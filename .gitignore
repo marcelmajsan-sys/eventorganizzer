@@ -1,0 +1,4 @@
+node_modules/ 
+.env.local 
+.next/ 
+cro-commerce-portal/cro-commerce-portal/node_modules/ 
