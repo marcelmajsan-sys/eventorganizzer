@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket } from "lucide-react";
@@ -188,13 +188,15 @@ function AddContactForm({
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const { data } = await supabase
+    setError("");
+    const { data, error: err } = await supabase
       .from("sponsor_contacts")
       .insert({
         sponsor_id: sponsorId,
@@ -207,6 +209,7 @@ function AddContactForm({
       .select()
       .single();
     setSaving(false);
+    if (err) { setError(err.message); return; }
     if (data) onAdded(data as Contact);
     setForm(emptyForm);
     setOpen(false);
@@ -283,12 +286,17 @@ function AddContactForm({
           Dodaj
         </button>
       </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </form>
   );
 }
 
 export default function ContactsSection({ sponsorId, contacts: initial }: Props) {
   const [contacts, setContacts] = useState(initial);
+
+  useEffect(() => {
+    setContacts(initial);
+  }, [initial]);
 
   const mainContacts = contacts.filter((c) => c.type === "contact");
   const ticketContacts = contacts.filter((c) => c.type === "ticket");
