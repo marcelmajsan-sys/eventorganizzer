@@ -59,7 +59,7 @@ export default function LoginPage() {
             <span className="text-white font-display font-bold text-xl">CC</span>
           </div>
           <h1 className="font-display text-3xl font-bold text-gray-900">CRO Commerce</h1>
-          <p className="text-gray-500 mt-1">Sponzorski portal · 2025</p>
+          <p className="text-gray-500 mt-1">Admin portal</p>
         </div>
 
         {/* Login card */}
