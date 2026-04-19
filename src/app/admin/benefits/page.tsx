@@ -3,6 +3,7 @@ import { CheckCircle2, Clock, AlertTriangle, XCircle } from "lucide-react";
 import { benefitStatusLabel } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
 import BenefitsView from "@/components/admin/BenefitsView";
+import AddBenefitModal from "@/components/admin/AddBenefitModal";
 
 const statusIcon = {
   completed: <CheckCircle2 size={16} className="text-emerald-500" />,
@@ -14,18 +15,28 @@ const statusIcon = {
 export default async function BenefitsPage() {
   const supabase = await createClient();
 
-  const { data: benefits } = await supabase
-    .from("sponsor_benefits")
-    .select("id, benefit_name, deadline, status, notes, sponsors(id, name, package_type)")
-    .order("benefit_name");
+  const [{ data: benefits }, { data: sponsors }] = await Promise.all([
+    supabase
+      .from("sponsor_benefits")
+      .select("id, benefit_name, deadline, status, notes, sponsors(id, name, package_type)")
+      .order("benefit_name"),
+    supabase
+      .from("sponsors")
+      .select("id, name")
+      .order("name"),
+  ]);
 
   const rows = benefits ?? [];
+  const sponsorList = sponsors ?? [];
 
   return (
     <div className="animate-enter">
       <div className="page-header">
-        <h1 className="page-title">Benefiti</h1>
-        <p className="page-subtitle">Pregled svih benefita i sponzori koji ih imaju</p>
+        <div>
+          <h1 className="page-title">Benefiti</h1>
+          <p className="page-subtitle">Pregled svih benefita i sponzori koji ih imaju</p>
+        </div>
+        <AddBenefitModal sponsors={sponsorList} />
       </div>
 
       {/* Summary cards */}

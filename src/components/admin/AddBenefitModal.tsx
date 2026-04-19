@@ -7,10 +7,11 @@ import { Plus, X, Loader2 } from "lucide-react";
 import type { BenefitStatus } from "@/types";
 
 interface Props {
-  sponsorId: string;
+  sponsorId?: string;
+  sponsors?: { id: string; name: string }[];
 }
 
-export default function AddBenefitModal({ sponsorId }: Props) {
+export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -23,21 +24,25 @@ export default function AddBenefitModal({ sponsorId }: Props) {
     status: "not_started" as BenefitStatus,
     notes: "",
     assigned_to: "",
+    selected_sponsor_id: "",
   });
 
   function handleClose() {
     setOpen(false);
     setError("");
-    setForm({ benefit_name: "", deadline: "", status: "not_started", notes: "", assigned_to: "" });
+    setForm({ benefit_name: "", deadline: "", status: "not_started", notes: "", assigned_to: "", selected_sponsor_id: "" });
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const sid = sponsorId ?? form.selected_sponsor_id;
+    if (!sid) { setError("Odaberite sponzora."); return; }
+
     setLoading(true);
     setError("");
 
     const { error: err } = await supabase.from("sponsor_benefits").insert({
-      sponsor_id: sponsorId,
+      sponsor_id: sid,
       benefit_name: form.benefit_name,
       deadline: form.deadline ? new Date(form.deadline).toISOString() : null,
       status: form.status,
@@ -45,11 +50,7 @@ export default function AddBenefitModal({ sponsorId }: Props) {
       assigned_to: form.assigned_to || null,
     });
 
-    if (err) {
-      setError(err.message);
-      setLoading(false);
-      return;
-    }
+    if (err) { setError(err.message); setLoading(false); return; }
 
     setLoading(false);
     handleClose();
@@ -85,6 +86,24 @@ export default function AddBenefitModal({ sponsorId }: Props) {
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">
               {error}
+            </div>
+          )}
+
+          {/* Sponsor selector — only when not fixed to a specific sponsor */}
+          {!sponsorId && sponsors && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponzor *</label>
+              <select
+                value={form.selected_sponsor_id}
+                onChange={(e) => setForm({ ...form, selected_sponsor_id: e.target.value })}
+                className="input-field"
+                required
+              >
+                <option value="">— Odaberi sponzora —</option>
+                {sponsors.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
             </div>
           )}
 
