@@ -16,6 +16,7 @@ import EditSponsorForm from "@/components/admin/EditSponsorForm";
 import EditBenefitModal from "@/components/admin/EditBenefitModal";
 import AddBenefitModal from "@/components/admin/AddBenefitModal";
 import DeleteBenefitButton from "@/components/admin/DeleteBenefitButton";
+import ContactsSection from "@/components/admin/ContactsSection";
 
 interface Props {
   params: { id: string };
@@ -24,10 +25,11 @@ interface Props {
 export default async function SponsorDetailPage({ params }: Props) {
   const supabase = await createClient();
 
-  const [{ data: sponsor }, { data: benefits }, { data: files }] = await Promise.all([
+  const [{ data: sponsor }, { data: benefits }, { data: files }, { data: contacts }] = await Promise.all([
     supabase.from("sponsors").select("*").eq("id", params.id).single(),
     supabase.from("sponsor_benefits").select("*").eq("sponsor_id", params.id).order("deadline"),
     supabase.from("files").select("*").eq("sponsor_id", params.id).order("uploaded_at", { ascending: false }),
+    supabase.from("sponsor_contacts").select("*").eq("sponsor_id", params.id).order("created_at"),
   ]);
 
   if (!sponsor) notFound();
@@ -128,6 +130,9 @@ export default async function SponsorDetailPage({ params }: Props) {
               {completed} od {total} benefita završeno
             </p>
           </div>
+
+          {/* Contacts */}
+          <ContactsSection sponsorId={sponsor.id} contacts={contacts ?? []} />
 
           {/* Files */}
           <FileUploadSection sponsorId={sponsor.id} existingFiles={files ?? []} />
