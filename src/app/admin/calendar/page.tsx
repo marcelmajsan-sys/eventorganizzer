@@ -8,21 +8,21 @@ const MONTHS = [
 ];
 
 const CONFERENCE_EVENTS = [
-  { month: 0, day: 15, title: "Rok: Logo u visokoj rezoluciji", type: "deadline" },
-  { month: 1, day: 1, title: "Potvrda sponzorskih paketa", type: "milestone" },
-  { month: 1, day: 28, title: "Rok: Materijali za goodie bag", type: "deadline" },
-  { month: 2, day: 15, title: "Rok: Oglasi za magazin", type: "deadline" },
-  { month: 2, day: 31, title: "Otvaranje registracije posjetitelja", type: "milestone" },
-  { month: 3, day: 10, title: "Rok: Workshop opisi i govornici", type: "deadline" },
-  { month: 3, day: 20, title: "Tisak magazina", type: "milestone" },
-  { month: 4, day: 1, title: "Rok: Prezentacije za glavnu pozornicu", type: "deadline" },
-  { month: 4, day: 15, title: "Probna postavka štandova", type: "milestone" },
-  { month: 5, day: 10, title: "🎯 CRO Commerce 2025 — Dan 1", type: "conference" },
-  { month: 5, day: 11, title: "🎯 CRO Commerce 2025 — Dan 2", type: "conference" },
-  { month: 6, day: 1, title: "Post-event izvještaj sponzorima", type: "milestone" },
-  { month: 6, day: 31, title: "Rok plaćanja — drugi obrok", type: "payment" },
-  { month: 7, day: 31, title: "Rok plaćanja — treći obrok", type: "payment" },
-  { month: 8, day: 1, title: "Početak prikupljanja sponzora 2026", type: "milestone" },
+  { month: 0, day: 15, title: "Rok: Logo u visokoj rezoluciji", type: "deadline", href: "/admin/benefits" },
+  { month: 1, day: 1, title: "Potvrda sponzorskih paketa", type: "milestone", href: "/admin/sponsors" },
+  { month: 1, day: 28, title: "Rok: Materijali za goodie bag", type: "deadline", href: "/admin/benefits" },
+  { month: 2, day: 15, title: "Rok: Oglasi za magazin", type: "deadline", href: "/admin/benefits" },
+  { month: 2, day: 31, title: "Otvaranje registracije posjetitelja", type: "milestone", href: "/admin/dashboard" },
+  { month: 3, day: 10, title: "Rok: Workshop opisi i govornici", type: "deadline", href: "/admin/benefits" },
+  { month: 3, day: 20, title: "Tisak magazina", type: "milestone", href: "/admin/dashboard" },
+  { month: 4, day: 1, title: "Rok: Prezentacije za glavnu pozornicu", type: "deadline", href: "/admin/benefits" },
+  { month: 4, day: 15, title: "Probna postavka štandova", type: "milestone", href: "/admin/dashboard" },
+  { month: 5, day: 10, title: "🎯 CRO Commerce 2025 — Dan 1", type: "conference", href: "/admin/program" },
+  { month: 5, day: 11, title: "🎯 CRO Commerce 2025 — Dan 2", type: "conference", href: "/admin/program" },
+  { month: 6, day: 1, title: "Post-event izvještaj sponzorima", type: "milestone", href: "/admin/sponsors" },
+  { month: 6, day: 31, title: "Rok plaćanja — drugi obrok", type: "payment", href: "/admin/troskovi" },
+  { month: 7, day: 31, title: "Rok plaćanja — treći obrok", type: "payment", href: "/admin/troskovi" },
+  { month: 8, day: 1, title: "Početak prikupljanja sponzora 2026", type: "milestone", href: "/admin/sponsors" },
 ];
 
 const EVENT_COLORS: Record<string, string> = {
@@ -112,21 +112,23 @@ export default async function CalendarPage() {
 
               <div className="space-y-1.5">
                 {monthEvents.map((event, i) => (
-                  <div
+                  <a
                     key={i}
-                    className={`flex items-start gap-2 p-2 rounded-lg border text-xs ${EVENT_COLORS[event.type]}`}
+                    href={event.href}
+                    className={`flex items-start gap-2 p-2 rounded-lg border text-xs hover:opacity-80 transition-opacity cursor-pointer ${EVENT_COLORS[event.type]}`}
                   >
                     <div className={`w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0 ${EVENT_DOTS[event.type]}`} />
                     <div>
                       <span className="font-medium">{event.day}.</span> {event.title}
                     </div>
-                  </div>
+                  </a>
                 ))}
 
                 {monthBenefits.map((benefit) => (
-                  <div
+                  <a
                     key={benefit.id}
-                    className="flex items-start gap-2 p-2 rounded-lg border text-xs bg-orange-50 border-orange-100 text-orange-700"
+                    href={benefit.sponsor_id ? `/admin/sponsors/${benefit.sponsor_id}` : "/admin/benefits"}
+                    className="flex items-start gap-2 p-2 rounded-lg border text-xs bg-orange-50 border-orange-100 text-orange-700 hover:opacity-80 transition-opacity cursor-pointer"
                   >
                     <div className="w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0 bg-orange-400" />
                     <div>
@@ -134,7 +136,7 @@ export default async function CalendarPage() {
                       <span className="text-orange-500">[{benefit.sponsors?.name}]</span>{" "}
                       {benefit.benefit_name}
                     </div>
-                  </div>
+                  </a>
                 ))}
 
                 {monthEvents.length === 0 && monthBenefits.length === 0 && (
