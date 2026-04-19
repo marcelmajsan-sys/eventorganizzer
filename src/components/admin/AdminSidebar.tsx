@@ -4,25 +4,42 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  LayoutDashboard, Users, KanbanSquare, Calendar,
-  LogOut, ChevronRight, Building2
+  LayoutDashboard, Users, KanbanSquare, Calendar, Gift,
+  LogOut, ChevronRight, Building2, Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ProjectId } from "@/lib/supabase/projects";
+import ProjectSwitcher from "@/components/admin/ProjectSwitcher";
 
 const navItems = [
   { href: "/admin/dashboard", label: "Nadzorna ploča", icon: LayoutDashboard },
   { href: "/admin/sponsors", label: "Sponzori", icon: Users },
+  { href: "/admin/benefits", label: "Benefiti", icon: Gift },
   { href: "/admin/tasks", label: "Zadaci", icon: KanbanSquare },
   { href: "/admin/calendar", label: "Kalendar", icon: Calendar },
+  { href: "/admin/settings", label: "Postavke", icon: Settings },
 ];
 
-export default function AdminSidebar({ userEmail }: { userEmail: string }) {
+interface Props {
+  userEmail: string;
+  activeProject: ProjectId;
+  conferenceDate: string;
+  conferenceDates: Record<ProjectId, string>;
+}
+
+export default function AdminSidebar({ userEmail, activeProject, conferenceDate, conferenceDates }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
 
   const firstName = userEmail.split("@")[0];
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+
+  const rawDays = Math.ceil(
+    (new Date(conferenceDate).getTime() - Date.now()) / 86400000
+  );
+  const isPast = rawDays < 0;
+  const daysDisplay = Math.abs(rawDays);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -68,15 +85,16 @@ export default function AdminSidebar({ userEmail }: { userEmail: string }) {
         })}
       </nav>
 
-      {/* Conference info */}
-      <div className="px-4 pb-2">
-        <div className="bg-gray-800 rounded-lg p-3">
-          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Konferencija</p>
-          <p className="text-white text-sm font-semibold mt-0.5">CRO Commerce 2025</p>
-          <div className="mt-2 bg-gray-700 rounded-full h-1.5">
-            <div className="bg-brand-500 h-1.5 rounded-full" style={{ width: "42%" }} />
-          </div>
-          <p className="text-gray-500 text-xs mt-1">42% do konferencije</p>
+      {/* Project switcher + days countdown */}
+      <div className="px-4 pb-2 space-y-2">
+        <ProjectSwitcher activeProject={activeProject} conferenceDates={conferenceDates} />
+        <div className="bg-gray-800 rounded-lg px-3 py-2 flex items-center justify-between">
+          <p className="text-gray-500 text-xs">
+            {isPast ? "Dana od konferencije" : "Dana do konferencije"}
+          </p>
+          <p className={`text-sm font-bold ${isPast ? "text-gray-500" : "text-brand-400"}`}>
+            {isPast ? `-${daysDisplay}` : daysDisplay}
+          </p>
         </div>
       </div>
 

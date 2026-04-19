@@ -1,0 +1,2 @@
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS benefit_name TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sponsor_category TEXT;

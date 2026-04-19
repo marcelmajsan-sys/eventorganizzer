@@ -25,10 +25,11 @@ export interface SponsorBenefit {
   id: string;
   sponsor_id: string;
   benefit_name: string;
-  deadline: string;
+  deadline: string | null;
   status: BenefitStatus;
   file_url: string | null;
   notes: string | null;
+  assigned_to: string | null;
   created_at: string;
 }
 

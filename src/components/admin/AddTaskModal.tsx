@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
 
+const SPONSOR_CATEGORIES = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
+
 interface Props {
   sponsors: { id: string; name: string }[];
+  benefitNames: string[];
 }
 
-export default function AddTaskModal({ sponsors }: Props) {
+export default function AddTaskModal({ sponsors, benefitNames }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -22,6 +25,8 @@ export default function AddTaskModal({ sponsors }: Props) {
     status: "todo",
     due_date: "",
     assigned_to: "",
+    benefit_name: "",
+    sponsor_category: "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -32,10 +37,12 @@ export default function AddTaskModal({ sponsors }: Props) {
     if (!payload.sponsor_id) delete payload.sponsor_id;
     if (!payload.due_date) delete payload.due_date;
     if (!payload.assigned_to) delete payload.assigned_to;
+    if (!payload.benefit_name) delete payload.benefit_name;
+    if (!payload.sponsor_category) delete payload.sponsor_category;
 
     await supabase.from("tasks").insert(payload);
     setOpen(false);
-    setForm({ title: "", description: "", sponsor_id: "", status: "todo", due_date: "", assigned_to: "" });
+    setForm({ title: "", description: "", sponsor_id: "", status: "todo", due_date: "", assigned_to: "", benefit_name: "", sponsor_category: "" });
     setLoading(false);
     router.refresh();
   }
@@ -71,6 +78,7 @@ export default function AddTaskModal({ sponsors }: Props) {
               required
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Opis</label>
             <textarea
@@ -81,6 +89,7 @@ export default function AddTaskModal({ sponsors }: Props) {
               placeholder="Više detalja..."
             />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponzor</label>
@@ -125,6 +134,35 @@ export default function AddTaskModal({ sponsors }: Props) {
                 className="input-field"
                 placeholder="Marcel, Dino..."
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Benefit</label>
+              <select
+                value={form.benefit_name}
+                onChange={(e) => setForm({ ...form, benefit_name: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— Bez benefita —</option>
+                {benefitNames.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Kategorija sponzorstva</label>
+              <select
+                value={form.sponsor_category}
+                onChange={(e) => setForm({ ...form, sponsor_category: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— Bez kategorije —</option>
+                {SPONSOR_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
           </div>
 
