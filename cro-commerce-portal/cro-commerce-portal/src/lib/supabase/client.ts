@@ -1,8 +1,13 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { PROJECT_COOKIE, PROJECTS, resolveProjectId } from "./projects";
+
+function getActiveProject() {
+  if (typeof document === "undefined") return PROJECTS["2026"];
+  const match = document.cookie.match(new RegExp(`(?:^|; )${PROJECT_COOKIE}=([^;]*)`));
+  return PROJECTS[resolveProjectId(match?.[1])];
+}
 
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const project = getActiveProject();
+  return createBrowserClient(project.url, project.anonKey);
 }

@@ -13,6 +13,9 @@ import type { PackageType, PaymentStatus, BenefitStatus } from "@/types";
 import BenefitStatusSelect from "@/components/admin/BenefitStatusSelect";
 import FileUploadSection from "@/components/admin/FileUploadSection";
 import EditSponsorForm from "@/components/admin/EditSponsorForm";
+import EditBenefitModal from "@/components/admin/EditBenefitModal";
+import AddBenefitModal from "@/components/admin/AddBenefitModal";
+import DeleteBenefitButton from "@/components/admin/DeleteBenefitButton";
 
 interface Props {
   params: { id: string };
@@ -133,16 +136,19 @@ export default async function SponsorDetailPage({ params }: Props) {
         {/* Right: benefits */}
         <div className="lg:col-span-2">
           <div className="card p-5">
-            <div className="flex items-center gap-2 mb-5">
-              <Calendar size={16} className="text-gray-400" />
-              <h3 className="font-semibold text-gray-900">Benefiti i rokovi</h3>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-gray-400" />
+                <h3 className="font-semibold text-gray-900">Benefiti i rokovi</h3>
+              </div>
+              <AddBenefitModal sponsorId={sponsor.id} />
             </div>
 
             <div className="space-y-3">
               {benefits?.map((benefit) => {
-                const days = daysUntil(benefit.deadline);
-                const isOverdue = days < 0 && benefit.status !== "completed";
-                const isUrgent = days >= 0 && days <= 7 && benefit.status !== "completed";
+                const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
+                const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
+                const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
 
                 return (
                   <div
@@ -163,15 +169,17 @@ export default async function SponsorDetailPage({ params }: Props) {
                         <div className="min-w-0">
                           <p className="font-medium text-gray-900 text-sm">{benefit.benefit_name}</p>
                           <div className="flex items-center gap-3 mt-1">
-                            <span className="text-xs text-gray-500">
-                              Rok: {formatDate(benefit.deadline)}
-                            </span>
-                            {isOverdue && (
+                            {benefit.deadline && (
+                              <span className="text-xs text-gray-500">
+                                Rok: {formatDate(benefit.deadline)}
+                              </span>
+                            )}
+                            {isOverdue && days !== null && (
                               <span className="text-xs text-red-600 font-medium">
                                 Kasni {Math.abs(days)} dana
                               </span>
                             )}
-                            {isUrgent && (
+                            {isUrgent && days !== null && (
                               <span className="text-xs text-orange-600 font-medium">
                                 Za {days} dana
                               </span>
@@ -189,10 +197,17 @@ export default async function SponsorDetailPage({ params }: Props) {
                           )}
                         </div>
                       </div>
-                      <BenefitStatusSelect
-                        benefitId={benefit.id}
-                        currentStatus={benefit.status as BenefitStatus}
-                      />
+                      <div className="flex items-center gap-2">
+                        <DeleteBenefitButton
+                          benefitId={benefit.id}
+                          benefitName={benefit.benefit_name}
+                        />
+                        <EditBenefitModal benefit={benefit} />
+                        <BenefitStatusSelect
+                          benefitId={benefit.id}
+                          currentStatus={benefit.status as BenefitStatus}
+                        />
+                      </div>
                     </div>
                   </div>
                 );
