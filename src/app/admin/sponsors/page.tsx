@@ -4,6 +4,7 @@ import { Search, Plus, ChevronRight, Filter } from "lucide-react";
 import { packageColor, paymentStatusColor, paymentStatusLabel } from "@/lib/utils";
 import type { PackageType, PaymentStatus } from "@/types";
 import AddSponsorModal from "@/components/admin/AddSponsorModal";
+import SearchInput from "@/components/admin/SearchInput";
 
 interface Props {
   searchParams: { package?: string; payment?: string; q?: string };
@@ -52,6 +53,10 @@ export default async function SponsorsPage({ searchParams }: Props) {
 
       {/* Filters */}
       <div className="card p-4 mb-6 flex flex-wrap gap-3 items-center">
+        <SearchInput placeholder="Pretraži sponzore..." />
+
+        <div className="w-px h-6 bg-gray-200 hidden sm:block" />
+
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Filter size={14} />
           <span>Filter:</span>
