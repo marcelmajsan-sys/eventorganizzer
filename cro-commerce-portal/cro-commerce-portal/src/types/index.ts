@@ -1,4 +1,4 @@
-export type PackageType = "Glavni" | "Zlatni" | "Srebrni" | "Brončani";
+export type PackageType = "Glavni" | "Zlatni" | "Srebrni" | "Brončani" | "Medijski" | "Community";
 export type PaymentStatus = "paid" | "pending" | "overdue";
 export type BenefitStatus = "not_started" | "in_progress" | "completed" | "overdue";
 export type TaskStatus = "todo" | "in_progress" | "done";

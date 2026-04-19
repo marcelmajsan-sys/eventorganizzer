@@ -12,6 +12,8 @@ export function packageColor(pkg: PackageType): string {
     Zlatni: "text-yellow-700 bg-yellow-100 border-yellow-200",
     Srebrni: "text-slate-700 bg-slate-100 border-slate-200",
     "Brončani": "text-orange-700 bg-orange-100 border-orange-200",
+    Medijski: "text-blue-700 bg-blue-100 border-blue-200",
+    Community: "text-teal-700 bg-teal-100 border-teal-200",
   };
   return colors[pkg] ?? "text-gray-700 bg-gray-100";
 }
@@ -22,6 +24,8 @@ export function packageBadgeColor(pkg: PackageType): string {
     Zlatni: "bg-yellow-500",
     Srebrni: "bg-slate-400",
     "Brončani": "bg-orange-600",
+    Medijski: "bg-blue-500",
+    Community: "bg-teal-500",
   };
   return colors[pkg] ?? "bg-gray-400";
 }
@@ -112,4 +116,6 @@ export const PACKAGE_BENEFITS: Record<PackageType, string[]> = {
     "Branding u goodie bag-u",
     "3 kotizacije",
   ],
+  Medijski: [],
+  Community: [],
 };
