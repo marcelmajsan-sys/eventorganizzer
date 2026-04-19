@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard, Users, KanbanSquare, Calendar, Gift,
-  LogOut, ChevronRight, Building2, Settings
+  LogOut, ChevronRight, Building2, Settings, ListVideo, Receipt
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProjectId } from "@/lib/supabase/projects";
@@ -14,8 +14,10 @@ import ProjectSwitcher from "@/components/admin/ProjectSwitcher";
 const navItems = [
   { href: "/admin/dashboard", label: "Nadzorna ploča", icon: LayoutDashboard },
   { href: "/admin/sponsors", label: "Sponzori", icon: Users },
-  { href: "/admin/benefits", label: "Benefiti", icon: Gift },
-  { href: "/admin/tasks", label: "Zadaci", icon: KanbanSquare },
+  { href: "/admin/benefits",  label: "Benefiti",  icon: Gift },
+  { href: "/admin/program",   label: "Program",   icon: ListVideo },
+  { href: "/admin/troskovi",  label: "Troškovi",  icon: Receipt },
+  { href: "/admin/tasks",     label: "Zadaci",    icon: KanbanSquare },
   { href: "/admin/calendar", label: "Kalendar", icon: Calendar },
   { href: "/admin/settings", label: "Postavke", icon: Settings },
 ];
