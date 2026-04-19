@@ -231,6 +231,7 @@ export default function BudgetView({ items: initial, projectId }: Props) {
             <p className="text-gray-400 text-sm">Nema stavki.</p>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
@@ -287,6 +288,7 @@ export default function BudgetView({ items: initial, projectId }: Props) {
               </tfoot>
             )}
           </table>
+          </div>
         )}
       </div>
 
