@@ -52,14 +52,19 @@ interface Props {
 
 export default function CalendarView({ tasks, currentMonth }: Props) {
   const [selected, setSelected] = useState<SelectedTask | null>(null);
+  const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
+
+  const assignees = Array.from(new Set(tasks.map((t) => t.assigned_to).filter(Boolean))) as string[];
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", due_date: "", status: "", assigned_to: "" });
   const router = useRouter();
   const supabase = createClient();
 
+  const filteredTasks = assigneeFilter ? tasks.filter((t) => t.assigned_to === assigneeFilter) : tasks;
+
   const tasksByMonth: Record<number, (Task & { day: number })[]> = {};
-  tasks.forEach((t) => {
+  filteredTasks.forEach((t) => {
     const d = new Date(t.due_date);
     const month = d.getMonth();
     const day = d.getDate();
@@ -111,6 +116,30 @@ export default function CalendarView({ tasks, currentMonth }: Props) {
 
   return (
     <>
+      {assignees.length > 0 && (
+        <div className="flex gap-2 flex-wrap mb-5">
+          <button
+            onClick={() => setAssigneeFilter(null)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              !assigneeFilter ? "bg-brand-600 text-white border-brand-600" : "bg-white border-gray-200 text-gray-600 hover:border-brand-300"
+            }`}
+          >
+            Svi
+          </button>
+          {assignees.map((a) => (
+            <button
+              key={a}
+              onClick={() => setAssigneeFilter(assigneeFilter === a ? null : a)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                assigneeFilter === a ? "bg-brand-600 text-white border-brand-600" : "bg-white border-gray-200 text-gray-600 hover:border-brand-300"
+              }`}
+            >
+              {a}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {MONTHS.map((month, idx) => {
           const monthTasks = tasksByMonth[idx] ?? [];

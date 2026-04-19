@@ -3,6 +3,8 @@ import { Settings } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { PROJECT_COOKIE, PROJECTS, resolveProjectId } from "@/lib/supabase/projects";
 import ProjectSettingsForm from "@/components/admin/ProjectSettingsForm";
+import UserManagementSection from "@/components/admin/UserManagementSection";
+import { listUsersWithMeta } from "@/app/actions/userManagement";
 
 export default async function SettingsPage() {
   const cookieStore = await cookies();
@@ -10,17 +12,16 @@ export default async function SettingsPage() {
   const project = PROJECTS[projectId];
   const supabase = await createAdminClient();
 
-  const [settingsRes, adminsRes] = await Promise.all([
-    supabase.from("project_settings").select("key, value"),
-    supabase.from("project_admins").select("email").order("email"),
-  ]);
+  const settingsRes = await supabase.from("project_settings").select("key, value");
 
   const conferenceDate =
     settingsRes.data?.find((s) => s.key === `conference_date_${projectId}`)?.value ??
     project.conferenceDate;
 
-  const admins = adminsRes.data?.map((a) => a.email) ?? [];
-  const migrationNeeded = !!(settingsRes.error || adminsRes.error);
+  let users: { email: string; name: string | null; id2026: string | null; id2025: string | null }[] = [];
+  try {
+    users = await listUsersWithMeta();
+  } catch {}
 
   return (
     <div>
@@ -34,22 +35,14 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      {migrationNeeded && (
-        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <p className="text-amber-800 font-medium text-sm mb-1">
-            Baza podataka nije pripremljena za ovu funkciju.
-          </p>
-          <p className="text-amber-700 text-sm">
-            Pokrenite <code className="bg-amber-100 px-1 rounded font-mono">migration_005_project_settings.sql</code> u Supabase SQL Editoru za ovaj projekt.
-          </p>
-        </div>
-      )}
+      <div className="space-y-6">
+        <ProjectSettingsForm
+          conferenceDate={conferenceDate}
+          projectLabel={project.label}
+        />
 
-      <ProjectSettingsForm
-        conferenceDate={conferenceDate}
-        admins={admins}
-        projectLabel={project.label}
-      />
+        <UserManagementSection users={users} />
+      </div>
     </div>
   );
 }
