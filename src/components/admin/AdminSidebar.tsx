@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard, Users, KanbanSquare, Calendar, Gift,
   LogOut, ChevronRight, Building2, Settings, ListVideo, Receipt,
-  Menu, X
+  Menu, X, BookUser
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProjectId } from "@/lib/supabase/projects";
@@ -19,6 +19,7 @@ const navItems = [
   { href: "/admin/benefits",  label: "Benefiti",        icon: Gift },
   { href: "/admin/program",   label: "Program",         icon: ListVideo },
   { href: "/admin/troskovi",  label: "Troškovi",        icon: Receipt },
+  { href: "/admin/contacts",  label: "Kontakti",        icon: BookUser },
   { href: "/admin/tasks",     label: "Zadaci",          icon: KanbanSquare },
   { href: "/admin/calendar",  label: "Kalendar",        icon: Calendar },
   { href: "/admin/settings",  label: "Postavke",        icon: Settings },

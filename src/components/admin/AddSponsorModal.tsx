@@ -7,9 +7,10 @@ import { Plus, X, Loader2 } from "lucide-react";
 import { PACKAGE_BENEFITS } from "@/lib/utils";
 import type { PackageType } from "@/types";
 
-const PACKAGES: PackageType[] = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
+const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
-export default function AddSponsorModal() {
+export default function AddSponsorModal({ packageTypes }: { packageTypes?: string[] }) {
+  const PACKAGES = packageTypes ?? FALLBACK_PACKAGES;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -18,7 +19,7 @@ export default function AddSponsorModal() {
 
   const [form, setForm] = useState({
     name: "",
-    package_type: "Zlatni" as PackageType,
+    package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType,
     contact_email: "",
     contact_name: "",
     payment_status: "pending",
@@ -58,7 +59,7 @@ export default function AddSponsorModal() {
       await supabase.from("sponsor_benefits").insert(benefitsToInsert);
 
       setOpen(false);
-      setForm({ name: "", package_type: "Zlatni", contact_email: "", contact_name: "", payment_status: "pending", notes: "" });
+      setForm({ name: "", package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType, contact_email: "", contact_name: "", payment_status: "pending", notes: "" });
       router.refresh();
     } catch (err: any) {
       setError(err.message ?? "Greška pri dodavanju sponzora");
@@ -100,7 +101,7 @@ export default function AddSponsorModal() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Paket *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Kategorija *</label>
               <select
                 value={form.package_type}
                 onChange={(e) => setForm({ ...form, package_type: e.target.value as PackageType })}

@@ -1,0 +1,1 @@
+ALTER TABLE sponsor_contacts ADD COLUMN IF NOT EXISTS notes TEXT;

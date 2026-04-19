@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Building2, Mail, User, FileText,
+  ArrowLeft, Building2, FileText,
   Calendar, CheckCircle2, Clock, AlertTriangle, XCircle
 } from "lucide-react";
 import {
@@ -31,6 +31,12 @@ export default async function SponsorDetailPage({ params }: Props) {
     supabase.from("files").select("*").eq("sponsor_id", params.id).order("uploaded_at", { ascending: false }),
     supabase.from("sponsor_contacts").select("*").eq("sponsor_id", params.id).order("created_at"),
   ]);
+
+  let packageTypeNames: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
+  try {
+    const { data: pkgTypes } = await supabase.from("package_types").select("name").order("sort_order");
+    if (pkgTypes && pkgTypes.length > 0) packageTypeNames = pkgTypes.map((p) => p.name);
+  } catch {}
 
   if (!sponsor) notFound();
 
@@ -66,7 +72,7 @@ export default async function SponsorDetailPage({ params }: Props) {
             </h1>
             <p className="page-subtitle">Detalji sponzora i upravljanje benefitima</p>
           </div>
-          <EditSponsorForm sponsor={sponsor} />
+          <EditSponsorForm sponsor={sponsor} packageTypes={packageTypeNames} />
         </div>
       </div>
 
@@ -80,20 +86,6 @@ export default async function SponsorDetailPage({ params }: Props) {
               Informacije
             </h3>
             <dl className="space-y-3 text-sm">
-              <div className="flex items-start gap-3">
-                <User size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <dt className="text-gray-500 text-xs">Kontakt osoba</dt>
-                  <dd className="font-medium text-gray-900">{sponsor.contact_name}</dd>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Mail size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <dt className="text-gray-500 text-xs">Email</dt>
-                  <dd className="font-medium text-gray-900 break-all">{sponsor.contact_email}</dd>
-                </div>
-              </div>
               <div className="flex items-start gap-3">
                 <FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
                 <div>

@@ -12,8 +12,9 @@ const statusIcon = {
   overdue: <AlertTriangle size={16} className="text-red-500" />,
 };
 
-export default async function BenefitsPage() {
+export default async function BenefitsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const supabase = await createClient();
+  const { status: statusFilter } = await searchParams;
 
   const [{ data: benefits }, { data: sponsors }] = await Promise.all([
     supabase
@@ -26,8 +27,9 @@ export default async function BenefitsPage() {
       .order("name"),
   ]);
 
-  const rows = benefits ?? [];
+  const allRows = benefits ?? [];
   const sponsorList = sponsors ?? [];
+  const rows = statusFilter ? allRows.filter((b) => b.status === statusFilter) : allRows;
 
   return (
     <div className="animate-enter">
@@ -42,15 +44,22 @@ export default async function BenefitsPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {(["not_started", "in_progress", "completed", "overdue"] as BenefitStatus[]).map((status) => {
-          const count = rows.filter((b) => b.status === status).length;
+          const count = allRows.filter((b) => b.status === status).length;
+          const isActive = statusFilter === status;
           return (
-            <div key={status} className="card p-4 flex items-center gap-3">
+            <a
+              key={status}
+              href={isActive ? "/admin/benefits" : `/admin/benefits?status=${status}`}
+              className={`card p-4 flex items-center gap-3 hover:shadow-md transition-shadow border ${
+                isActive ? "border-brand-400 bg-brand-50" : "border-transparent hover:border-brand-200"
+              }`}
+            >
               {statusIcon[status]}
               <div>
                 <p className="text-xl font-bold text-gray-900">{count}</p>
                 <p className="text-xs text-gray-500">{benefitStatusLabel(status)}</p>
               </div>
-            </div>
+            </a>
           );
         })}
       </div>
