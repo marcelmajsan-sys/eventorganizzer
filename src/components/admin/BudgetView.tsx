@@ -51,9 +51,10 @@ type FilterTab = "all" | BudgetStatus;
 
 interface Props {
   items: BudgetItem[];
+  projectId: string;
 }
 
-export default function BudgetView({ items: initial }: Props) {
+export default function BudgetView({ items: initial, projectId }: Props) {
   const [items, setItems]           = useState(initial);
   const [filter, setFilter]         = useState<FilterTab>("all");
   const [query, setQuery]           = useState("");
@@ -118,7 +119,7 @@ export default function BudgetView({ items: initial }: Props) {
     } else {
       const { data, error: err } = await supabase
         .from("budget_items")
-        .insert({ ...payload, sort_order: items.length * 10 })
+        .insert({ ...payload, sort_order: items.length * 10, project_id: projectId })
         .select()
         .single();
       setSaving(false);

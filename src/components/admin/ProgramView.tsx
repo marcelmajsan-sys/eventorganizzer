@@ -76,9 +76,10 @@ const emptyForm = {
 
 interface Props {
   sessions: Session[];
+  projectId: string;
 }
 
-export default function ProgramView({ sessions: initial }: Props) {
+export default function ProgramView({ sessions: initial, projectId }: Props) {
   const [sessions, setSessions]       = useState(initial);
   const [activeTab, setActiveTab]     = useState<StageTab>("sve");
   const [query, setQuery]             = useState("");
@@ -153,7 +154,7 @@ export default function ProgramView({ sessions: initial }: Props) {
     } else {
       const { data, error: err } = await supabase
         .from("program_sessions")
-        .insert({ ...payload, sort_order: 0 })
+        .insert({ ...payload, sort_order: 0, project_id: projectId })
         .select()
         .single();
       setSaving(false);
