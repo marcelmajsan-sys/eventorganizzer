@@ -22,7 +22,7 @@ export default async function BenefitsPage() {
       .order("benefit_name"),
     supabase
       .from("sponsors")
-      .select("id, name")
+      .select("id, name, package_type")
       .order("name"),
   ]);
 
