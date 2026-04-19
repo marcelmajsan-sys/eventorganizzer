@@ -21,7 +21,7 @@ const navItems = [
   { href: "/admin/troskovi",  label: "Troškovi",        icon: Receipt },
   { href: "/admin/contacts",  label: "Kontakti",        icon: BookUser },
   { href: "/admin/tasks",     label: "Zadaci",          icon: KanbanSquare },
-  { href: "/admin/calendar",  label: "Kalendar",        icon: Calendar },
+  { href: "/admin/calendar",  label: "Rokovnik",        icon: Calendar },
   { href: "/admin/settings",  label: "Postavke",        icon: Settings },
 ];
 

@@ -29,18 +29,21 @@ const CONFERENCE_EVENTS = [
 
 export default async function CalendarPage() {
   const supabase = await createClient();
-  const { data: benefits } = await supabase
-    .from("sponsor_benefits")
-    .select("id, benefit_name, deadline, sponsor_id, sponsors(name)")
-    .not("deadline", "is", null)
-    .order("deadline");
+  const { data: tasks } = await supabase
+    .from("tasks")
+    .select("id, title, due_date, assigned_to, status, sponsor_id, sponsors(id, name)")
+    .not("due_date", "is", null)
+    .order("due_date");
 
   const currentMonth = new Date().getMonth();
 
   return (
     <div className="animate-enter">
       <div className="page-header">
-        <h1 className="page-title">Kalendar aktivnosti</h1>
+        <div>
+          <h1 className="page-title">Rokovnik</h1>
+          <p className="page-subtitle">Niže se prikazuju rokovi za sve zadatke po svim mjesecima u godini.</p>
+        </div>
       </div>
 
       {/* Legend */}
@@ -57,13 +60,13 @@ export default async function CalendarPage() {
         ))}
         <div className="flex items-center gap-2 text-sm text-gray-600 ml-auto">
           <AlertCircle size={14} className="text-orange-500" />
-          <span>Rokovi iz baze su prikazani narančasto</span>
+          <span>Zadaci iz baze prikazani narančasto</span>
         </div>
       </div>
 
       <CalendarView
         staticEvents={CONFERENCE_EVENTS}
-        benefits={(benefits ?? []) as any}
+        tasks={(tasks ?? []) as any}
         currentMonth={currentMonth}
       />
     </div>

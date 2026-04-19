@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Calendar, Tag, ExternalLink } from "lucide-react";
+import { X, Calendar, User, Tag, ExternalLink, CheckCircle2, Clock, Circle } from "lucide-react";
 import Link from "next/link";
 
 const MONTHS = [
@@ -28,7 +28,6 @@ const TYPE_LABEL: Record<string, string> = {
   milestone: "Prekretnica",
   conference: "Konferencija",
   payment: "Plaćanje",
-  benefit: "Rok isporuke",
 };
 
 const TYPE_BADGE: Record<string, string> = {
@@ -36,53 +35,58 @@ const TYPE_BADGE: Record<string, string> = {
   milestone: "bg-blue-100 text-blue-700 border-blue-200",
   conference: "bg-purple-100 text-purple-700 border-purple-200",
   payment: "bg-green-100 text-green-700 border-green-200",
-  benefit: "bg-orange-100 text-orange-700 border-orange-200",
+};
+
+const STATUS_ICON: Record<string, React.ReactNode> = {
+  todo: <Circle size={13} className="text-gray-400" />,
+  in_progress: <Clock size={13} className="text-blue-500" />,
+  done: <CheckCircle2 size={13} className="text-emerald-500" />,
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  todo: "Za napraviti",
+  in_progress: "U tijeku",
+  done: "Završeno",
 };
 
 interface StaticEvent {
-  kind: "static";
-  day: number;
   month: number;
+  day: number;
   title: string;
   type: string;
   href: string;
 }
 
-interface BenefitEvent {
-  kind: "benefit";
+interface TaskEvent {
   id: string;
-  day: number;
-  month: number;
   title: string;
-  sponsorName: string | null;
-  sponsorId: string | null;
+  due_date: string;
+  assigned_to: string | null;
+  status: string;
+  sponsor_id: string | null;
+  sponsors: { id: string; name: string } | null;
 }
 
-type CalendarEvent = StaticEvent | BenefitEvent;
+interface SelectedStatic extends StaticEvent { kind: "static" }
+interface SelectedTask extends TaskEvent { kind: "task"; day: number; month: number }
+type Selected = SelectedStatic | SelectedTask;
 
 interface Props {
-  staticEvents: Omit<StaticEvent, "kind">[];
-  benefits: { id: string; deadline: string; benefit_name: string; sponsor_id: string | null; sponsors: { name: string } | null }[];
+  staticEvents: StaticEvent[];
+  tasks: TaskEvent[];
   currentMonth: number;
 }
 
-export default function CalendarView({ staticEvents, benefits, currentMonth }: Props) {
-  const [selected, setSelected] = useState<CalendarEvent | null>(null);
+export default function CalendarView({ staticEvents, tasks, currentMonth }: Props) {
+  const [selected, setSelected] = useState<Selected | null>(null);
 
-  const benefitsByMonth: Record<number, BenefitEvent[]> = {};
-  benefits.forEach((b) => {
-    const month = new Date(b.deadline).getMonth();
-    const day = new Date(b.deadline).getDate();
-    if (!benefitsByMonth[month]) benefitsByMonth[month] = [];
-    benefitsByMonth[month]!.push({
-      kind: "benefit",
-      id: b.id,
-      day,
-      month,
-      title: b.benefit_name,
-      sponsorName: b.sponsors?.name ?? null,
-      sponsorId: b.sponsor_id,
-    });
+  const tasksByMonth: Record<number, (TaskEvent & { day: number })[]> = {};
+  tasks.forEach((t) => {
+    const d = new Date(t.due_date);
+    const month = d.getMonth();
+    const day = d.getDate();
+    if (!tasksByMonth[month]) tasksByMonth[month] = [];
+    tasksByMonth[month]!.push({ ...t, day });
   });
 
   function formatFullDate(day: number, month: number) {
@@ -94,8 +98,9 @@ export default function CalendarView({ staticEvents, benefits, currentMonth }: P
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {MONTHS.map((month, idx) => {
           const monthEvents = staticEvents.filter((e) => e.month === idx);
-          const monthBenefits = benefitsByMonth[idx] ?? [];
+          const monthTasks = tasksByMonth[idx] ?? [];
           const isCurrentMonth = idx === currentMonth;
+          const total = monthEvents.length + monthTasks.length;
 
           return (
             <div
@@ -111,10 +116,8 @@ export default function CalendarView({ staticEvents, benefits, currentMonth }: P
                     </span>
                   )}
                 </h3>
-                {(monthEvents.length > 0 || monthBenefits.length > 0) && (
-                  <span className="text-xs text-gray-400">
-                    {monthEvents.length + monthBenefits.length} eventi
-                  </span>
+                {total > 0 && (
+                  <span className="text-xs text-gray-400">{total} eventi</span>
                 )}
               </div>
 
@@ -126,28 +129,26 @@ export default function CalendarView({ staticEvents, benefits, currentMonth }: P
                     className={`w-full text-left flex items-start gap-2 p-2 rounded-lg border text-xs hover:opacity-80 transition-opacity ${EVENT_COLORS[event.type]}`}
                   >
                     <div className={`w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0 ${EVENT_DOTS[event.type]}`} />
-                    <div>
-                      <span className="font-medium">{event.day}.</span> {event.title}
-                    </div>
+                    <span><span className="font-medium">{event.day}.</span> {event.title}</span>
                   </button>
                 ))}
 
-                {monthBenefits.map((benefit) => (
+                {monthTasks.map((task) => (
                   <button
-                    key={benefit.id}
-                    onClick={() => setSelected(benefit)}
+                    key={task.id}
+                    onClick={() => setSelected({ kind: "task", ...task, month: idx })}
                     className="w-full text-left flex items-start gap-2 p-2 rounded-lg border text-xs bg-orange-50 border-orange-100 text-orange-700 hover:opacity-80 transition-opacity"
                   >
                     <div className="w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0 bg-orange-400" />
-                    <div>
-                      <span className="font-medium">{benefit.day}.</span>{" "}
-                      {benefit.sponsorName && <span className="text-orange-500">[{benefit.sponsorName}]</span>}{" "}
-                      {benefit.title}
-                    </div>
+                    <span>
+                      <span className="font-medium">{task.day}.</span>{" "}
+                      {task.sponsors && <span className="text-orange-500">[{task.sponsors.name}]</span>}{" "}
+                      {task.title}
+                    </span>
                   </button>
                 ))}
 
-                {monthEvents.length === 0 && monthBenefits.length === 0 && (
+                {total === 0 && (
                   <p className="text-xs text-gray-300 text-center py-3">—</p>
                 )}
               </div>
@@ -156,7 +157,6 @@ export default function CalendarView({ staticEvents, benefits, currentMonth }: P
         })}
       </div>
 
-      {/* Event detail modal */}
       {selected && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-24"
@@ -167,8 +167,8 @@ export default function CalendarView({ staticEvents, benefits, currentMonth }: P
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <span className={`badge border text-xs ${TYPE_BADGE[selected.kind === "benefit" ? "benefit" : selected.type]}`}>
-                {TYPE_LABEL[selected.kind === "benefit" ? "benefit" : selected.type]}
+              <span className={`badge border text-xs ${selected.kind === "static" ? TYPE_BADGE[selected.type] : "bg-orange-100 text-orange-700 border-orange-200"}`}>
+                {selected.kind === "static" ? TYPE_LABEL[selected.type] : "Zadatak"}
               </span>
               <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
@@ -176,34 +176,49 @@ export default function CalendarView({ staticEvents, benefits, currentMonth }: P
             </div>
 
             <div className="p-5 space-y-4">
-              <div>
-                <p className="text-lg font-bold text-gray-900 leading-snug">
-                  {selected.kind === "benefit" && selected.sponsorName
-                    ? `[${selected.sponsorName}] ${selected.title}`
-                    : selected.title}
-                </p>
-              </div>
+              <p className="text-lg font-bold text-gray-900 leading-snug">{selected.title}</p>
 
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Calendar size={15} className="text-gray-400" />
-                <span>{formatFullDate(selected.day, selected.month)}</span>
+                <span>{formatFullDate(selected.day, selected.kind === "task" ? selected.month : selected.month)}</span>
               </div>
 
-              {selected.kind === "benefit" && selected.sponsorName && (
+              {selected.kind === "task" && selected.assigned_to && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <User size={15} className="text-gray-400" />
+                  <span>{selected.assigned_to}</span>
+                </div>
+              )}
+
+              {selected.kind === "task" && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  {STATUS_ICON[selected.status]}
+                  <span>{STATUS_LABEL[selected.status] ?? selected.status}</span>
+                </div>
+              )}
+
+              {selected.kind === "task" && selected.sponsors && (
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Tag size={15} className="text-gray-400" />
-                  {selected.sponsorId ? (
-                    <Link
-                      href={`/admin/sponsors/${selected.sponsorId}`}
-                      className="text-brand-600 hover:text-brand-700 hover:underline font-medium"
-                      onClick={() => setSelected(null)}
-                    >
-                      {selected.sponsorName}
-                    </Link>
-                  ) : (
-                    <span>{selected.sponsorName}</span>
-                  )}
+                  <Link
+                    href={`/admin/sponsors/${selected.sponsors.id}`}
+                    className="text-brand-600 hover:text-brand-700 hover:underline font-medium"
+                    onClick={() => setSelected(null)}
+                  >
+                    {selected.sponsors.name}
+                  </Link>
                 </div>
+              )}
+
+              {selected.kind === "task" && (
+                <Link
+                  href={`/admin/tasks/${selected.id}`}
+                  className="flex items-center gap-1.5 text-sm text-brand-600 hover:text-brand-700 font-medium"
+                  onClick={() => setSelected(null)}
+                >
+                  <ExternalLink size={14} />
+                  Otvori zadatak
+                </Link>
               )}
 
               {selected.kind === "static" && (
