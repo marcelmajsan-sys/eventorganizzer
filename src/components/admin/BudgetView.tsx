@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Pencil, Trash2, X, Check, Loader2, TrendingUp, Wallet, CircleDollarSign, ListChecks } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Loader2, TrendingUp, Wallet, CircleDollarSign, ListChecks, Search } from "lucide-react";
 
 type BudgetStatus = "pending" | "paid" | "cancelled";
 
@@ -56,6 +56,7 @@ interface Props {
 export default function BudgetView({ items: initial }: Props) {
   const [items, setItems]           = useState(initial);
   const [filter, setFilter]         = useState<FilterTab>("all");
+  const [query, setQuery]           = useState("");
   const [showModal, setShowModal]   = useState(false);
   const [editing, setEditing]       = useState<BudgetItem | null>(null);
   const [form, setForm]             = useState(emptyForm);
@@ -67,7 +68,10 @@ export default function BudgetView({ items: initial }: Props) {
 
   useEffect(() => { setItems(initial); }, [initial]);
 
-  const filtered = filter === "all" ? items : items.filter(i => i.status === filter);
+  const q = query.toLowerCase();
+  const filtered = items
+    .filter(i => filter === "all" || i.status === filter)
+    .filter(i => !q || i.category.toLowerCase().includes(q) || (i.vendor ?? "").toLowerCase().includes(q));
 
   const totalBudget  = items.filter(i => i.status !== "cancelled").reduce((s, i) => s + i.amount, 0);
   const totalPaid    = items.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
@@ -200,9 +204,25 @@ export default function BudgetView({ items: initial }: Props) {
               </button>
             ))}
           </div>
-          <button onClick={openAdd} className="btn-primary text-sm py-2">
-            <Plus size={14} /> Dodaj trošak
-          </button>
+          <div className="flex items-center gap-2 flex-1 justify-end">
+            <div className="relative max-w-xs w-full">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Traži kategoriju ili dobavljača..."
+                className="input-field pl-8 text-sm py-2"
+              />
+              {query && (
+                <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+            <button onClick={openAdd} className="btn-primary text-sm py-2 shrink-0">
+              <Plus size={14} /> Dodaj trošak
+            </button>
+          </div>
         </div>
 
         {filtered.length === 0 ? (

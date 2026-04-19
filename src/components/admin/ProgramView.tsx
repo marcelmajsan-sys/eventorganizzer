@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Pencil, Trash2, X, Check, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Loader2, Search } from "lucide-react";
 
 type Stage = "future" | "action" | "wonderland" | "all";
 type SessionType = "talk" | "panel" | "fireside" | "keynote" | "break" | "networking";
@@ -81,6 +81,7 @@ interface Props {
 export default function ProgramView({ sessions: initial }: Props) {
   const [sessions, setSessions]       = useState(initial);
   const [activeTab, setActiveTab]     = useState<StageTab>("sve");
+  const [query, setQuery]             = useState("");
   const [showModal, setShowModal]     = useState(false);
   const [editing, setEditing]         = useState<Session | null>(null);
   const [form, setForm]               = useState(emptyForm);
@@ -92,9 +93,10 @@ export default function ProgramView({ sessions: initial }: Props) {
 
   useEffect(() => { setSessions(initial); }, [initial]);
 
-  const filtered = activeTab === "sve"
-    ? sessions
-    : sessions.filter(s => s.stage === activeTab || s.stage === "all");
+  const q = query.toLowerCase();
+  const filtered = sessions
+    .filter(s => activeTab === "sve" || s.stage === activeTab || s.stage === "all")
+    .filter(s => !q || s.topic.toLowerCase().includes(q) || (s.speaker_name ?? "").toLowerCase().includes(q));
 
   // Group by time slot
   const timeMap = new Map<string, Session[]>();
@@ -177,7 +179,7 @@ export default function ProgramView({ sessions: initial }: Props) {
   return (
     <div>
       {/* Controls */}
-      <div className="flex items-center justify-between mb-5 gap-4 flex-wrap">
+      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {STAGE_TABS.map(tab => (
             <button
@@ -193,9 +195,25 @@ export default function ProgramView({ sessions: initial }: Props) {
             </button>
           ))}
         </div>
-        <button onClick={openAdd} className="btn-primary">
-          <Plus size={15} /> Dodaj sesiju
-        </button>
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          <div className="relative max-w-xs w-full">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Traži govornika ili temu..."
+              className="input-field pl-8 text-sm py-2"
+            />
+            {query && (
+              <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <button onClick={openAdd} className="btn-primary shrink-0">
+            <Plus size={15} /> Dodaj sesiju
+          </button>
+        </div>
       </div>
 
       {/* Timeline */}
