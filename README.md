@@ -1,260 +1,213 @@
-# CRO Commerce Sponzorski Portal 2025
+# CRO Commerce Event Organizer
 
-Kompletni sponzorski portal za upravljanje sponzorima, benefitima i isporukom sadržaja za CRO Commerce konferenciju.
+Interni admin portal za upravljanje CRO Commerce konferencijom. Izgrađen s Next.js 14, Supabase i Tailwind CSS.
 
-## 🏗 Tech Stack
-
-- **Next.js 14** — App Router + TypeScript
-- **Tailwind CSS** — UI styling
-- **Supabase** — PostgreSQL baza + Auth + Storage
-- **Resend** — Transakcijski emailovi
-- **@dnd-kit** — Drag & drop Kanban board
-- **Vercel** — Hosting + Cron poslovi
+**Live:** https://eventorganizzer.vercel.app
 
 ---
 
-## 🚀 Deploy upute (korak po korak)
+## Što aplikacija radi
 
-### 1. Priprema Supabase projekta
+- **Sponzori** — praćenje sponzora, paketa i statusa plaćanja
+- **Benefiti** — upravljanje benefitima sponzora s rokovima i statusima (nije početo / u tijeku / završeno / kasni)
+- **Kontakti** — kontakt osobe i osobe za ulaznice po sponzoru
+- **Upload datoteka** — dokumenti vezani za sponzore
+- **Program** — program konferencije po pozornicama (Future / Action / Wonderland Stage)
+- **Troškovi** — praćenje troškova eventa s budžetom i statusima plaćanja
+- **Zadaci** — Kanban board (Za napraviti / U tijeku / Završeno)
+- **Rokovnik** — godišnji pregled svih zadataka po rokovima s filtrom po odgovornoj osobi
+- **Postavke** — datum konferencije, upravljanje korisnicima (dodavanje, uređivanje, brisanje)
+- **Multi-projekt** — CRO Commerce 2026 i 2025, prebacivanje bez ponovnog logina
 
-1. Idite na [supabase.com](https://supabase.com) i kreirajte novi projekt
-2. U **SQL Editoru** (lijevi sidebar → SQL Editor), pokrenite cijeli sadržaj datoteke:
-   ```
-   supabase/migration_001_initial.sql
-   ```
-3. U **Storage** (lijevi sidebar → Storage):
-   - Kliknite "New bucket"
-   - Ime bucketa: `sponsor-files`
-   - Označite "Public bucket" ✓
-   - Kliknite "Create bucket"
-4. U **Authentication → Providers**:
-   - Email/Password mora biti uključen (je by default)
-5. Kreirajte admin korisnike u **Authentication → Users → Add user**:
-   - `marcel@cro-commerce.hr` (zamijeni s pravim emailom)
-   - `dino@cro-commerce.hr`
-   - `goran@cro-commerce.hr`
-6. Za svaki seed sponzor koji treba pristup portalu, dodajte korisnika s njihovim `contact_email`-om
-7. Zapišite si iz **Settings → API**:
-   - Project URL
-   - anon/public key
-   - service_role key (čuvajte tajnim!)
+---
 
-### 2. Postavljanje Resend-a
+## Tech stack
 
-1. Registrirajte se na [resend.com](https://resend.com)
-2. Dodajte i verificirajte vašu domenu (npr. `cro-commerce.hr`)
-3. Kreirajte API key u **API Keys** sekciji
-4. Zapišite API key
+| | |
+|---|---|
+| Framework | Next.js 14 (App Router, TypeScript) |
+| Baza podataka | Supabase (PostgreSQL) |
+| Auth | Supabase Auth (email + lozinka) |
+| Styling | Tailwind CSS |
+| Drag & drop | @dnd-kit (Kanban) |
+| Email | Resend |
+| Deployment | Vercel |
 
-### 3. Lokalni razvoj
+---
+
+## Pokretanje lokalno
 
 ```bash
-# Klonirajte repo
-git clone <vaš-repo>
-cd cro-commerce-portal
+# Dev direktorij
+cd cro-commerce-portal/cro-commerce-portal
 
-# Instalirajte dependencies
+# Instaliraj dependencije
 npm install
 
-# Kopirajte env file
-cp .env.example .env.local
+# Kreiraj .env.local (pogledaj .env.example)
+cp ../../.env.example .env.local
 
-# Ispunite .env.local s vašim vrijednostima
-# (Supabase URL, keys, Resend key, itd.)
-
-# Pokrenite development server
+# Pokreni
 npm run dev
+# → http://localhost:3000
 ```
 
-Otvorite [http://localhost:3000](http://localhost:3000)
+---
 
-### 4. Deploy na Vercel
+## Environment varijable
 
-#### Opcija A: Vercel CLI
+```env
+# Supabase — CRO Commerce 2026
+NEXT_PUBLIC_SUPABASE_URL_2026=
+NEXT_PUBLIC_SUPABASE_ANON_KEY_2026=
+SUPABASE_SERVICE_ROLE_KEY_2026=
+
+# Supabase — CRO Commerce 2025
+NEXT_PUBLIC_SUPABASE_URL_2025=
+NEXT_PUBLIC_SUPABASE_ANON_KEY_2025=
+SUPABASE_SERVICE_ROLE_KEY_2025=
+
+# Fallback (ako _2026/_2025 nisu postavljeni)
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Email
+RESEND_API_KEY=
+
+# App
+NEXT_PUBLIC_APP_URL=https://eventorganizzer.vercel.app
+ADMIN_EMAIL=tim@cro-commerce.hr
+CRON_SECRET=
+```
+
+Supabase ključeve naći ćeš u: **Supabase Dashboard → Settings → API**
+
+---
+
+## Baza podataka
+
+### Tablice
+
+| Tablica | Opis |
+|---|---|
+| `sponsors` | Sponzori — naziv, paket, kontakt, status plaćanja |
+| `sponsor_benefits` | Benefiti sponzora s rokovima i statusima |
+| `sponsor_contacts` | Kontakt osobe i osobe za ulaznice po sponzoru |
+| `files` | Upload datoteke vezane za sponzore |
+| `tasks` | Kanban zadaci |
+| `program_sessions` | Sesije programa konferencije (s `project_id`) |
+| `budget_items` | Stavke troškova (s `project_id`) |
+| `project_settings` | Datum konferencije po projektu |
+| `project_admins` | Korisnici s pristupom portalu |
+
+### Tipovi paketa
+`Glavni` · `Zlatni` · `Srebrni` · `Brončani` · `Medijski` · `Community`
+
+### Statusi benefita
+`not_started` · `in_progress` · `completed` · `overdue`
+
+### Statusi plaćanja
+`paid` · `pending` · `overdue`
+
+### Migracije (kronološki redoslijed)
+
+```
+supabase/migration_001_initial.sql
+supabase/migration_002_nullable_sponsor_benefit.sql
+supabase/migration_003_optional_deadline_assigned_to.sql
+supabase/migration_004_task_benefit_category.sql
+supabase/migration_005_project_settings.sql
+supabase/migration_006_sponsor_contacts.sql
+supabase/migration_007_program_budget.sql
+supabase/migration_008_project_id.sql
+```
+
+**Pokretanje:** Supabase Dashboard → SQL Editor → New query → kopiraj sadržaj → Run.
+Ponovi za oba projekta (2025 i 2026) ako dijele istu bazu.
+
+---
+
+## Autentikacija i pristup
+
+- Login: email + lozinka na `/login`
+- Korisnici se upravljaju kroz **Admin panel → Postavke → Pristup portalu**
+- Novi korisnik se automatski kreira u obje baze (2025 i 2026)
+- Svi korisnici u tablici `project_admins` imaju puni pristup admin panelu
+
+### Promjena projekta
+Cookie `cro_active_project` (`2026` | `2025`) — prebacivanje bez ponovnog logina putem ProjectSwitcher komponente u sidebaru.
+
+---
+
+## Deployment
+
 ```bash
-npm install -g vercel
-vercel login
-vercel --prod
+# Push na main → automatski deploy na Vercel
+git push origin main
+
+# Ručni redeploy (bez promjena koda)
+git commit --allow-empty -m 'Force redeploy'
+git push
 ```
 
-#### Opcija B: GitHub integracija (preporučeno)
-1. Pushajte kod na GitHub
-2. Idite na [vercel.com](https://vercel.com) → "Add New Project"
-3. Importirajte vaš GitHub repozitorij
-4. U **Environment Variables** dodajte sve varijable iz `.env.example`:
-
-| Varijabla | Vrijednost |
-|-----------|-----------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
-| `RESEND_API_KEY` | Resend API key |
-| `NEXT_PUBLIC_APP_URL` | https://vaša-domena.vercel.app |
-| `ADMIN_EMAIL` | tim@cro-commerce.hr |
-| `CRON_SECRET` | Generirani random string |
-
-5. Kliknite **Deploy**
-
-### 5. Konfiguracija Vercel Cron-a
-
-Vercel automatski detektira `vercel.json` i pokreće cron posao svaki dan u 8:00 UTC.
-
-U Vercel dashboardu dodajte environment varijablu:
-```
-CRON_SECRET=your-very-secret-key
-```
-
-Cron endpoint: `GET /api/cron/reminders`
-- Authorization: `Bearer {CRON_SECRET}`
-- Šalje podsjetnik 30 dana prije roka
-- Šalje urgentni email 7 dana prije roka
-- Obavještava admin tim kada rok prođe
-
-### 6. Postavljanje custom domene (opcionalno)
-
-1. U Vercel projektu: **Settings → Domains**
-2. Dodajte `portal.cro-commerce.hr`
-3. Konfigurirajte DNS prema uputama
-4. Ažurirajte `NEXT_PUBLIC_APP_URL` env varijablu
+### Vercel konfiguracija
+- Root directory: `/`
+- Build command: `next build`
+- Output: `.next`
+- Node: 18+
 
 ---
 
-## 👥 Korisnici i role
+## Email podsjetnici (Cron)
 
-### Admin (Marcel, Dino, Goran)
-- Pristup: `/admin/*`
-- Email: Definirani u `middleware.ts` i Supabase Auth
-- Mogu: vidjeti sve sponzore, upravljati zadacima, pratiti rokove
-
-### Sponzori
-- Pristup: `/portal`
-- Email: Mora biti jednak `contact_email` u tablici `sponsors`
-- Mogu: vidjeti svoje benefite, uploadati materijale, čitati obavijesti
-
----
-
-## 📁 Struktura projekta
-
-```
-src/
-├── app/
-│   ├── admin/
-│   │   ├── dashboard/     # Metrike i pregled
-│   │   ├── sponsors/      # Lista + detalji sponzora
-│   │   │   └── [id]/
-│   │   ├── tasks/         # Kanban board
-│   │   └── calendar/      # Godišnji plan
-│   ├── portal/            # Sponzorski portal
-│   ├── login/             # Auth stranica
-│   └── api/
-│       ├── sponsors/      # REST API
-│       └── cron/
-│           └── reminders/ # Email podsjetnici
-├── components/
-│   ├── admin/
-│   │   ├── AdminSidebar
-│   │   ├── KanbanBoard    # dnd-kit
-│   │   ├── AddSponsorModal
-│   │   ├── AddTaskModal
-│   │   ├── BenefitStatusSelect
-│   │   ├── EditSponsorForm
-│   │   └── FileUploadSection
-│   └── portal/
-│       ├── PortalHeader
-│       └── PortalFileUpload
-├── lib/
-│   ├── supabase/
-│   │   ├── client.ts      # Browser client
-│   │   └── server.ts      # Server client + admin
-│   ├── email.ts           # Resend templates
-│   └── utils.ts           # Helper funkcije
-└── types/
-    └── index.ts           # TypeScript tipovi
-```
-
----
-
-## 📧 Email podsjetnici
-
-Automatski se šalju:
+Vercel Cron pokreće `/api/cron/reminders` svaki dan u 8:00 UTC.
 
 | Kada | Kome | Sadržaj |
-|------|------|---------|
+|---|---|---|
 | 30 dana prije roka | Sponzoru | Prijateljski podsjetnik |
 | 7 dana prije roka | Sponzoru | Urgentni email |
 | Dan nakon roka | Admin timu | Alert s detaljima kašnjenja |
 
 ---
 
-## 🗄 Baza podataka
+## Struktura repozitorija
 
-### Tablice
-
-- **sponsors** — Profili sponzora s paketom i statusom plaćanja
-- **packages** — Definicije paketa s benefitima (JSONB)
-- **sponsor_benefits** — Individualni benefiti s rokovima i statusima
-- **tasks** — Interni zadaci za Kanban board
-- **files** — Upload metadati (datoteke su u Supabase Storage)
-- **notifications** — Inbox obavijesti za sponzore
-
-### RLS politike
-
-- Admini imaju puni pristup svim tablicama
-- Sponzori vide samo vlastite podatke (filtriranje po `contact_email`)
-- Storage: sponzori mogu uploadati samo u vlastiti folder (`{sponsor_id}/`)
-
----
-
-## 🎨 Sponzorski paketi
-
-| Paket | Benefiti |
-|-------|----------|
-| **Glavni** | Govor na gl. pozornici + Podcast + VIP štand + Naslovnica magazina + 3 str. oglasi + 10 kotizacija |
-| **Zlatni** | Govor/panel + Veliki štand + Oglas u magazinu + 8 kotizacija |
-| **Srebrni** | Workshop + Veliki štand + Goodie bag + Oglas + 5 kotizacija |
-| **Brončani** | Mali štand + Goodie bag + 3 kotizacije |
-
----
-
-## 🛠 Razvoj
-
-```bash
-# Development
-npm run dev
-
-# Build provjera
-npm run build
-
-# Lint
-npm run lint
+```
+eventorganizzer/
+├── src/                          ← Vercel deploya odavde (root)
+│   ├── app/
+│   │   ├── admin/                ← Admin panel (zaštićeno auth-om)
+│   │   │   ├── layout.tsx        ← Auth guard + sidebar
+│   │   │   ├── dashboard/
+│   │   │   ├── sponsors/
+│   │   │   ├── benefits/
+│   │   │   ├── program/
+│   │   │   ├── troskovi/
+│   │   │   ├── tasks/
+│   │   │   ├── calendar/
+│   │   │   └── settings/
+│   │   ├── actions/              ← Server actions (mutacije)
+│   │   ├── api/                  ← REST API + cron job
+│   │   ├── login/
+│   │   └── portal/               ← Sponzorski portal (javni)
+│   ├── components/
+│   │   ├── admin/                ← Admin UI komponente
+│   │   └── portal/               ← Portal UI komponente
+│   ├── lib/
+│   │   ├── supabase/             ← Supabase klijenti (client/server/admin)
+│   │   ├── email.ts
+│   │   └── utils.ts
+│   └── middleware.ts             ← Auth guard
+├── supabase/                     ← SQL migracije
+├── cro-commerce-portal/          ← Lokalni dev direktorij (kopija src/)
+├── .env.example
+├── .npmrc                        ← legacy-peer-deps=true (dnd-kit)
+└── CLAUDE.md                     ← Interne upute za AI asistenta
 ```
 
-### Dodavanje novog sponzora (programski)
-
-```typescript
-// Putem API-a
-POST /api/sponsors
-{
-  "name": "Nova Tvrtka d.o.o.",
-  "package_type": "Zlatni",
-  "contact_email": "kontakt@novatvrtka.hr",
-  "contact_name": "Ime Prezime",
-  "payment_status": "pending"
-}
-```
-
-Benefiti se automatski kreiraju prema paketu.
+> **Napomena:** Postoje dvije kopije koda — `src/` (root, Vercel deploya odavde) i `cro-commerce-portal/cro-commerce-portal/src/` (lokalni dev). Nakon svake promjene u lokalnom dev direktoriju, datoteke je potrebno kopirati u root `src/` prije commita.
 
 ---
 
-## ⚠️ Važne napomene
-
-1. **Service Role Key** nikad ne smije biti na frontendu (samo server-side)
-2. **CRON_SECRET** mora biti isti u `vercel.json` i environment varijablama
-3. Za Resend, domena pošiljatelja mora biti verificirana
-4. Supabase Storage bucket mora biti kreiran PRIJE uploada datoteka
-5. Admin emailovi moraju biti dodani i u `middleware.ts` i u Supabase Auth
-
----
-
-© 2025 CRO Commerce | Sva prava pridržana
+© 2025–2026 CRO Commerce · Sva prava pridržana
