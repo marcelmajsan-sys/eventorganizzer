@@ -14,12 +14,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const ADMIN_EMAILS = [
-    "marcel@ecommerce.hr",
-    "udruga@ecommerce.hr",
-    "laura@ecommerce.hr",
-  ];
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -34,11 +28,7 @@ export default function LoginPage() {
     }
 
     if (data.user) {
-      if (ADMIN_EMAILS.includes(data.user.email ?? "")) {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/portal");
-      }
+      router.push("/admin/dashboard");
       router.refresh();
     }
   }
@@ -59,7 +49,7 @@ export default function LoginPage() {
             <span className="text-white font-display font-bold text-xl">CC</span>
           </div>
           <h1 className="font-display text-3xl font-bold text-gray-900">CRO Commerce</h1>
-          <p className="text-gray-500 mt-1">Sponzorski portal · 2025</p>
+          <p className="text-gray-500 mt-1">Admin portal</p>
         </div>
 
         {/* Login card */}

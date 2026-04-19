@@ -14,12 +14,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const ADMIN_EMAILS = [
-    "marcel@ecommerce.hr",
-    "udruga@ecommerce.hr",
-    "laura@ecommerce.hr",
-  ];
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -34,11 +28,7 @@ export default function LoginPage() {
     }
 
     if (data.user) {
-      if (ADMIN_EMAILS.includes(data.user.email ?? "")) {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/portal");
-      }
+      router.push("/admin/dashboard");
       router.refresh();
     }
   }
