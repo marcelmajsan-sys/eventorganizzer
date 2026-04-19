@@ -37,19 +37,24 @@ INSERT INTO program_sessions (time_start, time_end, stage, speaker_name, topic, 
 ('20:00', '00:00', 'all',        NULL,                    'Afterparty (Mozaik)',                            'networking',180);
 
 -- Seed: CRO Commerce 2025 - Troškovi
+-- Nazivi i vendori su točni prema tablici
+
 INSERT INTO budget_items (category, vendor, amount, status, notes, sort_order) VALUES
-('Fotografija',            'ramai',                                           800.00,   'pending', NULL, 10),
-('Snimanje (bez streaminga)', 'Neuralab',                                   2000.00,   'pending', NULL, 20),
-('Zabava / After',         'DJ, barmen',                                    1700.00,   'pending', NULL, 30),
-('Marketing',              'FB, Google, Hero',                              2500.00,   'pending', NULL, 40),
-('Ispomoć (studenti)',     NULL,                                               0.00,   'pending', NULL, 50),
-('Nagrade i provizije',    NULL,                                            1500.00,   'pending', NULL, 60),
-('Tehnika',                'Goran DJI',                                     2000.00,   'pending', NULL, 70),
-('Prostor i ručak',        NULL,                                           11000.00,   'pending', NULL, 80),
-('Trošak predavača',       'Bildi, Ašković, Varga, Tintor',                2000.00,   'pending', NULL, 90),
-('Voditelji eventa',       'Petar Štefanić, Maja Vratarić, Dino Oreški',   2300.00,   'pending', NULL,100),
-('Prodaja ulaznica',       'kartične provizije',                             300.00,   'pending', NULL,110),
-('Leon materijali',        'Leon',                                             0.00,   'pending', NULL,120),
-('Novinar / PR',           'Goran',                                        1000.00,   'pending', NULL,130),
-('Snimanje teasera',       'Justa',                                        1000.00,   'pending', NULL,140),
-('Ostali troškovi',        'barske, frižider, pizze za crew',               800.00,   'pending', NULL,150);
+('Fotkanje eventa',                    'ramai (300+17%), goran (350+pdv)',                       800.00,   'pending', NULL,  10),
+('Snimanje glavni stage i sekundarni', 'Neuralab (bez streaminga)',                            2000.00,   'pending', NULL,  20),
+('Zabava / after - DJ / bend / tehnika / barmen', 'dj, barmen',                               1700.00,   'pending', NULL,  30),
+('Marketing',                          'fb, gugl, hero',                                       2500.00,   'pending', NULL,  40),
+('Ispomoć',                            'studenti',                                                0.00,   'pending', NULL,  50),
+('Nagrade (provizije i naš tim)',       NULL,                                                   1500.00,   'pending', NULL,  60),
+('Izrada materijala (grafičar)',        NULL,                                                      0.00,   'pending', NULL,  70),
+('Tehnika',                            'goran dji',                                            2000.00,   'pending', NULL,  80),
+('Prostor i ručak',                    NULL,                                                  11000.00,   'pending', NULL,  90),
+('Trošak predavača',                   'bildi, ašković, varga, tintor',                        2000.00,   'pending', NULL, 100),
+('Voditelj eventa',                    'petar štefanić (800), maja vratarić (500), dino oreški (1000)', 2300.00, 'pending', NULL, 110),
+('Prodaja ulaznica (troškovi)',         'kartične provizije',                                    300.00,   'pending', NULL, 120),
+('Leon materijali',                    'leon',                                                    0.00,   'pending', NULL, 130),
+('Novinar/izvještaj',                  'goran (pr i izvještaj)',                               1000.00,   'pending', NULL, 140),
+('Snimanje teasera na konfi',          'justa (600+članstvo)',                                 1000.00,   'pending', NULL, 150),
+('Ostali troškovi',                    'barske, frižider, pizze',                               800.00,   'pending', NULL, 160),
+('PR agencija',                        NULL,                                                      0.00,   'cancelled', NULL, 170),
+('Community management',               NULL,                                                      0.00,   'cancelled', NULL, 180);
