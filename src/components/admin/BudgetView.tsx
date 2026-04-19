@@ -271,7 +271,7 @@ export default function BudgetView({ items: initial }: Props) {
 
       {/* Add / Edit modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 pt-8">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-enter">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-900 text-base">
