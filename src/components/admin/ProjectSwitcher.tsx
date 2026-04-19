@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Check, FolderOpen } from "lucide-react";
+import { ChevronDown, Check, FolderOpen, Loader2 } from "lucide-react";
 import { switchProject } from "@/app/actions/switchProject";
 import type { ProjectId } from "@/lib/supabase/projects";
 
@@ -22,7 +22,7 @@ interface Props {
 
 export default function ProjectSwitcher({ activeProject, conferenceDates }: Props) {
   const [open, setOpen] = useState(false);
-  const [switching, setSwitching] = useState(false);
+  const [switching, setSwitching] = useState<ProjectId | null>(null);
 
   const projects: { id: ProjectId; label: string; sub: string }[] = (
     ["2026", "2025"] as ProjectId[]
@@ -35,9 +35,16 @@ export default function ProjectSwitcher({ activeProject, conferenceDates }: Prop
   const current = projects.find((p) => p.id === activeProject)!;
 
   async function handleSwitch(id: ProjectId) {
-    if (id === activeProject) { setOpen(false); return; }
-    setSwitching(true);
-    await switchProject(id);
+    if (id === activeProject || switching) { setOpen(false); return; }
+    setSwitching(id);
+    setOpen(false);
+    try {
+      await switchProject(id);
+    } catch {
+      // redirect() in Next.js throws — navigation is handled by the framework
+    } finally {
+      setSwitching(null);
+    }
   }
 
   return (
@@ -45,9 +52,13 @@ export default function ProjectSwitcher({ activeProject, conferenceDates }: Prop
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-2 bg-gray-800 hover:bg-gray-700 rounded-lg px-3 py-2.5 transition-colors text-left"
-        disabled={switching}
+        disabled={!!switching}
       >
-        <FolderOpen size={14} className="text-brand-400 flex-shrink-0" />
+        {switching ? (
+          <Loader2 size={14} className="text-brand-400 flex-shrink-0 animate-spin" />
+        ) : (
+          <FolderOpen size={14} className="text-brand-400 flex-shrink-0" />
+        )}
         <div className="flex-1 min-w-0">
           <p className="text-white text-xs font-semibold truncate">{current.label}</p>
           <p className="text-gray-500 text-xs">{current.sub}</p>
@@ -61,20 +72,26 @@ export default function ProjectSwitcher({ activeProject, conferenceDates }: Prop
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full left-0 right-0 mb-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl z-20">
+          <div
+            className="absolute bottom-full left-0 right-0 mb-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl z-20"
+            onClick={(e) => e.stopPropagation()}
+          >
             {projects.map((p) => (
               <button
                 key={p.id}
                 onClick={() => handleSwitch(p.id)}
-                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-700 transition-colors text-left"
-                disabled={switching}
+                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-700 transition-colors text-left disabled:opacity-50"
+                disabled={!!switching}
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-xs font-medium truncate">{p.label}</p>
                   <p className="text-gray-500 text-xs">{p.sub}</p>
                 </div>
-                {p.id === activeProject && (
+                {p.id === activeProject && !switching && (
                   <Check size={13} className="text-brand-400 flex-shrink-0" />
+                )}
+                {switching === p.id && (
+                  <Loader2 size={13} className="text-brand-400 flex-shrink-0 animate-spin" />
                 )}
               </button>
             ))}
