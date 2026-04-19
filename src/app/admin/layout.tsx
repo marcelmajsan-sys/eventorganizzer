@@ -46,7 +46,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // Tables not yet created — use hardcoded fallbacks
   }
 
-  if (!adminEmails.includes(user.email ?? "")) redirect("/login");
+  if (!adminEmails.includes(user.email ?? "")) redirect("/portal");
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
