@@ -31,7 +31,7 @@ export default async function CalendarPage() {
   const supabase = await createClient();
   const { data: tasks } = await supabase
     .from("tasks")
-    .select("id, title, due_date, assigned_to, status, sponsor_id, sponsors(id, name)")
+    .select("id, title, description, due_date, assigned_to, status, sponsor_id, sponsors(id, name)")
     .not("due_date", "is", null)
     .order("due_date");
 

@@ -62,6 +62,7 @@ interface StaticEvent {
 interface TaskEvent {
   id: string;
   title: string;
+  description: string | null;
   due_date: string;
   assigned_to: string | null;
   status: string;
@@ -83,7 +84,7 @@ export default function CalendarView({ staticEvents, tasks, currentMonth }: Prop
   const [selected, setSelected] = useState<Selected | null>(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ title: "", due_date: "", status: "", assigned_to: "" });
+  const [form, setForm] = useState({ title: "", description: "", due_date: "", status: "", assigned_to: "" });
   const router = useRouter();
   const supabase = createClient();
 
@@ -101,6 +102,7 @@ export default function CalendarView({ staticEvents, tasks, currentMonth }: Prop
     setEditing(false);
     setForm({
       title: task.title,
+      description: task.description ?? "",
       due_date: task.due_date.substring(0, 10),
       status: task.status,
       assigned_to: task.assigned_to ?? "",
@@ -118,6 +120,7 @@ export default function CalendarView({ staticEvents, tasks, currentMonth }: Prop
     setLoading(true);
     await supabase.from("tasks").update({
       title: form.title,
+      description: form.description || null,
       due_date: form.due_date || null,
       status: form.status,
       assigned_to: form.assigned_to || null,
@@ -227,6 +230,10 @@ export default function CalendarView({ staticEvents, tasks, currentMonth }: Prop
                   <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field text-sm" required />
                 </div>
                 <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Opis</label>
+                  <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-field text-sm resize-none" rows={2} placeholder="Opis zadatka..." />
+                </div>
+                <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Rok</label>
                   <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="input-field text-sm" />
                 </div>
@@ -255,6 +262,10 @@ export default function CalendarView({ staticEvents, tasks, currentMonth }: Prop
             {!editing && (
               <div className="p-5 space-y-4">
                 <p className="text-lg font-bold text-gray-900 leading-snug">{selected.title}</p>
+
+                {selected.kind === "task" && selected.description && (
+                  <p className="text-sm text-gray-500 leading-relaxed">{selected.description}</p>
+                )}
 
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Calendar size={15} className="text-gray-400" />
