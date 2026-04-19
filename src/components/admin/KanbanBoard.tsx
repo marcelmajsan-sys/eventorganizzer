@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 import { Calendar, Tag, GripVertical, ExternalLink } from "lucide-react";
 import { formatDate, packageBadgeColor } from "@/lib/utils";
 import type { Task, TaskStatus } from "@/types";
@@ -51,7 +52,9 @@ function TaskCard({ task, isDragging }: TaskCardProps) {
           <GripVertical size={14} />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 leading-snug">{task.title}</p>
+          <Link href={`/admin/tasks/${task.id}`} className="text-sm font-medium text-gray-900 leading-snug hover:text-brand-600 transition-colors line-clamp-2 block">
+            {task.title}
+          </Link>
           {task.description && (
             <p className="text-xs text-gray-500 mt-1 line-clamp-2">{task.description}</p>
           )}
