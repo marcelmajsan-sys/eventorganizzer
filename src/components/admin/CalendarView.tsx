@@ -222,92 +222,90 @@ export default function CalendarView({ staticEvents, tasks, currentMonth }: Prop
               </div>
             </div>
 
-            {/* Edit form */}
-            {editing && selected.kind === "task" && (
-              <form onSubmit={handleSave} className="p-5 space-y-3">
+            {/* Task: always show all data + inline edit */}
+            {selected.kind === "task" && (
+              <form onSubmit={handleSave} className="p-5 space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Naziv</label>
-                  <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field text-sm" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Opis</label>
-                  <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-field text-sm resize-none" rows={2} placeholder="Opis zadatka..." />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Rok</label>
-                  <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="input-field text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
-                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="input-field text-sm">
-                    <option value="todo">Za napraviti</option>
-                    <option value="in_progress">U tijeku</option>
-                    <option value="done">Završeno</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Odgovorna osoba</label>
-                  <input type="text" value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value })} className="input-field text-sm" placeholder="Marcel, Dino..." />
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <button type="button" onClick={() => setEditing(false)} className="btn-secondary flex-1 justify-center text-sm">Odustani</button>
-                  <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center text-sm">
-                    {loading ? <><Loader2 size={13} className="animate-spin" /> Sprema...</> : <><Save size={13} /> Spremi</>}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Detail view */}
-            {!editing && (
-              <div className="p-5 space-y-4">
-                <p className="text-lg font-bold text-gray-900 leading-snug">{selected.title}</p>
-
-                {selected.kind === "task" && selected.description && (
-                  <p className="text-sm text-gray-500 leading-relaxed">{selected.description}</p>
-                )}
-
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar size={15} className="text-gray-400" />
-                  <span>{formatFullDate(selected.day, selected.kind === "task" ? selected.month : selected.month)}</span>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Naziv</label>
+                  {editing
+                    ? <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field text-sm" required />
+                    : <p className="text-base font-semibold text-gray-900">{selected.title}</p>}
                 </div>
 
-                {selected.kind === "task" && selected.assigned_to && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <User size={15} className="text-gray-400" />
-                    <span>{selected.assigned_to}</span>
+                {(editing || selected.description) && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Opis</label>
+                    {editing
+                      ? <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-field text-sm resize-none" rows={3} placeholder="Opis zadatka..." />
+                      : <p className="text-sm text-gray-600 whitespace-pre-wrap">{selected.description}</p>}
                   </div>
                 )}
 
-                {selected.kind === "task" && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    {STATUS_ICON[selected.status]}
-                    <span>{STATUS_LABEL[selected.status] ?? selected.status}</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Rok</label>
+                    {editing
+                      ? <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="input-field text-sm" />
+                      : <p className="text-sm text-gray-700">{formatFullDate(selected.day, selected.month)}</p>}
                   </div>
-                )}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                    {editing
+                      ? <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="input-field text-sm">
+                          <option value="todo">Za napraviti</option>
+                          <option value="in_progress">U tijeku</option>
+                          <option value="done">Završeno</option>
+                        </select>
+                      : <div className="flex items-center gap-1.5">{STATUS_ICON[selected.status]}<span className="text-sm text-gray-700">{STATUS_LABEL[selected.status]}</span></div>}
+                  </div>
+                </div>
 
-                {selected.kind === "task" && selected.sponsors && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Tag size={15} className="text-gray-400" />
-                    <Link href={`/admin/sponsors/${selected.sponsors.id}`} className="text-brand-600 hover:text-brand-700 hover:underline font-medium" onClick={closeModal}>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Odgovorna osoba</label>
+                  {editing
+                    ? <input type="text" value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value })} className="input-field text-sm" placeholder="Marcel, Dino..." />
+                    : <p className="text-sm text-gray-700">{selected.assigned_to ?? <span className="text-gray-300">—</span>}</p>}
+                </div>
+
+                {selected.sponsors && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Sponzor</label>
+                    <Link href={`/admin/sponsors/${selected.sponsors.id}`} className="text-sm text-brand-600 hover:underline font-medium" onClick={closeModal}>
                       {selected.sponsors.name}
                     </Link>
                   </div>
                 )}
 
-                {selected.kind === "task" && (
-                  <Link href={`/admin/tasks/${selected.id}`} className="flex items-center gap-1.5 text-sm text-brand-600 hover:text-brand-700 font-medium" onClick={closeModal}>
-                    <ExternalLink size={14} />
-                    Otvori zadatak
-                  </Link>
-                )}
+                <div className="flex gap-2 pt-1 border-t border-gray-100">
+                  {editing ? (
+                    <>
+                      <button type="button" onClick={() => setEditing(false)} className="btn-secondary flex-1 justify-center text-sm">Odustani</button>
+                      <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center text-sm">
+                        {loading ? <><Loader2 size={13} className="animate-spin" /> Sprema...</> : <><Save size={13} /> Spremi</>}
+                      </button>
+                    </>
+                  ) : (
+                    <Link href={`/admin/tasks/${selected.id}`} className="flex items-center gap-1.5 text-sm text-brand-600 hover:text-brand-700 font-medium" onClick={closeModal}>
+                      <ExternalLink size={14} />
+                      Otvori zadatak
+                    </Link>
+                  )}
+                </div>
+              </form>
+            )}
 
-                {selected.kind === "static" && (
-                  <Link href={selected.href} className="flex items-center gap-1.5 text-sm text-brand-600 hover:text-brand-700 font-medium" onClick={closeModal}>
-                    <ExternalLink size={14} />
-                    Otvori sekciju
-                  </Link>
-                )}
+            {/* Static event detail */}
+            {selected.kind === "static" && (
+              <div className="p-5 space-y-4">
+                <p className="text-lg font-bold text-gray-900 leading-snug">{selected.title}</p>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Calendar size={15} className="text-gray-400" />
+                  <span>{formatFullDate(selected.day, selected.month)}</span>
+                </div>
+                <Link href={selected.href} className="flex items-center gap-1.5 text-sm text-brand-600 hover:text-brand-700 font-medium" onClick={closeModal}>
+                  <ExternalLink size={14} />
+                  Otvori sekciju
+                </Link>
               </div>
             )}
           </div>
