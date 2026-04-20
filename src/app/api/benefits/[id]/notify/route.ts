@@ -35,7 +35,8 @@ export async function POST(
             Obavještavamo vas o benefitu <strong>${benefit_name}</strong>${sponsor_name ? ` (${sponsor_name})` : ""}.
           </p>
           ${rows ? `<table style="border-collapse:collapse;width:100%;margin-bottom:24px">${rows}</table>` : ""}
-          <p style="margin:0;color:#6b7280;font-size:13px">Za pitanja javite se timu CRO Commerce.</p>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
+          <p style="margin:0;color:#9ca3af;font-size:13px">Ovo je automatizirana obavijest. Za sva pitanja proslijedite ovaj mail uz svoj upit na: <a href="mailto:konferencija@ecommerce.hr" style="color:#ea580c">konferencija@ecommerce.hr</a></p>
         </div>
         <div style="background:#f9fafb;padding:16px 32px;text-align:center;font-size:12px;color:#9ca3af">
           CRO Commerce · Zagreb · ecommerce.hr
