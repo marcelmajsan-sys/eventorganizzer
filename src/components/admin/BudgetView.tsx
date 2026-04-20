@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Pencil, Trash2, X, Check, Loader2, TrendingUp, Wallet, CircleDollarSign, ListChecks, Search } from "lucide-react";
 
-type BudgetStatus = "pending" | "paid" | "cancelled" | "unknown";
+type BudgetStatus = "pending" | "paid" | "cancelled";
 
 interface BudgetItem {
   id: string;
@@ -21,7 +21,6 @@ const STATUS_OPTIONS: { value: BudgetStatus; label: string }[] = [
   { value: "pending",   label: "Na čekanju" },
   { value: "paid",      label: "Plaćeno" },
   { value: "cancelled", label: "Otkazano" },
-  { value: "unknown",   label: "Nepotvrđeni trošak" },
 ];
 
 function statusStyle(status: BudgetStatus) {
@@ -29,7 +28,6 @@ function statusStyle(status: BudgetStatus) {
     case "paid":      return "bg-emerald-50 text-emerald-700 border-emerald-200";
     case "pending":   return "bg-amber-50 text-amber-700 border-amber-200";
     case "cancelled": return "bg-gray-100 text-gray-400 border-gray-200";
-    case "unknown":   return "bg-purple-50 text-purple-600 border-purple-200";
   }
 }
 
@@ -76,12 +74,10 @@ export default function BudgetView({ items: initial, projectId }: Props) {
     .filter(i => filter === "all" || i.status === filter)
     .filter(i => !q || i.category.toLowerCase().includes(q) || (i.vendor ?? "").toLowerCase().includes(q));
 
-  const totalBudget    = items.filter(i => i.status !== "cancelled").reduce((s, i) => s + i.amount, 0);
-  const totalPaid      = items.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
-  const totalPending   = items.filter(i => i.status === "pending").reduce((s, i) => s + i.amount, 0);
-  const totalUnknown   = items.filter(i => i.status === "unknown").reduce((s, i) => s + i.amount, 0);
-  const totalCancelled = items.filter(i => i.status === "cancelled").reduce((s, i) => s + i.amount, 0);
-  const paidPct        = totalBudget > 0 ? Math.round((totalPaid / totalBudget) * 100) : 0;
+  const totalBudget  = items.filter(i => i.status !== "cancelled").reduce((s, i) => s + i.amount, 0);
+  const totalPaid    = items.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
+  const totalPending = items.filter(i => i.status === "pending").reduce((s, i) => s + i.amount, 0);
+  const paidPct      = totalBudget > 0 ? Math.round((totalPaid / totalBudget) * 100) : 0;
 
   function openAdd() {
     setEditing(null);
@@ -147,13 +143,12 @@ export default function BudgetView({ items: initial, projectId }: Props) {
     { id: "pending",   label: "Na čekanju" },
     { id: "paid",      label: "Plaćeno" },
     { id: "cancelled", label: "Otkazano" },
-    { id: "unknown",   label: "Nepotvrđeni trošak" },
   ];
 
   return (
     <div className="space-y-5">
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-4">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-gray-500 font-medium">Ukupni budžet</p>
@@ -182,15 +177,6 @@ export default function BudgetView({ items: initial, projectId }: Props) {
           </div>
           <p className="text-xl font-bold text-amber-600">{formatEur(totalPending)}</p>
           <p className="text-xs text-gray-400 mt-1">{items.filter(i => i.status === "pending").length} stavki</p>
-        </div>
-
-        <div className="card p-4 border-purple-100">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-purple-500 font-medium">Nepotvrđeni trošak</p>
-            <ListChecks size={16} className="text-purple-400" />
-          </div>
-          <p className="text-xl font-bold text-purple-700">{formatEur(totalUnknown)}</p>
-          <p className="text-xs text-gray-400 mt-1">{items.filter(i => i.status === "unknown").length} stavki</p>
         </div>
 
         <div className="card p-4">
