@@ -99,8 +99,9 @@ function TemplateModal({ initial, onClose, onSaved }: ModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl animate-enter mb-8 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+      <div className="flex min-h-full items-start justify-center p-4 py-8">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl animate-enter">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="font-display text-xl font-bold text-gray-900">
             {initial ? "Uredi predložak" : "Novi predložak"}
@@ -183,6 +184,7 @@ function TemplateModal({ initial, onClose, onSaved }: ModalProps) {
             />
           </div>
         )}
+      </div>
       </div>
     </div>
   );
