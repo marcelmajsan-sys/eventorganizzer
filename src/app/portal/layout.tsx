@@ -26,6 +26,8 @@ export default async function PortalLayout({ children }: { children: React.React
 
   if (adminRow) redirect("/admin/dashboard");
 
+  const otherProjectId: ProjectId = projectId === "2026" ? "2025" : "2026";
+
   // Provjeri je li sponzor u aktivnom projektu
   const { data: sponsorUser } = await adminClient
     .from("sponsor_users")
@@ -67,7 +69,6 @@ export default async function PortalLayout({ children }: { children: React.React
   const sponsor = (Array.isArray(sponsorsRaw) ? sponsorsRaw[0] : sponsorsRaw) as { id: string; name: string; package_type: string };
 
   // Provjeri postoji li isti korisnik i u drugom projektu
-  const otherProjectId: ProjectId = projectId === "2026" ? "2025" : "2026";
   let otherProjectAvailable = false;
   try {
     if (PROJECTS[otherProjectId].url !== PROJECTS[projectId].url) {
