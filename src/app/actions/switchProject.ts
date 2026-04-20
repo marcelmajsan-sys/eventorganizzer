@@ -50,7 +50,8 @@ export async function switchProject(projectId: ProjectId) {
   redirect("/login");
 }
 
-// Returns the magic link URL so the client can navigate with window.location.href
+// Returns the magic link URL so the client can navigate with window.location.href.
+// Cookie is set server-side so the middleware still sees the OLD project during this request.
 export async function getPortalSwitchLink(targetProjectId: ProjectId): Promise<string | null> {
   const cookieStore = await cookies();
   const currentProjectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
@@ -72,5 +73,15 @@ export async function getPortalSwitchLink(targetProjectId: ProjectId): Promise<s
   });
 
   if (error || !data?.properties?.action_link) return null;
+
+  // Set cookie after generating the link — this goes into the response Set-Cookie header
+  // so the browser has the right project cookie when arriving at /auth/callback
+  cookieStore.set(PROJECT_COOKIE, targetProjectId, {
+    path: "/",
+    httpOnly: false,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
   return data.properties.action_link;
 }
