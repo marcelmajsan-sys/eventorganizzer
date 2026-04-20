@@ -36,31 +36,6 @@ export default async function PortalLayout({ children }: { children: React.React
     .maybeSingle();
 
   if (!sponsorUser) {
-    // Pokušaj drugi projekt — user možda ima sponsor_users samo tamo
-    try {
-      const fallbackAdmin = createAdminClientForProject(otherProjectId);
-      const { data: otherAuth } = await fallbackAdmin.auth.admin.listUsers({ perPage: 1000 });
-      const otherAuthUser = otherAuth?.users?.find(
-        (u) => u.email?.toLowerCase() === user.email?.toLowerCase()
-      );
-      if (otherAuthUser) {
-        const { data: otherSU } = await fallbackAdmin
-          .from("sponsor_users")
-          .select("id")
-          .eq("user_id", otherAuthUser.id)
-          .maybeSingle();
-        if (otherSU) {
-          // Prebaci cookie na projekt gdje user ima pristup i reload
-          cookieStore.set(PROJECT_COOKIE, otherProjectId, {
-            path: "/",
-            httpOnly: false,
-            sameSite: "lax",
-            maxAge: 60 * 60 * 24 * 365,
-          });
-          redirect("/portal/benefits");
-        }
-      }
-    } catch {}
     await supabase.auth.signOut();
     redirect("/login?error=no_access");
   }
