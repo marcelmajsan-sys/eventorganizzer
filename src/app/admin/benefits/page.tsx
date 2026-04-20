@@ -24,7 +24,7 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
     .lt("deadline", new Date().toISOString())
     .not("status", "in", '("completed","overdue")');
 
-  const [{ data: benefits }, { data: sponsors }] = await Promise.all([
+  const [{ data: benefits }, { data: sponsors }, { data: emailLogs }] = await Promise.all([
     supabase
       .from("sponsor_benefits")
       .select("id, benefit_name, deadline, status, notes, sponsors(id, name, package_type)")
@@ -33,9 +33,23 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
       .from("sponsors")
       .select("id, name, package_type")
       .order("name"),
+    supabase
+      .from("email_logs")
+      .select("benefit_id, created_at")
+      .order("created_at", { ascending: false }),
   ]);
 
-  const rows = benefits ?? [];
+  const lastRemindedMap: Record<string, string> = {};
+  emailLogs?.forEach((log) => {
+    if (log.benefit_id && !lastRemindedMap[log.benefit_id]) {
+      lastRemindedMap[log.benefit_id] = log.created_at;
+    }
+  });
+
+  const rows = (benefits ?? []).map((b) => ({
+    ...b,
+    last_reminded_at: lastRemindedMap[b.id] ?? null,
+  }));
   const sponsorList = sponsors ?? [];
 
   return (

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   CheckCircle2, Clock, AlertTriangle, XCircle, Gift,
-  ChevronDown, LayoutList, Tag, Pencil, Trash2, Loader2, Users, Search, X
+  ChevronDown, LayoutList, Tag, Pencil, Trash2, Loader2, Users, Search, X, Mail
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -22,6 +22,7 @@ type BenefitRow = {
   status: string;
   notes?: string | null;
   assigned_to?: string | null;
+  last_reminded_at?: string | null;
   sponsors: { id: string; name: string; package_type: string } | null;
 };
 
@@ -100,6 +101,15 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
         <span className={`badge text-xs flex-shrink-0 ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
           {benefitStatusLabel(benefit.status as BenefitStatus)}
         </span>
+
+        {benefit.last_reminded_at && (
+          <span
+            className="flex items-center gap-1 text-xs text-blue-500 flex-shrink-0"
+            title={`Podsjetnik poslan: ${new Date(benefit.last_reminded_at).toLocaleString("hr-HR")}`}
+          >
+            <Mail size={12} />
+          </span>
+        )}
 
         <Pencil size={13} className="flex-shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors" />
       </div>
@@ -326,6 +336,15 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
         <span className={`badge text-xs flex-shrink-0 ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
           {benefitStatusLabel(benefit.status as BenefitStatus)}
         </span>
+
+        {benefit.last_reminded_at && (
+          <span
+            className="flex items-center gap-1 text-xs text-blue-500 flex-shrink-0"
+            title={`Podsjetnik poslan: ${new Date(benefit.last_reminded_at).toLocaleString("hr-HR")}`}
+          >
+            <Mail size={12} />
+          </span>
+        )}
 
         <Pencil size={13} className="flex-shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors" />
       </div>
