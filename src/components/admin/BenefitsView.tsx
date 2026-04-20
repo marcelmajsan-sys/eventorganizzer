@@ -125,6 +125,13 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
   const router = useRouter();
   const supabase = createClient();
   const doneCount = rows.filter((r) => r.status === "completed").length;
+
+  const lastReminded = rows
+    .map((r) => r.last_reminded_at)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+
   const overdueCount = rows.filter(
     (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed")
   ).length;
@@ -153,6 +160,12 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
           <span className="font-semibold text-gray-900 text-sm group-hover:text-brand-700">{name}</span>
           <Pencil size={12} className="text-gray-300 group-hover:text-brand-500 transition-colors" />
         </button>
+        {lastReminded && (
+          <span className="flex items-center gap-1 text-xs text-blue-500 font-medium">
+            <Mail size={11} />
+            Podsjetnik {new Date(lastReminded).toLocaleDateString("hr-HR")}
+          </span>
+        )}
         <div className="flex items-center gap-3 flex-shrink-0">
           {overdueCount > 0 && (
             <span className="text-xs text-red-600 font-medium flex items-center gap-1">
