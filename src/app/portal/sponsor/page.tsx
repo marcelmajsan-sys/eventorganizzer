@@ -1,7 +1,7 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Building2, Mail, Phone, User, CreditCard, Users, Ticket } from "lucide-react";
-import { packageColor, paymentStatusLabel, paymentStatusColor } from "@/lib/utils";
+import { Building2, Mail, Phone, User, Users, Ticket, File, FileText } from "lucide-react";
+import { packageColor, paymentStatusLabel, paymentStatusColor, formatDate, formatFileSize } from "@/lib/utils";
 import type { PackageType, PaymentStatus } from "@/types";
 
 export default async function PortalSponsorPage() {
@@ -18,9 +18,10 @@ export default async function PortalSponsorPage() {
 
   if (!sponsorUser) redirect("/login");
 
-  const [{ data: sponsor }, { data: contacts }] = await Promise.all([
+  const [{ data: sponsor }, { data: contacts }, { data: files }] = await Promise.all([
     adminClient.from("sponsors").select("*").eq("id", sponsorUser.sponsor_id).single(),
     adminClient.from("sponsor_contacts").select("*").eq("sponsor_id", sponsorUser.sponsor_id).order("created_at"),
+    adminClient.from("files").select("*").eq("sponsor_id", sponsorUser.sponsor_id).order("uploaded_at", { ascending: false }),
   ]);
 
   if (!sponsor) redirect("/login");
@@ -112,7 +113,7 @@ export default async function PortalSponsorPage() {
 
       {/* Osobe za ulaznice */}
       {ticketContacts.length > 0 && (
-        <div className="card p-5">
+        <div className="card p-5 mb-4">
           <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-sm">
             <Ticket size={15} className="text-gray-400" />
             Osobe za ulaznice
@@ -130,6 +131,37 @@ export default async function PortalSponsorPage() {
                   {c.phone && <p className="text-xs text-gray-500">{c.phone}</p>}
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Datoteke */}
+      {(files ?? []).length > 0 && (
+        <div className="card p-5">
+          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-sm">
+            <FileText size={15} className="text-gray-400" />
+            Datoteke ({(files ?? []).length})
+          </h3>
+          <div className="space-y-2">
+            {(files ?? []).map((file) => (
+              <a
+                key={file.id}
+                href={file.storage_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 p-2.5 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
+              >
+                <File size={14} className="text-gray-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-700 group-hover:text-brand-600 truncate">
+                    {file.filename}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {file.file_size ? formatFileSize(file.file_size) : ""}{file.file_size ? " · " : ""}{formatDate(file.uploaded_at)}
+                  </p>
+                </div>
+              </a>
             ))}
           </div>
         </div>
