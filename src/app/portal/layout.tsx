@@ -31,7 +31,8 @@ export default async function PortalLayout({ children }: { children: React.React
     redirect("/login?error=no_access");
   }
 
-  const sponsor = sponsorUser.sponsors as { id: string; name: string; package_type: string };
+  const sponsorsRaw = sponsorUser.sponsors as unknown;
+  const sponsor = (Array.isArray(sponsorsRaw) ? sponsorsRaw[0] : sponsorsRaw) as { id: string; name: string; package_type: string };
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
