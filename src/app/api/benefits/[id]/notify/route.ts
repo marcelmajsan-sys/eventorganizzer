@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
+import { cookies } from "next/headers";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = "CRO Commerce <konferencija@ecommerce.hr>";
@@ -16,6 +17,10 @@ export async function POST(
       return NextResponse.json({ error: "Nije definirana odgovorna osoba (email)." }, { status: 400 });
     }
 
+    const cookieStore = await cookies();
+    const projectId = cookieStore.get("cro_active_project")?.value ?? "2026";
+    const projectName = `CRO Commerce ${projectId}`;
+
     const deadlineFormatted = deadline
       ? new Date(deadline).toLocaleDateString("hr-HR")
       : null;
@@ -25,7 +30,7 @@ export async function POST(
       deadlineFormatted && `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px">Rok:</td><td style="padding:8px 0;color:#111827;font-size:14px;font-weight:600">${deadlineFormatted}</td></tr>`,
     ].filter(Boolean).join("");
 
-    const subject = `CRO Commerce - ${benefit_name}`;
+    const subject = `${projectName} - Podsjetnik za ${benefit_name}`;
 
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
@@ -33,9 +38,9 @@ export async function POST(
           <span style="color:white;font-weight:700;font-size:18px">CRO Commerce</span>
         </div>
         <div style="padding:32px;background:white">
-          <p style="margin:0 0 8px;color:#374151;font-size:15px">Poštovani,</p>
+          <p style="margin:0 0 16px;color:#374151;font-size:15px">Poštovani,</p>
           <p style="margin:0 0 24px;color:#374151;font-size:15px">
-            Obavještavamo vas o benefitu <strong>${benefit_name}</strong>${sponsor_name ? ` (${sponsor_name})` : ""}.
+            podsjećamo vas na rok za korištenje benefita <strong>${benefit_name}</strong>${sponsor_name ? ` (${sponsor_name})` : ""}.
           </p>
           ${rows ? `<table style="border-collapse:collapse;width:100%;margin-bottom:24px">${rows}</table>` : ""}
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
