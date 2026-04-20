@@ -35,14 +35,14 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
       .order("name"),
     supabase
       .from("email_logs")
-      .select("benefit_id, created_at")
-      .order("created_at", { ascending: false }),
+      .select("benefit_id, sent_at")
+      .order("sent_at", { ascending: false }),
   ]);
 
   const lastRemindedMap: Record<string, string> = {};
   emailLogs?.forEach((log) => {
     if (log.benefit_id && !lastRemindedMap[log.benefit_id]) {
-      lastRemindedMap[log.benefit_id] = log.created_at;
+      lastRemindedMap[log.benefit_id] = log.sent_at;
     }
   });
 
