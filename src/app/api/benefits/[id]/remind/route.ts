@@ -83,6 +83,8 @@ export async function POST(
           <div style="padding:32px;background:white">
             <p style="margin:0 0 12px;color:#374151;font-size:15px">Podsjetnik za benefit <strong>${benefit.benefit_name}</strong> (${sponsorName}).</p>
             ${deadlineDate ? `<p style="margin:0 0 12px;color:#374151;font-size:15px">Rok: <strong>${deadlineDate.toLocaleDateString("hr-HR")}</strong>${daysLeft !== null ? ` (za ${daysLeft} dana)` : ""}</p>` : ""}
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
+            <p style="margin:0;color:#9ca3af;font-size:13px">Ovo je automatizirana obavijest. Za sva pitanja proslijedite ovaj mail uz svoj upit na: <a href="mailto:konferencija@ecommerce.hr" style="color:#ea580c">konferencija@ecommerce.hr</a></p>
           </div>
         </div>`;
     }
