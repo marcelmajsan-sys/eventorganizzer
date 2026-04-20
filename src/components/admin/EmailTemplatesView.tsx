@@ -99,17 +99,18 @@ function TemplateModal({ initial, onClose, onSaved }: ModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
-      <div className="flex min-h-full items-start justify-center p-4 py-8">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl animate-enter">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: "calc(100vh - 2rem)" }}>
+        {/* Header — fiksan */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
           <h2 className="font-display text-xl font-bold text-gray-900">
             {initial ? "Uredi predložak" : "Novi predložak"}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
         </div>
 
-        <div className="flex border-b border-gray-100">
+        {/* Tabovi — fiksan */}
+        <div className="flex border-b border-gray-100 flex-shrink-0">
           <button
             onClick={() => setTab("edit")}
             className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${tab === "edit" ? "border-brand-600 text-brand-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
@@ -124,67 +125,69 @@ function TemplateModal({ initial, onClose, onSaved }: ModalProps) {
           </button>
         </div>
 
-        {tab === "edit" ? (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Naziv predloška *</label>
-              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                className="input-field" placeholder="npr. Podsjetnik 7 dana prije roka" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Predmet emaila *</label>
-              <input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })}
-                className="input-field" placeholder="npr. Podsjetnik: rok benefita se bliži" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tijelo emaila *</label>
-              <p className="text-xs text-gray-400 mb-1.5">
-                Dostupne varijable: <code className="bg-gray-100 px-1 rounded">{"{{benefit_name}}"}</code>{" "}
-                <code className="bg-gray-100 px-1 rounded">{"{{sponsor_name}}"}</code>{" "}
-                <code className="bg-gray-100 px-1 rounded">{"{{deadline}}"}</code>{" "}
-                <code className="bg-gray-100 px-1 rounded">{"{{days_left}}"}</code>
-              </p>
-              <textarea value={form.body} onChange={e => setForm({ ...form, body: e.target.value })}
-                className="input-field resize-none" rows={6}
-                placeholder={"Poštovani,\n\nPodsjećamo vas da benefit {{benefit_name}} za sponzora {{sponsor_name}} ima rok {{deadline}} (za {{days_left}} dana).\n\nSrdačan pozdrav,\nTim CRO Commerce"} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+        {/* Scrollable sadržaj */}
+        <div className="overflow-y-auto flex-1">
+          {tab === "edit" ? (
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Tekst gumba (opcija)</label>
-                <input value={form.button_text} onChange={e => setForm({ ...form, button_text: e.target.value })}
-                  className="input-field" placeholder="npr. Otvori benefit" />
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Naziv predloška *</label>
+                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                  className="input-field" placeholder="npr. Podsjetnik 7 dana prije roka" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">URL gumba (opcija)</label>
-                <input value={form.button_url} onChange={e => setForm({ ...form, button_url: e.target.value })}
-                  className="input-field" placeholder="https://..." />
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Predmet emaila *</label>
+                <input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })}
+                  className="input-field" placeholder="npr. Podsjetnik: rok benefita se bliži" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Tijelo emaila *</label>
+                <p className="text-xs text-gray-400 mb-1.5">
+                  Dostupne varijable: <code className="bg-gray-100 px-1 rounded">{"{{benefit_name}}"}</code>{" "}
+                  <code className="bg-gray-100 px-1 rounded">{"{{sponsor_name}}"}</code>{" "}
+                  <code className="bg-gray-100 px-1 rounded">{"{{deadline}}"}</code>{" "}
+                  <code className="bg-gray-100 px-1 rounded">{"{{days_left}}"}</code>
+                </p>
+                <textarea value={form.body} onChange={e => setForm({ ...form, body: e.target.value })}
+                  className="input-field resize-none" rows={6}
+                  placeholder={"Poštovani,\n\nPodsjećamo vas da benefit {{benefit_name}} za sponzora {{sponsor_name}} ima rok {{deadline}} (za {{days_left}} dana).\n\nSrdačan pozdrav,\nTim CRO Commerce"} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tekst gumba (opcija)</label>
+                  <input value={form.button_text} onChange={e => setForm({ ...form, button_text: e.target.value })}
+                    className="input-field" placeholder="npr. Otvori benefit" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">URL gumba (opcija)</label>
+                  <input value={form.button_url} onChange={e => setForm({ ...form, button_url: e.target.value })}
+                    className="input-field" placeholder="https://..." />
+                </div>
+              </div>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input type="checkbox" checked={form.is_active}
+                  onChange={e => setForm({ ...form, is_active: e.target.checked })}
+                  className="w-4 h-4 accent-brand-600" />
+                <span className="text-sm text-gray-700">Aktivan predložak</span>
+              </label>
+              {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{error}</div>}
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Odustani</button>
+                <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center">
+                  {loading ? <><Loader2 size={14} className="animate-spin" /> Sprema...</> : "Spremi predložak"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="p-6">
+              <EmailPreview
+                subject={form.subject}
+                body={form.body}
+                buttonText={form.button_text}
+                buttonUrl={form.button_url}
+              />
             </div>
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input type="checkbox" checked={form.is_active}
-                onChange={e => setForm({ ...form, is_active: e.target.checked })}
-                className="w-4 h-4 accent-brand-600" />
-              <span className="text-sm text-gray-700">Aktivan predložak</span>
-            </label>
-            {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{error}</div>}
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Odustani</button>
-              <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center">
-                {loading ? <><Loader2 size={14} className="animate-spin" /> Sprema...</> : "Spremi predložak"}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="p-6">
-            <EmailPreview
-              subject={form.subject}
-              body={form.body}
-              buttonText={form.button_text}
-              buttonUrl={form.button_url}
-            />
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       </div>
     </div>
   );
