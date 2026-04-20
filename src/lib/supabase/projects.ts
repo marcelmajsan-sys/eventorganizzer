@@ -18,8 +18,8 @@ export const PROJECTS: Record<ProjectId, {
   },
   "2025": {
     label: "CRO Commerce 2025",
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL_2025 ?? "https://bpybtjwdrnuufxmgczus.supabase.co",
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_2025 ?? "sb_publishable_ys-Q9yxUQ7Z53CoK68Y4sg_OeJ8OZEs",
+    url: "https://bpybtjwdrnuufxmgczus.supabase.co",
+    anonKey: "sb_publishable_ys-Q9yxUQ7Z53CoK68Y4sg_OeJ8OZEs",
     serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY_2025 ?? process.env.SUPABASE_SERVICE_ROLE_KEY!,
     conferenceDate: "2025-06-10",
   },
