@@ -45,6 +45,7 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
         sponsor_name: sponsor?.name ?? "—",
         email: form.email.toLowerCase(),
         name: form.name || null,
+        projectId: "2026" as const,
       }]);
       setForm({ name: "", email: "", password: "", sponsor_id: "" });
       setShowAdd(false);
