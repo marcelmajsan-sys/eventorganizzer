@@ -15,6 +15,13 @@ const statusIcon = {
 export default async function BenefitsPage() {
   const supabase = await createClient();
 
+  // Automatski označi benefite s prošlim rokom kao "overdue"
+  await supabase
+    .from("sponsor_benefits")
+    .update({ status: "overdue" })
+    .lt("deadline", new Date().toISOString())
+    .not("status", "in", '("completed","overdue")');
+
   const [{ data: benefits }, { data: sponsors }] = await Promise.all([
     supabase
       .from("sponsor_benefits")
