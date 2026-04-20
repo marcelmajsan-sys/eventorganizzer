@@ -42,12 +42,14 @@ export async function POST(
         </div>
       </div>`;
 
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: assigned_to,
       subject: `CRO Commerce - ${benefit_name}`,
       html,
     });
+
+    if (sendError) return NextResponse.json({ error: sendError.message }, { status: 500 });
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {

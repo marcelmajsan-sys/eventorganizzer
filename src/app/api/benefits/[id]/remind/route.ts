@@ -90,7 +90,8 @@ export async function POST(
     const to = recipient_email || benefit.reminder_email || benefit.assigned_to;
     if (!to) return NextResponse.json({ error: "Nije definiran primatelj emaila." }, { status: 400 });
 
-    await resend.emails.send({ from: FROM_EMAIL, to, subject, html: bodyHtml });
+    const { error: sendError } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html: bodyHtml });
+    if (sendError) return NextResponse.json({ error: sendError.message }, { status: 500 });
 
     // Logiraj slanje
     await supabase.from("email_logs").insert({
