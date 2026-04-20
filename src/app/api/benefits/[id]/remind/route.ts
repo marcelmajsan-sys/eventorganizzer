@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -18,7 +18,7 @@ export async function POST(
 ) {
   try {
     const { template_id, recipient_email } = await req.json();
-    const supabase = await createClient();
+    const supabase = await createAdminClient();
 
     // Dohvati benefit + sponzora
     const { data: benefit } = await supabase
@@ -83,8 +83,6 @@ export async function POST(
           <div style="padding:32px;background:white">
             <p style="margin:0 0 12px;color:#374151;font-size:15px">Podsjetnik za benefit <strong>${benefit.benefit_name}</strong> (${sponsorName}).</p>
             ${deadlineDate ? `<p style="margin:0 0 12px;color:#374151;font-size:15px">Rok: <strong>${deadlineDate.toLocaleDateString("hr-HR")}</strong>${daysLeft !== null ? ` (za ${daysLeft} dana)` : ""}</p>` : ""}
-            <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
-            <p style="margin:0;color:#9ca3af;font-size:13px">Ovo je automatizirana obavijest. Za sva pitanja proslijedite ovaj mail uz svoj upit na: <a href="mailto:konferencija@ecommerce.hr" style="color:#ea580c">konferencija@ecommerce.hr</a></p>
           </div>
         </div>`;
     }
@@ -92,8 +90,7 @@ export async function POST(
     const to = recipient_email || benefit.reminder_email || benefit.assigned_to;
     if (!to) return NextResponse.json({ error: "Nije definiran primatelj emaila." }, { status: 400 });
 
-    const { error: sendError } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html: bodyHtml });
-    if (sendError) return NextResponse.json({ error: sendError.message }, { status: 500 });
+    await resend.emails.send({ from: FROM_EMAIL, to, subject, html: bodyHtml });
 
     // Logiraj slanje
     await supabase.from("email_logs").insert({
