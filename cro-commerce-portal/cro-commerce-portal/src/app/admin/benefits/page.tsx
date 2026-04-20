@@ -27,7 +27,7 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
   const [{ data: benefits }, { data: sponsors }, { data: emailLogs }] = await Promise.all([
     supabase
       .from("sponsor_benefits")
-      .select("id, benefit_name, deadline, status, notes, sponsors(id, name, package_type)")
+      .select("id, benefit_name, deadline, status, notes, assigned_to, sponsors(id, name, package_type)")
       .order("benefit_name"),
     supabase
       .from("sponsors")
