@@ -18,22 +18,41 @@ function CallbackInner() {
       ?.trim();
     const projectId = resolveProjectId(rawCookie);
     const { url, anonKey } = PROJECTS[projectId];
-    const supabase = createBrowserClient(url, anonKey);
 
-    // PKCE flow: code in query param
+    // flowType implicit — admin-generated magic links use hash fragment tokens, not PKCE codes
+    const supabase = createBrowserClient(url, anonKey, {
+      auth: { flowType: "implicit" },
+    });
+
+    // PKCE flow: ?code= in query string (regular sign-in flows)
     const code = searchParams.get("code");
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        router.push(error ? "/login?error=no_access" : next);
+        router.replace(error ? "/login?error=no_access" : next);
       });
       return;
     }
 
-    // Implicit flow: tokens in URL hash — onAuthStateChange picks them up
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        router.push(next);
+    // Implicit flow: tokens in URL hash (#access_token=...&refresh_token=...)
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        supabase.auth
+          .setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ data: { session }, error }) => {
+            router.replace(!error && session ? next : "/login?error=no_access");
+          });
+        return;
       }
+    }
+
+    // Fallback: listen for SIGNED_IN (handles cases where client auto-processes the URL)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) router.replace(next);
     });
     return () => subscription.unsubscribe();
   }, []);
