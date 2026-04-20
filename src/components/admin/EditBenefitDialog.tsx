@@ -75,6 +75,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
     setSending(false);
     if (!res.ok) { setSendError(data.error ?? "Greška pri slanju."); return; }
     setSent(true);
+    router.refresh();
     setTimeout(() => setSent(false), 3000);
   }
 
