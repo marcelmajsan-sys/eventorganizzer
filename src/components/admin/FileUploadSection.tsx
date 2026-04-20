@@ -17,20 +17,21 @@ export default function FileUploadSection({
   const [files, setFiles] = useState(existingFiles);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
   const uploadFile = useCallback(async (file: File) => {
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    setUploadError("");
     const path = `${sponsorId}/${Date.now()}_${file.name}`;
 
-    const { data: storageData, error: storageError } = await supabase.storage
+    const { error: storageError } = await supabase.storage
       .from("sponsor-files")
       .upload(path, file, { upsert: false });
 
     if (storageError) {
-      console.error("Upload error:", storageError);
+      setUploadError(`Storage greška: ${storageError.message}`);
       setUploading(false);
       return;
     }
@@ -39,7 +40,7 @@ export default function FileUploadSection({
       .from("sponsor-files")
       .getPublicUrl(path);
 
-    const { data: fileRecord } = await supabase
+    const { data: fileRecord, error: dbError } = await supabase
       .from("files")
       .insert({
         sponsor_id: sponsorId,
@@ -51,6 +52,11 @@ export default function FileUploadSection({
       .select()
       .single();
 
+    if (dbError) {
+      setUploadError(`DB greška: ${dbError.message}`);
+      setUploading(false);
+      return;
+    }
     if (fileRecord) {
       setFiles((prev) => [fileRecord, ...prev]);
     }
@@ -116,6 +122,12 @@ export default function FileUploadSection({
           </>
         )}
       </div>
+
+      {uploadError && (
+        <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+          {uploadError}
+        </div>
+      )}
 
       {/* File list */}
       <div className="space-y-2">

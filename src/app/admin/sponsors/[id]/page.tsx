@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { PROJECT_COOKIE } from "@/lib/supabase/projects";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -24,6 +26,8 @@ interface Props {
 
 export default async function SponsorDetailPage({ params }: Props) {
   const supabase = await createClient();
+  const cookieStore = await cookies();
+  const projectId = cookieStore.get(PROJECT_COOKIE)?.value ?? "2026";
 
   const [{ data: sponsor }, { data: benefits }, { data: files }, { data: contacts }] = await Promise.all([
     supabase.from("sponsors").select("*").eq("id", params.id).single(),
@@ -124,7 +128,7 @@ export default async function SponsorDetailPage({ params }: Props) {
           </div>
 
           {/* Contacts */}
-          <ContactsSection sponsorId={sponsor.id} contacts={contacts ?? []} />
+          <ContactsSection sponsorId={sponsor.id} sponsorName={sponsor.name} contacts={contacts ?? []} projectId={projectId} />
 
           {/* Files */}
           <FileUploadSection sponsorId={sponsor.id} existingFiles={files ?? []} />
