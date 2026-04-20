@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { CheckCircle2, Clock, AlertTriangle, XCircle } from "lucide-react";
 import { benefitStatusLabel } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
@@ -16,6 +16,7 @@ const statusIcon = {
 export default async function BenefitsPage({ searchParams }: { searchParams: { status?: string } }) {
   const activeStatus = searchParams.status ?? null;
   const supabase = await createClient();
+  const adminSupabase = await createAdminClient();
 
   // Automatski označi benefite s prošlim rokom kao "overdue"
   await supabase
@@ -33,7 +34,7 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
       .from("sponsors")
       .select("id, name, package_type")
       .order("name"),
-    supabase
+    adminSupabase
       .from("email_logs")
       .select("benefit_id, sent_at")
       .order("sent_at", { ascending: false }),
