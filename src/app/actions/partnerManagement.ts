@@ -19,12 +19,18 @@ export interface PartnerUser {
 export async function listPartnerUsers(): Promise<PartnerUser[]> {
   const supabase = await createAdminClient();
 
-  const { data: sponsorUsers } = await supabase
+  const { data: sponsorUsers, error } = await supabase
     .from("sponsor_users")
-    .select("id, user_id, sponsor_id, sponsors(name)")
+    .select("id, user_id, sponsor_id")
     .order("created_at");
 
+  if (error) throw new Error(error.message);
   if (!sponsorUsers || sponsorUsers.length === 0) return [];
+
+  const { data: sponsorsData } = await supabase
+    .from("sponsors")
+    .select("id, name");
+  const sponsorsMap = Object.fromEntries((sponsorsData ?? []).map((s) => [s.id, s.name]));
 
   const cookieStore = await cookies();
   const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
@@ -34,13 +40,11 @@ export async function listPartnerUsers(): Promise<PartnerUser[]> {
 
   return sponsorUsers.map((su) => {
     const authUser = authUsers.find((u) => u.id === su.user_id);
-    const sponsorsRaw = su.sponsors as unknown;
-    const sponsor = (Array.isArray(sponsorsRaw) ? sponsorsRaw[0] : sponsorsRaw) as { name: string } | null;
     return {
       id: su.id,
       user_id: su.user_id,
       sponsor_id: su.sponsor_id,
-      sponsor_name: sponsor?.name ?? "—",
+      sponsor_name: sponsorsMap[su.sponsor_id] ?? "—",
       email: authUser?.email ?? su.user_id,
       name: authUser?.user_metadata?.name ?? null,
     };
