@@ -7,7 +7,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "CRO Commerce 2025 — Sponzorski Portal",
+  title: "EventOrganizzer - CRO Commerce Conference",
   description: "Upravljanje sponzorima i benefitima za CRO Commerce konferenciju",
   icons: { icon: "/favicon.ico" },
 };
