@@ -38,7 +38,7 @@ export async function POST(
           <p style="margin:0;color:#6b7280;font-size:13px">Za pitanja javite se timu CRO Commerce.</p>
         </div>
         <div style="background:#f9fafb;padding:16px 32px;text-align:center;font-size:12px;color:#9ca3af">
-          CRO Commerce · Zagreb · cro-commerce.hr
+          CRO Commerce · Zagreb · ecommerce.hr
         </div>
       </div>`;
 

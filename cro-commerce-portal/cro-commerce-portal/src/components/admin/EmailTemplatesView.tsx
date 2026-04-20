@@ -49,7 +49,7 @@ function EmailPreview({ subject, body, buttonText, buttonUrl }: {
           )}
         </div>
         <div className="bg-gray-100 px-6 py-3 text-center text-xs text-gray-500">
-          CRO Commerce · Zagreb · cro-commerce.hr
+          CRO Commerce · Zagreb · ecommerce.hr
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = "CRO Commerce <noreply@cro-commerce.hr>";
+const FROM_EMAIL = "CRO Commerce <noreply@ecommerce.hr>";
 
 function applyVars(text: string, vars: Record<string, string>) {
   return Object.entries(vars).reduce(
@@ -71,7 +71,7 @@ export async function POST(
             ${btnHtml}
           </div>
           <div style="background:#f9fafb;padding:16px 32px;text-align:center;font-size:12px;color:#9ca3af">
-            CRO Commerce · Zagreb · cro-commerce.hr
+            CRO Commerce · Zagreb · ecommerce.hr
           </div>
         </div>`;
     } else {

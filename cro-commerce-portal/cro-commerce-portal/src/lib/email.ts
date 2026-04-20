@@ -2,8 +2,8 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = "CRO Commerce <noreply@cro-commerce.hr>";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "tim@cro-commerce.hr";
+const FROM_EMAIL = "CRO Commerce <noreply@ecommerce.hr>";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "tim@ecommerce.hr";
 
 export async function sendDeadlineReminder(
   to: string,
