@@ -49,3 +49,14 @@ export async function switchProject(projectId: ProjectId) {
   await currentSupabase.auth.signOut();
   redirect("/login");
 }
+
+export async function switchPortalProject(projectId: ProjectId) {
+  const cookieStore = await cookies();
+  cookieStore.set(PROJECT_COOKIE, projectId, {
+    path: "/",
+    httpOnly: false,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  redirect("/portal/benefits");
+}

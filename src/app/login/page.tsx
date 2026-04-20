@@ -21,16 +21,27 @@ function LoginForm() {
     setLoading(true);
     setError("");
 
-    // Try both projects — user may exist in either 2026 or 2025
+    let successProject: "2026" | "2025" | null = null;
+
+    // Try both projects — user may exist in either or both.
+    // Sign into ALL matching projects so sessions are stored for portal switcher.
     for (const projectId of ["2026", "2025"] as const) {
-      const client = createBrowserClient(PROJECTS[projectId].url, PROJECTS[projectId].anonKey);
+      const p = PROJECTS[projectId];
+      // Skip duplicate URLs (same Supabase instance for both projects)
+      if (successProject && PROJECTS[successProject].url === p.url) continue;
+      const client = createBrowserClient(p.url, p.anonKey);
       const { data, error: authError } = await client.auth.signInWithPassword({ email, password });
       if (!authError && data.user) {
-        document.cookie = `${PROJECT_COOKIE}=${projectId}; path=/; max-age=31536000`;
-        router.push("/admin/dashboard");
-        router.refresh();
-        return;
+        if (!successProject) successProject = projectId;
+        // Don't break — continue to sign into other project too
       }
+    }
+
+    if (successProject) {
+      document.cookie = `${PROJECT_COOKIE}=${successProject}; path=/; max-age=31536000`;
+      router.push("/admin/dashboard");
+      router.refresh();
+      return;
     }
 
     setError("Neispravni podaci za prijavu. Provjerite email i lozinku.");
