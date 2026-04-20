@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -24,6 +25,8 @@ export async function POST(
       deadlineFormatted && `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px">Rok:</td><td style="padding:8px 0;color:#111827;font-size:14px;font-weight:600">${deadlineFormatted}</td></tr>`,
     ].filter(Boolean).join("");
 
+    const subject = `CRO Commerce - ${benefit_name}`;
+
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
         <div style="background:#1f2937;padding:24px 32px">
@@ -46,11 +49,19 @@ export async function POST(
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: assigned_to,
-      subject: `CRO Commerce - ${benefit_name}`,
+      subject,
       html,
     });
 
     if (sendError) return NextResponse.json({ error: sendError.message }, { status: 500 });
+
+    const supabase = await createClient();
+    await supabase.from("email_logs").insert({
+      benefit_id: params.id,
+      recipient: assigned_to,
+      subject,
+      status: "sent",
+    });
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
