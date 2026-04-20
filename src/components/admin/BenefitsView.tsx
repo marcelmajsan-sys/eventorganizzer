@@ -62,7 +62,7 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
         onClose={() => setEditing(false)}
       />
       <div
-        onClick={() => setEditing(true)}
+        onClick={() => { setEditing(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}
         className={`group flex items-center gap-4 px-5 py-3 text-sm cursor-pointer transition-colors ${
           isOverdue
             ? "bg-red-50 hover:bg-red-100"
@@ -326,7 +326,7 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
         onClose={() => setEditing(false)}
       />
       <div
-        onClick={() => setEditing(true)}
+        onClick={() => { setEditing(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}
         className={`group flex items-center gap-4 px-5 py-3 text-sm cursor-pointer transition-colors ${
           isOverdue ? "bg-red-50 hover:bg-red-100" : isUrgent ? "bg-orange-50 hover:bg-orange-100" : "hover:bg-gray-50"
         }`}
