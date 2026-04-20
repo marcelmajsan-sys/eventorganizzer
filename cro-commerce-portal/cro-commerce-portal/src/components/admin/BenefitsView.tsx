@@ -151,21 +151,22 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
         onClose={() => setRenaming(false)}
       />
       <div className="flex items-center justify-between px-5 py-4 bg-gray-50">
-        <button
-          onClick={() => setRenaming(true)}
-          className="group flex items-center gap-2.5 text-left hover:text-brand-700 transition-colors"
-          title="Klikni za preimenovanje"
-        >
-          <Gift size={14} className="text-brand-500 flex-shrink-0" />
-          <span className="font-semibold text-gray-900 text-sm group-hover:text-brand-700">{name}</span>
-          <Pencil size={12} className="text-gray-300 group-hover:text-brand-500 transition-colors" />
-        </button>
-        {lastReminded && (
-          <span className="flex items-center gap-1 text-xs text-blue-500 font-medium">
-            <Mail size={11} />
-            Podsjetnik {new Date(lastReminded).toLocaleDateString("hr-HR")}
-          </span>
-        )}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => setRenaming(true)}
+            className="group flex items-center gap-2.5 text-left hover:text-brand-700 transition-colors flex-shrink-0"
+            title="Klikni za preimenovanje"
+          >
+            <Gift size={14} className="text-brand-500 flex-shrink-0" />
+            <span className="font-semibold text-gray-900 text-sm group-hover:text-brand-700">{name}</span>
+            <Pencil size={12} className="text-gray-300 group-hover:text-brand-500 transition-colors" />
+          </button>
+          {lastReminded && (
+            <span className="text-xs text-gray-400">
+              Zadnji podsjetnik: {new Date(lastReminded).toLocaleDateString("hr-HR")}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           {overdueCount > 0 && (
             <span className="text-xs text-red-600 font-medium flex items-center gap-1">
