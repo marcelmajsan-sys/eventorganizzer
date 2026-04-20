@@ -3,8 +3,8 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import { PROJECT_COOKIE } from "@/lib/supabase/projects";
-
+import { PROJECT_COOKIE, PROJECTS } from "@/lib/supabase/projects";
+import { findPartnerProject } from "@/app/actions/findPartnerProject";
 import { Eye, EyeOff, LogIn, Loader2, Building2 } from "lucide-react";
 
 function PartnerLoginForm() {
@@ -22,27 +22,21 @@ function PartnerLoginForm() {
     setLoading(true);
     setError("");
 
-    // Try 2025 first
-    const client2025 = createBrowserClient(
-      "https://bpybtjwdrnuufxmgczus.supabase.co",
-      "sb_publishable_ys-Q9yxUQ7Z53CoK68Y4sg_OeJ8OZEs"
-    );
-    const result2025 = await client2025.auth.signInWithPassword({ email, password });
-    if (!result2025.error && result2025.data.user) {
-      document.cookie = `${PROJECT_COOKIE}=2025; path=/; max-age=31536000`;
-      router.push("/portal/benefits");
-      router.refresh();
+    // Find which project this email belongs to (server-side, avoids createBrowserClient singleton issue)
+    const projectId = await findPartnerProject(email);
+    if (!projectId) {
+      setError("Neispravni podaci za prijavu. Provjerite email i lozinku.");
+      setLoading(false);
       return;
     }
 
-    // Try 2026 fallback
-    const client2026 = createBrowserClient(
-      "https://qpspkvswfbtivxvsateg.supabase.co",
-      "sb_publishable_AdkY0bbhIBUOXfmGJG4iyg_yd7OCTsH"
-    );
-    const result2026 = await client2026.auth.signInWithPassword({ email, password });
-    if (!result2026.error && result2026.data.user) {
-      document.cookie = `${PROJECT_COOKIE}=2026; path=/; max-age=31536000`;
+    // Create ONE client for the correct project
+    const { url, anonKey } = PROJECTS[projectId];
+    const client = createBrowserClient(url, anonKey);
+    const { data, error: authError } = await client.auth.signInWithPassword({ email, password });
+
+    if (!authError && data.user) {
+      document.cookie = `${PROJECT_COOKIE}=${projectId}; path=/; max-age=31536000`;
       router.push("/portal/benefits");
       router.refresh();
       return;
