@@ -78,7 +78,6 @@ export default async function AdminDashboard() {
     <div className="animate-enter">
       <div className="page-header">
         <h1 className="page-title">Nadzorna ploča</h1>
-        <p className="page-subtitle">Pregled CRO Commerce 2025 sponzorskog programa</p>
       </div>
 
       {/* Stat cards */}
