@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(npm run *)",
+      "Bash(git merge *)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(cp C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/components/admin/AddBenefitModal.tsx C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/components/admin/AddBenefitModal.tsx)",
+      "Bash(cp C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/components/admin/ContactsView.tsx C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/components/admin/ContactsView.tsx)",
+      "Bash(cp C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/components/admin/AddContactModal.tsx C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/components/admin/AddContactModal.tsx)",
+      "Bash(cp C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/components/admin/ContactDetailActions.tsx C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/components/admin/ContactDetailActions.tsx)",
+      "Bash(git stash *)",
+      "Bash(mkdir -p 'C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/admin/contacts/[id]')",
+      "Bash(cp 'C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/app/admin/contacts/[id]/page.tsx' 'C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/admin/contacts/[id]/page.tsx')",
+      "Bash(mkdir -p 'C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/api/benefits/[id]/remind')",
+      "Bash(cp 'C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/app/api/benefits/[id]/remind/route.ts' 'C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/api/benefits/[id]/remind/route.ts')",
+      "Bash(mkdir -p /tmp/contacts_backup)",
+      "Bash(cp -r \"cro-commerce-portal/cro-commerce-portal/src/app/admin/contacts\" /tmp/contacts_backup/)",
+      "Bash(cp \"cro-commerce-portal/cro-commerce-portal/src/components/admin/AddContactModal.tsx\" /tmp/contacts_backup/)",
+      "Bash(cp \"cro-commerce-portal/cro-commerce-portal/src/components/admin/ContactDetailActions.tsx\" /tmp/contacts_backup/)",
+      "Bash(cp \"cro-commerce-portal/cro-commerce-portal/src/components/admin/ContactsSection.tsx\" /tmp/contacts_backup/)",
+      "Bash(cp /tmp/contacts_backup/AddContactModal.tsx C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/components/admin/AddContactModal.tsx)",
+      "Bash(cp /tmp/contacts_backup/ContactDetailActions.tsx C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/components/admin/ContactDetailActions.tsx)",
+      "Bash(cp /tmp/contacts_backup/ContactsSection.tsx C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/components/admin/ContactsSection.tsx)",
+      "Bash(cp /tmp/contacts_backup/ContactsView.tsx C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/components/admin/ContactsView.tsx)",
+      "Bash(cp -r /tmp/contacts_backup/contacts C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/admin/contacts)",
+      "Bash(cp -r C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/app/admin/program C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/admin/program)",
+      "Bash(cp -r C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/app/admin/troskovi C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/admin/troskovi)",
+      "Bash([ ! -f \"$DEV/components/admin/$f\" ])",
+      "Bash(cp -r C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/app/api/benefits C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/api/benefits)",
+      "Bash(mkdir -p 'C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/app/api/benefits/[id]/notify')",
+      "Bash(cp 'C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/api/benefits/[id]/notify/route.ts' 'C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/app/api/benefits/[id]/notify/route.ts')"
+    ]
+  }
+}

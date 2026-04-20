@@ -1,5 +1,32 @@
 {
-  "node": {},
+  "node": {
+    "ea4fa90a1a576353cff17fca114c4dcbab98739e": {
+      "workers": {
+        "app/admin/dashboard/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Cmarce%5C%5CDesktop%5C%5CEventOrganizzer%5C%5Ceventorganizzer%5C%5Ccro-commerce-portal%5C%5Ccro-commerce-portal%5C%5Csrc%5C%5Capp%5C%5Cactions%5C%5CswitchProject.ts%22%2C%5B%22switchProject%22%5D%5D%5D&__client_imported__=true!",
+        "app/admin/contacts/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Cmarce%5C%5CDesktop%5C%5CEventOrganizzer%5C%5Ceventorganizzer%5C%5Ccro-commerce-portal%5C%5Ccro-commerce-portal%5C%5Csrc%5C%5Capp%5C%5Cactions%5C%5CswitchProject.ts%22%2C%5B%22switchProject%22%5D%5D%5D&__client_imported__=true!",
+        "app/admin/program/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Cmarce%5C%5CDesktop%5C%5CEventOrganizzer%5C%5Ceventorganizzer%5C%5Ccro-commerce-portal%5C%5Ccro-commerce-portal%5C%5Csrc%5C%5Capp%5C%5Cactions%5C%5CswitchProject.ts%22%2C%5B%22switchProject%22%5D%5D%5D&__client_imported__=true!",
+        "app/admin/sponsors/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Cmarce%5C%5CDesktop%5C%5CEventOrganizzer%5C%5Ceventorganizzer%5C%5Ccro-commerce-portal%5C%5Ccro-commerce-portal%5C%5Csrc%5C%5Capp%5C%5Cactions%5C%5CswitchProject.ts%22%2C%5B%22switchProject%22%5D%5D%5D&__client_imported__=true!",
+        "app/admin/sponsors/[id]/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Cmarce%5C%5CDesktop%5C%5CEventOrganizzer%5C%5Ceventorganizzer%5C%5Ccro-commerce-portal%5C%5Ccro-commerce-portal%5C%5Csrc%5C%5Capp%5C%5Cactions%5C%5CswitchProject.ts%22%2C%5B%22switchProject%22%5D%5D%5D&__client_imported__=true!",
+        "app/admin/benefits/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Cmarce%5C%5CDesktop%5C%5CEventOrganizzer%5C%5Ceventorganizzer%5C%5Ccro-commerce-portal%5C%5Ccro-commerce-portal%5C%5Csrc%5C%5Capp%5C%5Cactions%5C%5CswitchProject.ts%22%2C%5B%22switchProject%22%5D%5D%5D&__client_imported__=true!",
+        "app/admin/contacts/[id]/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Cmarce%5C%5CDesktop%5C%5CEventOrganizzer%5C%5Ceventorganizzer%5C%5Ccro-commerce-portal%5C%5Ccro-commerce-portal%5C%5Csrc%5C%5Capp%5C%5Cactions%5C%5CswitchProject.ts%22%2C%5B%22switchProject%22%5D%5D%5D&__client_imported__=true!",
+        "app/admin/email-predlosci/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Cmarce%5C%5CDesktop%5C%5CEventOrganizzer%5C%5Ceventorganizzer%5C%5Ccro-commerce-portal%5C%5Ccro-commerce-portal%5C%5Csrc%5C%5Capp%5C%5Cactions%5C%5CswitchProject.ts%22%2C%5B%22switchProject%22%5D%5D%5D&__client_imported__=true!",
+        "app/admin/automatizacija/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Cmarce%5C%5CDesktop%5C%5CEventOrganizzer%5C%5Ceventorganizzer%5C%5Ccro-commerce-portal%5C%5Ccro-commerce-portal%5C%5Csrc%5C%5Capp%5C%5Cactions%5C%5CswitchProject.ts%22%2C%5B%22switchProject%22%5D%5D%5D&__client_imported__=true!",
+        "app/admin/calendar/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Cmarce%5C%5CDesktop%5C%5CEventOrganizzer%5C%5Ceventorganizzer%5C%5Ccro-commerce-portal%5C%5Ccro-commerce-portal%5C%5Csrc%5C%5Capp%5C%5Cactions%5C%5CswitchProject.ts%22%2C%5B%22switchProject%22%5D%5D%5D&__client_imported__=true!"
+      },
+      "layer": {
+        "app/admin/dashboard/page": "action-browser",
+        "app/admin/contacts/page": "action-browser",
+        "app/admin/program/page": "action-browser",
+        "app/admin/sponsors/page": "action-browser",
+        "app/admin/sponsors/[id]/page": "action-browser",
+        "app/admin/benefits/page": "action-browser",
+        "app/admin/contacts/[id]/page": "action-browser",
+        "app/admin/email-predlosci/page": "action-browser",
+        "app/admin/automatizacija/page": "action-browser",
+        "app/admin/calendar/page": "action-browser"
+      }
+    }
+  },
   "edge": {},
-  "encryptionKey": "XNoA30yH2MPyJGRSSN/VsCvzqUh9hMBzMIBcu8XeTVI="
+  "encryptionKey": "WVxHLlP4OhOqSUjwD+9l/UL4ENooqODFhz7oDJ7HQk4="
 }

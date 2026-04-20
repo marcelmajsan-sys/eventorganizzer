@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(cp -r cro-commerce-portal/cro-commerce-portal/src/. src/)",
+      "Bash(cp -r cro-commerce-portal/cro-commerce-portal/supabase/. supabase/)",
+      "Bash(cp cro-commerce-portal/cro-commerce-portal/.env.example .env.example)",
+      "Bash(cp src/components/admin/AddBenefitModal.tsx cro-commerce-portal/cro-commerce-portal/src/components/admin/AddBenefitModal.tsx)",
+      "Bash(cp src/app/admin/benefits/page.tsx cro-commerce-portal/cro-commerce-portal/src/app/admin/benefits/page.tsx)",
+      "Bash(git -C /c/Users/marce/Desktop/EventOrganizzer/eventorganizzer add src/components/admin/ContactsSection.tsx)",
+      "Bash(git -C /c/Users/marce/Desktop/EventOrganizzer/eventorganizzer status --short src/components/admin/ContactsSection.tsx)",
+      "Bash(git *)",
+      "WebFetch(domain:docs.google.com)",
+      "WebFetch(domain:doc-14-6c-sheets.googleusercontent.com)",
+      "Bash(mkdir -p \"C:/Users/marce/Desktop/EventOrganizzer/eventorganizzer/src/app/admin/contacts/[id]\")",
+      "Bash(cp \"C:/Users/marce/Desktop/EventOrganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/admin/contacts/[id]/page.tsx\" \"C:/Users/marce/Desktop/EventOrganizzer/eventorganizzer/src/app/admin/contacts/[id]/page.tsx\")",
+      "Bash(mkdir -p \"C:/Users/marce/Desktop/EventOrganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/admin/tasks/[id]\")",
+      "Bash(mkdir -p \"C:/Users/marce/Desktop/EventOrganizzer/eventorganizzer/src/app/admin/tasks/[id]\")",
+      "WebFetch(domain:prnt.sc)",
+      "Bash(cp \"C:/Users/marce/Desktop/EventOrganizzer/eventorganizzer/src/components/admin/CalendarView.tsx\" \"C:/Users/marce/Desktop/EventOrganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/components/admin/CalendarView.tsx\")",
+      "Bash(cp \"C:/Users/marce/Desktop/EventOrganizzer/eventorganizzer/src/app/admin/calendar/page.tsx\" \"C:/Users/marce/Desktop/EventOrganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/admin/calendar/page.tsx\")",
+      "Bash(cp \"C:\\\\Users\\\\marce\\\\Desktop\\\\EventOrganizzer\\\\eventorganizzer\\\\src\\\\components\\\\admin\\\\AddTaskModal.tsx\" \"C:\\\\Users\\\\marce\\\\Desktop\\\\EventOrganizzer\\\\eventorganizzer\\\\cro-commerce-portal\\\\cro-commerce-portal\\\\src\\\\components\\\\admin\\\\AddTaskModal.tsx\")",
+      "Bash(cp \"C:\\\\Users\\\\marce\\\\Desktop\\\\EventOrganizzer\\\\eventorganizzer\\\\src\\\\app\\\\admin\\\\tasks\\\\page.tsx\" \"C:\\\\Users\\\\marce\\\\Desktop\\\\EventOrganizzer\\\\eventorganizzer\\\\cro-commerce-portal\\\\cro-commerce-portal\\\\src\\\\app\\\\admin\\\\tasks\\\\page.tsx\")"
+    ]
+  }
+}

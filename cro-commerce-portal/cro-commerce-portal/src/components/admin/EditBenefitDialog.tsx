@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { X, Loader2, User } from "lucide-react";
+import { X, Loader2, User, Send, CheckCircle } from "lucide-react";
 import type { BenefitStatus } from "@/types";
 
 export type EditableBenefit = {
@@ -24,6 +24,9 @@ interface Props {
 export default function EditBenefitDialog({ benefit, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [sendError, setSendError] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
@@ -49,6 +52,31 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
   }, [benefit]);
 
   if (!benefit) return null;
+
+  async function handleNotify() {
+    if (!form.assigned_to) {
+      setSendError("Unesi email odgovorne osobe prije slanja.");
+      return;
+    }
+    setSending(true);
+    setSendError("");
+    const res = await fetch(`/api/benefits/${benefit!.id}/notify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        benefit_name: form.benefit_name,
+        assigned_to: form.assigned_to,
+        deadline: form.deadline,
+        notes: form.notes,
+        sponsor_name: benefit!.sponsor_name,
+      }),
+    });
+    const data = await res.json();
+    setSending(false);
+    if (!res.ok) { setSendError(data.error ?? "Greška pri slanju."); return; }
+    setSent(true);
+    setTimeout(() => setSent(false), 3000);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -174,6 +202,27 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
               rows={3}
               placeholder="Dodatne napomene..."
             />
+          </div>
+
+          <div className="border-t border-gray-100 pt-4">
+            {sendError && <p className="text-xs text-red-600 mb-2">{sendError}</p>}
+            <button
+              type="button"
+              onClick={handleNotify}
+              disabled={sending || sent}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+                sent
+                  ? "bg-green-50 border-green-200 text-green-700"
+                  : "bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100"
+              }`}
+            >
+              {sending ? <><Loader2 size={14} className="animate-spin" /> Šalje se...</>
+                : sent ? <><CheckCircle size={14} /> Obavijest poslana!</>
+                : <><Send size={14} /> Pošalji obavijest</>}
+            </button>
+            {!form.assigned_to && (
+              <p className="text-xs text-gray-400 mt-1.5 text-center">Unesi email odgovorne osobe za slanje obavijesti</p>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">

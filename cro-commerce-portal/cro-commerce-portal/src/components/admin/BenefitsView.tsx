@@ -391,19 +391,24 @@ function SponsorGroup({ sponsorId, sponsorName, packageType, rows }: {
 
 interface Props {
   benefits: BenefitRow[];
+  filterStatus?: string | null;
 }
 
-export default function BenefitsView({ benefits }: Props) {
+export default function BenefitsView({ benefits, filterStatus }: Props) {
   const [view, setView] = useState<"benefit" | "category" | "sponsor">("benefit");
   const [query, setQuery] = useState("");
 
+  const statusFiltered = filterStatus
+    ? benefits.filter((b) => b.status === filterStatus)
+    : benefits;
+
   const filtered = query
-    ? benefits.filter(
+    ? statusFiltered.filter(
         (b) =>
           b.benefit_name.toLowerCase().includes(query.toLowerCase()) ||
           b.sponsors?.name.toLowerCase().includes(query.toLowerCase())
       )
-    : benefits;
+    : statusFiltered;
 
   const groupedByBenefit: Record<string, BenefitRow[]> = {};
   filtered.forEach((b) => {

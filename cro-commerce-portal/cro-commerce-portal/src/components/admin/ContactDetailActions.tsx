@@ -24,7 +24,6 @@ interface Contact {
   role: string | null;
   company: string | null;
   type: string;
-  notes: string | null;
 }
 
 export default function ContactDetailActions({ contact }: { contact: Contact }) {
@@ -37,7 +36,6 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
     company: contact.company ?? "",
     role: contact.role ?? "",
     type: contact.type,
-    notes: contact.notes ?? "",
   });
   const router = useRouter();
   const supabase = createClient();
@@ -52,7 +50,6 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
       company: form.company || null,
       role:    form.role    || null,
       type:    form.type,
-      notes:   form.notes   || null,
     }).eq("id", contact.id);
     setLoading(false);
     setEditing(false);
@@ -115,10 +112,7 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
               {CONTACT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Napomena</label>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field resize-none" rows={3} placeholder="Interne napomene o kontaktu..." />
-          </div>
+
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setEditing(false)} className="btn-secondary flex-1 justify-center">Odustani</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center">
