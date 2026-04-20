@@ -32,6 +32,12 @@ export async function createPartnerUser(
 
   if (existingUser) {
     userId = existingUser.id;
+    // Ažuriraj lozinku i ime — admin je možda unio novu lozinku
+    await adminClient.auth.admin.updateUserById(userId, {
+      password,
+      user_metadata: { name: name.trim() },
+      email_confirm: true,
+    });
   } else {
     const { data, error } = await adminClient.auth.admin.createUser({
       email: email.toLowerCase().trim(),
