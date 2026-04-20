@@ -65,7 +65,7 @@ export default function EditBenefitModal({ benefit }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-enter">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="font-display text-xl font-bold text-gray-900">Uredi benefit</h2>

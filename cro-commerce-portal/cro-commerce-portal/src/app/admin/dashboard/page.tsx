@@ -1,13 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import {
   Users, CreditCard, AlertTriangle, CheckCircle2,
-  TrendingUp, Clock, Package
+  TrendingUp, Clock, Package, Wallet, CircleDollarSign, ListChecks
 } from "lucide-react";
 import { packageBadgeColor, paymentStatusColor } from "@/lib/utils";
 import type { PackageType } from "@/types";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
+  const cookieStore = await cookies();
+  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
 
   const [
     { data: sponsors },
@@ -18,6 +22,23 @@ export default async function AdminDashboard() {
     supabase.from("sponsor_benefits").select("*"),
     supabase.from("tasks").select("*"),
   ]);
+
+  let budgetItems: any[] = [];
+  try {
+    const { data } = await supabase
+      .from("budget_items")
+      .select("id, status, amount")
+      .eq("project_id", projectId);
+    budgetItems = data ?? [];
+  } catch {}
+
+  const formatEur = (n: number) =>
+    new Intl.NumberFormat("hr-HR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+
+  const budgetPaid    = budgetItems.filter(i => i.status === "paid").reduce((s: number, i: any) => s + i.amount, 0);
+  const budgetPending = budgetItems.filter(i => i.status === "pending").reduce((s: number, i: any) => s + i.amount, 0);
+  const budgetUnknown = budgetItems.filter(i => i.status === "unknown").reduce((s: number, i: any) => s + i.amount, 0);
+  const budgetTotal   = budgetItems.filter(i => i.status !== "cancelled").reduce((s: number, i: any) => s + i.amount, 0);
 
   const totalSponsors = sponsors?.length ?? 0;
   const paidCount = sponsors?.filter((s) => s.payment_status === "paid").length ?? 0;
@@ -78,19 +99,49 @@ export default async function AdminDashboard() {
     <div className="animate-enter">
       <div className="page-header">
         <h1 className="page-title">Nadzorna ploča</h1>
-        <p className="page-subtitle">Pregled CRO Commerce 2025 sponzorskog programa</p>
       </div>
+
+      {/* Budget summary — top */}
+      {budgetItems.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          {[
+            { label: "Ukupni budžet", value: formatEur(budgetTotal), sub: `${budgetItems.filter(i => i.status !== "cancelled").length} stavki`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: "text-gray-900", href: "/admin/troskovi" },
+            { label: "Plaćeno", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
+            { label: "Na čekanju", value: formatEur(budgetPending), sub: `${budgetItems.filter(i=>i.status==="pending").length} stavki`, icon: TrendingUp, iconCls: "text-amber-500", valCls: "text-amber-600", href: "/admin/troskovi?status=pending" },
+            { label: "Nepotvrđeni trošak", value: formatEur(budgetUnknown), sub: `${budgetItems.filter(i=>i.status==="unknown").length} stavki`, icon: ListChecks, iconCls: "text-purple-400", valCls: "text-purple-700", labelCls: "text-purple-500", href: "/admin/troskovi?status=unknown" },
+            { label: "Preostalo za platiti", value: formatEur(budgetTotal - budgetPaid), sub: `${budgetTotal > 0 ? 100-Math.round((budgetPaid/budgetTotal)*100) : 100}% budžeta`, icon: ListChecks, iconCls: "text-gray-400", valCls: "text-gray-900", href: "/admin/troskovi" },
+          ].map((c) => {
+            const Icon = c.icon;
+            return (
+              <a key={c.label} href={c.href} className="card p-4 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <p className={`text-xs font-medium ${(c as any).labelCls ?? "text-gray-500"}`}>{c.label}</p>
+                  <Icon size={16} className={c.iconCls} />
+                </div>
+                <p className={`text-xl font-bold ${c.valCls}`}>{c.value}</p>
+                {(c as any).progress !== undefined && (
+                  <div className="mt-2 bg-gray-100 rounded-full h-1.5">
+                    <div className={`${(c as any).progressCls} h-1.5 rounded-full transition-all`} style={{ width: `${(c as any).progress}%` }} />
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">{c.sub}</p>
+              </a>
+            );
+          })}
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {statCards.map((card, i) => {
+        {[
+          { value: totalSponsors, label: "Ukupno sponzora", icon: Users, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/sponsors" },
+          { value: paidCount, label: "Plaćenih", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50", sub: `${pendingCount} na čekanju`, href: "/admin/sponsors?payment=paid" },
+          { value: openTasks, label: "Otvorenih zadataka", icon: Clock, color: "text-orange-600", bg: "bg-orange-50", href: "/admin/tasks" },
+          { value: overdueBenefits, label: "Benefita kasni", icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50", href: "/admin/benefits" },
+        ].map((card, i) => {
           const Icon = card.icon;
           return (
-            <div
-              key={i}
-              className={`card p-5 animate-enter-delay-${i}`}
-              style={{ animationDelay: `${i * 0.05}s` }}
-            >
+            <a key={i} href={card.href} className={`card p-5 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent`} style={{ animationDelay: `${i * 0.05}s` }}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="stat-value text-gray-900">{card.value}</p>
@@ -101,14 +152,14 @@ export default async function AdminDashboard() {
                   <Icon size={20} className={card.color} />
                 </div>
               </div>
-            </div>
+            </a>
           );
         })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Package breakdown */}
-        <div className="card p-6">
+        <a href="/admin/sponsors" className="card p-6 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
           <div className="flex items-center gap-2 mb-5">
             <Package size={18} className="text-gray-400" />
             <h3 className="font-semibold text-gray-900">Sponzori po paketu</h3>
@@ -127,16 +178,13 @@ export default async function AdminDashboard() {
                     <span className="text-sm text-gray-500">{count}</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-1.5">
-                    <div
-                      className={`h-1.5 rounded-full ${packageBadgeColor(pkg as PackageType)} transition-all duration-500`}
-                      style={{ width: `${pct}%` }}
-                    />
+                    <div className={`h-1.5 rounded-full ${packageBadgeColor(pkg as PackageType)} transition-all duration-500`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </a>
 
         {/* Payment status */}
         <div className="card p-6">
@@ -146,28 +194,26 @@ export default async function AdminDashboard() {
           </div>
           <div className="space-y-3">
             {[
-              { label: "Plaćeno", count: paidCount, status: "paid" as const, color: "bg-emerald-500" },
-              { label: "Na čekanju", count: pendingCount, status: "pending" as const, color: "bg-yellow-500" },
-              { label: "Kasni", count: overduePayments, status: "overdue" as const, color: "bg-red-500" },
+              { label: "Plaćeno", count: paidCount, status: "paid", color: "bg-emerald-500" },
+              { label: "Na čekanju", count: pendingCount, status: "pending", color: "bg-yellow-500" },
+              { label: "Kasni", count: overduePayments, status: "overdue", color: "bg-red-500" },
             ].map((item) => (
-              <div key={item.status} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+              <a key={item.status} href={`/admin/sponsors?payment=${item.status}`} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-2.5">
                   <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
                   <span className="text-sm text-gray-700">{item.label}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-gray-900">{item.count}</span>
-                  <span className="text-xs text-gray-400">
-                    ({totalSponsors > 0 ? Math.round((item.count / totalSponsors) * 100) : 0}%)
-                  </span>
+                  <span className="text-xs text-gray-400">({totalSponsors > 0 ? Math.round((item.count / totalSponsors) * 100) : 0}%)</span>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>
 
         {/* Delivery progress */}
-        <div className="card p-6">
+        <a href="/admin/benefits" className="card p-6 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
           <div className="flex items-center gap-2 mb-5">
             <TrendingUp size={18} className="text-gray-400" />
             <h3 className="font-semibold text-gray-900">Isporuka benefita</h3>
@@ -176,13 +222,7 @@ export default async function AdminDashboard() {
             <div className="relative w-32 h-32">
               <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" strokeWidth="3" />
-                <circle
-                  cx="18" cy="18" r="15.9" fill="none"
-                  stroke="#ea580c" strokeWidth="3"
-                  strokeDasharray={`${completionRate} 100`}
-                  strokeLinecap="round"
-                  className="transition-all duration-700"
-                />
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#ea580c" strokeWidth="3" strokeDasharray={`${completionRate} 100`} strokeLinecap="round" className="transition-all duration-700" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-2xl font-bold font-display text-gray-900">{completionRate}%</span>
@@ -194,12 +234,10 @@ export default async function AdminDashboard() {
                 <span className="font-semibold text-emerald-600">{completedBenefits}</span> od{" "}
                 <span className="font-semibold">{totalBenefits}</span> benefita
               </p>
-              {overdueBenefits > 0 && (
-                <p className="text-xs text-red-600 mt-1">⚠ {overdueBenefits} kasni</p>
-              )}
+              {overdueBenefits > 0 && <p className="text-xs text-red-600 mt-1">⚠ {overdueBenefits} kasni</p>}
             </div>
           </div>
-        </div>
+        </a>
       </div>
 
       {/* Recent sponsors */}

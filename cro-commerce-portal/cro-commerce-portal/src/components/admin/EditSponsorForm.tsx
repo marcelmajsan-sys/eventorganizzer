@@ -6,9 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Save } from "lucide-react";
 import type { Sponsor, PackageType } from "@/types";
 
-const PACKAGES: PackageType[] = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
+const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
-export default function EditSponsorForm({ sponsor }: { sponsor: Sponsor }) {
+export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sponsor; packageTypes?: string[] }) {
+  const PACKAGES = packageTypes ?? FALLBACK_PACKAGES;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -42,7 +43,7 @@ export default function EditSponsorForm({ sponsor }: { sponsor: Sponsor }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-enter">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="font-display text-xl font-bold text-gray-900">Uredi sponzora</h2>
@@ -58,7 +59,7 @@ export default function EditSponsorForm({ sponsor }: { sponsor: Sponsor }) {
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input-field" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Paket</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Kategorija</label>
               <select value={form.package_type} onChange={(e) => setForm({ ...form, package_type: e.target.value as PackageType })} className="input-field">
                 {PACKAGES.map((p) => <option key={p}>{p}</option>)}
               </select>
