@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket, Mail } from "lucide-react";
 
 type ContactType = "contact" | "ticket";
 
@@ -18,16 +18,24 @@ interface Contact {
 
 interface Props {
   sponsorId: string;
+  sponsorName: string;
   contacts: Contact[];
+  projectId?: string;
 }
 
 const emptyForm = { name: "", email: "", phone: "", role: "" };
 
 function ContactRow({
   contact,
+  sponsorId,
+  sponsorName,
+  projectId,
   onDelete,
 }: {
   contact: Contact;
+  sponsorId: string;
+  sponsorName: string;
+  projectId?: string;
   onDelete: (id: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -39,8 +47,31 @@ function ContactRow({
   });
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [invited, setInvited] = useState(false);
+  const [inviteError, setInviteError] = useState("");
   const router = useRouter();
   const supabase = createClient();
+
+  async function handleInvite() {
+    if (!contact.email) return;
+    setInviting(true);
+    setInviteError("");
+    try {
+      const res = await fetch("/api/portal/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: contact.email, sponsor_id: sponsorId, sponsor_name: sponsorName, project_id: projectId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setInviteError(data.error ?? "Greška"); }
+      else { setInvited(true); setTimeout(() => setInvited(false), 3000); }
+    } catch {
+      setInviteError("Greška pri slanju");
+    } finally {
+      setInviting(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -126,6 +157,7 @@ function ContactRow({
   }
 
   return (
+    <div className="flex flex-col">
     <div className="flex items-start gap-3 py-2.5 px-3 rounded-lg hover:bg-gray-50 group">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -142,6 +174,16 @@ function ContactRow({
         )}
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        {contact.email && (
+          <button
+            onClick={handleInvite}
+            disabled={inviting || invited}
+            title="Pošalji pozivnicu za portal"
+            className={`p-1 transition-colors ${invited ? "text-emerald-500" : "text-gray-400 hover:text-brand-600"}`}
+          >
+            {inviting ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+          </button>
+        )}
         <button
           onClick={() => setEditing(true)}
           className="p-1 text-gray-400 hover:text-brand-600 transition-colors"
@@ -172,6 +214,9 @@ function ContactRow({
           </button>
         )}
       </div>
+    </div>
+    {inviteError && <p className="text-xs text-red-500 px-3 pb-1">{inviteError}</p>}
+    {invited && <p className="text-xs text-emerald-600 px-3 pb-1">Pozivnica poslana!</p>}
     </div>
   );
 }
@@ -291,7 +336,7 @@ function AddContactForm({
   );
 }
 
-export default function ContactsSection({ sponsorId, contacts: initial }: Props) {
+export default function ContactsSection({ sponsorId, sponsorName, contacts: initial, projectId }: Props) {
   const [contacts, setContacts] = useState(initial);
 
   useEffect(() => {
@@ -322,7 +367,7 @@ export default function ContactsSection({ sponsorId, contacts: initial }: Props)
             <p className="text-xs text-gray-400 px-3 py-2">Nema dodanih kontakt osoba</p>
           )}
           {mainContacts.map((c) => (
-            <ContactRow key={c.id} contact={c} onDelete={handleDelete} />
+            <ContactRow key={c.id} contact={c} sponsorId={sponsorId} sponsorName={sponsorName} projectId={projectId} onDelete={handleDelete} />
           ))}
         </div>
         <AddContactForm sponsorId={sponsorId} type="contact" onAdded={handleAdded} />
@@ -339,7 +384,7 @@ export default function ContactsSection({ sponsorId, contacts: initial }: Props)
             <p className="text-xs text-gray-400 px-3 py-2">Nema dodanih osoba za ulaznice</p>
           )}
           {ticketContacts.map((c) => (
-            <ContactRow key={c.id} contact={c} onDelete={handleDelete} />
+            <ContactRow key={c.id} contact={c} sponsorId={sponsorId} sponsorName={sponsorName} projectId={projectId} onDelete={handleDelete} />
           ))}
         </div>
         <AddContactForm sponsorId={sponsorId} type="ticket" onAdded={handleAdded} />
