@@ -44,6 +44,12 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
     setLoading(true);
     setError("");
 
+    if (sponsors && sponsors.length > 0 && !form.selected_sponsor_id) {
+      setError("Odaberi sponzora.");
+      setLoading(false);
+      return;
+    }
+
     const { error: err } = await supabase.from("sponsor_benefits").insert({
       sponsor_id: form.selected_sponsor_id || null,
       benefit_name: form.benefit_name,
