@@ -99,7 +99,7 @@ function TemplateModal({ initial, onClose, onSaved }: ModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: "calc(100vh - 2rem)" }}>
         {/* Header — fiksan */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">

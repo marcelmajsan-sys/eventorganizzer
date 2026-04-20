@@ -4,6 +4,7 @@ import { benefitStatusLabel } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
 import BenefitsView from "@/components/admin/BenefitsView";
 import AddBenefitModal from "@/components/admin/AddBenefitModal";
+import Link from "next/link";
 
 const statusIcon = {
   completed: <CheckCircle2 size={16} className="text-emerald-500" />,
@@ -12,7 +13,8 @@ const statusIcon = {
   overdue: <AlertTriangle size={16} className="text-red-500" />,
 };
 
-export default async function BenefitsPage() {
+export default async function BenefitsPage({ searchParams }: { searchParams: { status?: string } }) {
+  const activeStatus = searchParams.status ?? null;
   const supabase = await createClient();
 
   // Automatski označi benefite s prošlim rokom kao "overdue"
@@ -50,19 +52,24 @@ export default async function BenefitsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {(["not_started", "in_progress", "completed", "overdue"] as BenefitStatus[]).map((status) => {
           const count = rows.filter((b) => b.status === status).length;
+          const isActive = activeStatus === status;
           return (
-            <div key={status} className="card p-4 flex items-center gap-3">
+            <Link
+              key={status}
+              href={isActive ? "/admin/benefits" : `/admin/benefits?status=${status}`}
+              className={`card p-4 flex items-center gap-3 transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer ${isActive ? "ring-2 ring-brand-500 bg-brand-50/30" : ""}`}
+            >
               {statusIcon[status]}
               <div>
                 <p className="text-xl font-bold text-gray-900">{count}</p>
                 <p className="text-xs text-gray-500">{benefitStatusLabel(status)}</p>
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>
 
-      <BenefitsView benefits={rows as any} />
+      <BenefitsView benefits={rows as any} filterStatus={activeStatus} />
     </div>
   );
 }
