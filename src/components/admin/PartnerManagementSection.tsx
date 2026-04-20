@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Handshake, Plus, Trash2, Loader2, Eye, EyeOff, X, Building2 } from "lucide-react";
 import { createPartnerUser, deletePartnerUser } from "@/app/actions/partnerManagement";
 import type { PartnerUser } from "@/app/actions/partnerManagement";
@@ -17,7 +16,6 @@ interface Props {
 }
 
 export default function PartnerManagementSection({ partners: initial, sponsors }: Props) {
-  const router = useRouter();
   const [partners, setPartners] = useState(initial);
   const [showAdd, setShowAdd] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -51,7 +49,6 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
       setForm({ name: "", email: "", password: "", sponsor_id: "" });
       setShowAdd(false);
       flash("Partner kreiran.");
-      router.refresh();
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -66,7 +63,6 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
       await deletePartnerUser(partner.id, partner.user_id);
       setPartners((prev) => prev.filter((p) => p.id !== partner.id));
       flash("Partner obrisan.");
-      router.refresh();
     } catch (e: any) {
       setError(e.message);
     } finally {

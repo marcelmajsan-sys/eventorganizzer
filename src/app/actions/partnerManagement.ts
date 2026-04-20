@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/server";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
@@ -79,13 +79,12 @@ export async function createPartnerUser(
     userId = data.user.id;
   }
 
-  // Upsert u sponsor_users
-  const supabase = await createAdminClient();
-  const { error: suError } = await supabase
+  // Upsert u sponsor_users — koristimo isti adminClient kao za auth (isti projekt)
+  const { error: suError } = await adminClient
     .from("sponsor_users")
     .upsert({ user_id: userId, sponsor_id: sponsorId, invited_by: "admin" }, { onConflict: "user_id" });
 
-  if (suError) throw new Error(suError.message);
+  if (suError) throw new Error(`sponsor_users: ${suError.message}`);
 }
 
 export async function deletePartnerUser(sponsorUsersId: string, userId: string) {
