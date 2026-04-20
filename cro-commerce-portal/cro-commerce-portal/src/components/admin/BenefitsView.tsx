@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   CheckCircle2, Clock, AlertTriangle, XCircle, Gift,
-  ChevronDown, LayoutList, Tag, Pencil, Trash2, Loader2, Users
+  ChevronDown, LayoutList, Tag, Pencil, Trash2, Loader2, Users, Search, X
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -391,20 +391,34 @@ function SponsorGroup({ sponsorId, sponsorName, packageType, rows }: {
 
 interface Props {
   benefits: BenefitRow[];
+  filterStatus?: string | null;
 }
 
-export default function BenefitsView({ benefits }: Props) {
+export default function BenefitsView({ benefits, filterStatus }: Props) {
   const [view, setView] = useState<"benefit" | "category" | "sponsor">("benefit");
+  const [query, setQuery] = useState("");
+
+  const statusFiltered = filterStatus
+    ? benefits.filter((b) => b.status === filterStatus)
+    : benefits;
+
+  const filtered = query
+    ? statusFiltered.filter(
+        (b) =>
+          b.benefit_name.toLowerCase().includes(query.toLowerCase()) ||
+          b.sponsors?.name.toLowerCase().includes(query.toLowerCase())
+      )
+    : statusFiltered;
 
   const groupedByBenefit: Record<string, BenefitRow[]> = {};
-  benefits.forEach((b) => {
+  filtered.forEach((b) => {
     if (!groupedByBenefit[b.benefit_name]) groupedByBenefit[b.benefit_name] = [];
     groupedByBenefit[b.benefit_name]!.push(b);
   });
   const benefitNames = Object.keys(groupedByBenefit).sort();
 
   const groupedByPackage: Record<string, BenefitRow[]> = {};
-  benefits.forEach((b) => {
+  filtered.forEach((b) => {
     const pkg = b.sponsors?.package_type ?? "Ostalo";
     if (!groupedByPackage[pkg]) groupedByPackage[pkg] = [];
     groupedByPackage[pkg]!.push(b);
@@ -412,7 +426,7 @@ export default function BenefitsView({ benefits }: Props) {
 
   // Group by sponsor, preserving sponsor metadata
   const groupedBySponsor: Record<string, { id: string; name: string; packageType: string; rows: BenefitRow[] }> = {};
-  benefits.forEach((b) => {
+  filtered.forEach((b) => {
     if (!b.sponsors) return;
     const key = b.sponsors.id;
     if (!groupedBySponsor[key]) {
@@ -430,8 +444,9 @@ export default function BenefitsView({ benefits }: Props) {
 
   return (
     <>
-      <div className="flex items-center gap-2 mb-6">
-        {tabs.map((tab) => (
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setView(tab.key)}
@@ -445,6 +460,26 @@ export default function BenefitsView({ benefits }: Props) {
             {tab.label}
           </button>
         ))}
+        </div>
+
+        <div className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Pretraži benefite..."
+            className="pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 w-56"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       {view === "benefit" && (

@@ -40,7 +40,6 @@ export async function POST(
       sponsor_name: sponsorName,
       deadline: deadlineDate ? deadlineDate.toLocaleDateString("hr-HR") : "—",
       days_left: daysLeft !== null ? `${daysLeft}` : "—",
-      notes: benefit.notes ?? "",
     };
 
     let subject: string;

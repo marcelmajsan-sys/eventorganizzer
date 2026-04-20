@@ -106,6 +106,7 @@ export async function GET(request: NextRequest) {
         sponsor_name: sponsor?.name ?? "—",
         deadline: new Date(benefit.deadline).toLocaleDateString("hr-HR"),
         days_left: String(days),
+        notes: benefit.notes ?? "",
       };
 
       const subject = applyVars(
