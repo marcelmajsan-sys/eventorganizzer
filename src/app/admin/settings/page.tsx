@@ -3,6 +3,7 @@ import { Settings } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { PROJECT_COOKIE, PROJECTS, resolveProjectId } from "@/lib/supabase/projects";
+import type { ProjectId } from "@/lib/supabase/projects";
 import ProjectSettingsForm from "@/components/admin/ProjectSettingsForm";
 import UserManagementSection from "@/components/admin/UserManagementSection";
 import PartnerManagementSection from "@/components/admin/PartnerManagementSection";
@@ -24,42 +25,45 @@ export default async function SettingsPage() {
   let users: { email: string; name: string | null; id2026: string | null; id2025: string | null }[] = [];
   try { users = await listUsersWithMeta(); } catch {}
 
-  // Partneri — inline fetch bez "use server" konteksta
+  // Partneri — queryja oba projekta i deduplikuje po emailu
   let partners: PartnerUser[] = [];
   let sponsors: { id: string; name: string }[] = [];
   try {
-    const [sponsorUsersRes, sponsorsRes] = await Promise.all([
-      supabase.from("sponsor_users").select("id, user_id, sponsor_id").order("created_at"),
-      supabase.from("sponsors").select("id, name").order("name"),
-    ]);
+    const projectsToQuery: ProjectId[] = ["2026", "2025"];
+    const seenEmails = new Set<string>();
 
-    sponsors = sponsorsRes.data ?? [];
-    const sponsorsMap = Object.fromEntries(sponsors.map((s) => [s.id, s.name]));
-    const sponsorUsers = sponsorUsersRes.data ?? [];
+    for (const pid of projectsToQuery) {
+      // Preskoči duplikat ako oba projekta koriste isti Supabase URL
+      if (pid !== projectId && PROJECTS[pid].url === PROJECTS[projectId].url) continue;
 
-    if (sponsorUsers.length > 0) {
-      const admin2026 = createAdminClientForProject("2026");
-      const admin2025 = createAdminClientForProject("2025");
-      const [res2026, res2025] = await Promise.all([
-        admin2026.auth.admin.listUsers({ perPage: 1000 }),
-        admin2025.auth.admin.listUsers({ perPage: 1000 }),
+      const pidAdmin = createAdminClientForProject(pid);
+      const [sponsorUsersRes, sponsorsRes, authRes] = await Promise.all([
+        pidAdmin.from("sponsor_users").select("id, user_id, sponsor_id").order("created_at"),
+        pidAdmin.from("sponsors").select("id, name").order("name"),
+        pidAdmin.auth.admin.listUsers({ perPage: 1000 }),
       ]);
-      const authUsers = [
-        ...(res2026.data?.users ?? []),
-        ...(res2025.data?.users ?? []),
-      ];
 
-      partners = sponsorUsers.map((su) => {
-        const authUser = authUsers.find((u) => u.id === su.user_id);
-        return {
+      const pidSponsors = sponsorsRes.data ?? [];
+      const pidSponsorUsers = sponsorUsersRes.data ?? [];
+      const pidAuthUsers = authRes.data?.users ?? [];
+      const pidSponsorsMap = Object.fromEntries(pidSponsors.map((s) => [s.id, s.name]));
+
+      if (pid === projectId) sponsors = pidSponsors;
+
+      for (const su of pidSponsorUsers) {
+        const authUser = pidAuthUsers.find((u) => u.id === su.user_id);
+        const email = authUser?.email ?? su.user_id;
+        if (seenEmails.has(email)) continue;
+        seenEmails.add(email);
+        partners.push({
           id: su.id,
           user_id: su.user_id,
           sponsor_id: su.sponsor_id,
-          sponsor_name: sponsorsMap[su.sponsor_id] ?? "—",
-          email: authUser?.email ?? su.user_id,
+          sponsor_name: pidSponsorsMap[su.sponsor_id] ?? "—",
+          email,
           name: (authUser?.user_metadata?.name as string | null) ?? null,
-        };
-      });
+        });
+      }
     }
   } catch {}
 
