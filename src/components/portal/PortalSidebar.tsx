@@ -6,8 +6,8 @@ import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { packageColor } from "@/lib/utils";
-import { PROJECTS } from "@/lib/supabase/projects";
-import { switchPortalProject } from "@/app/actions/switchProject";
+import { PROJECTS, PROJECT_COOKIE } from "@/lib/supabase/projects";
+import { getPortalSwitchLink } from "@/app/actions/switchProject";
 import type { PackageType } from "@/types";
 import type { ProjectId } from "@/lib/supabase/projects";
 
@@ -43,7 +43,14 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
   async function handleSwitch() {
     if (!otherProjectId) return;
     setSwitching(true);
-    await switchPortalProject(otherProjectId);
+    // Set project cookie client-side before navigation
+    document.cookie = `${PROJECT_COOKIE}=${otherProjectId}; path=/; max-age=31536000`;
+    const actionLink = await getPortalSwitchLink(otherProjectId);
+    if (actionLink) {
+      window.location.href = actionLink;
+    } else {
+      setSwitching(false);
+    }
   }
 
   const SidebarContent = () => (

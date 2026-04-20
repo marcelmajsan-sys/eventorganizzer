@@ -52,7 +52,8 @@ export default async function SettingsPage() {
 
       for (const su of pidSponsorUsers) {
         const authUser = pidAuthUsers.find((u) => u.id === su.user_id);
-        const email = authUser?.email ?? su.user_id;
+        if (!authUser?.email) continue; // skip orphaned sponsor_users entries
+        const email = authUser.email;
         if (seenEmails.has(email)) continue;
         seenEmails.add(email);
         partners.push({

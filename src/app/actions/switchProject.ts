@@ -50,37 +50,27 @@ export async function switchProject(projectId: ProjectId) {
   redirect("/login");
 }
 
-export async function switchPortalProject(targetProjectId: ProjectId) {
+// Returns the magic link URL so the client can navigate with window.location.href
+export async function getPortalSwitchLink(targetProjectId: ProjectId): Promise<string | null> {
   const cookieStore = await cookies();
   const currentProjectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
 
-  // Get current user email from active session
   const { createServerClient } = await import("@supabase/ssr");
   const { PROJECTS: PROJ } = await import("@/lib/supabase/projects");
   const currentClient = createServerClient(PROJ[currentProjectId].url, PROJ[currentProjectId].anonKey, {
     cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
   });
   const { data: { user } } = await currentClient.auth.getUser();
-  if (!user?.email) redirect("/login");
+  if (!user?.email) return null;
 
-  // Set cookie for target project before redirect
-  cookieStore.set(PROJECT_COOKIE, targetProjectId, {
-    path: "/",
-    httpOnly: false,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 365,
-  });
-
-  // Generate server-side magic link in target project — no email sent, immediate redirect
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://eventorganizzer.vercel.app";
   const targetAdmin = createAdminClientForProject(targetProjectId);
   const { data, error } = await targetAdmin.auth.admin.generateLink({
     type: "magiclink",
-    email: user.email!,
+    email: user.email,
     options: { redirectTo: `${appUrl}/auth/callback?next=/portal/benefits` },
   });
 
-  if (error || !data?.properties?.action_link) redirect("/login?error=no_access");
-
-  redirect(data!.properties.action_link);
+  if (error || !data?.properties?.action_link) return null;
+  return data.properties.action_link;
 }

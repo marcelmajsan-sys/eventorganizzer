@@ -2,15 +2,20 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Gift, LogOut, Building2, Menu, X } from "lucide-react";
+import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { packageColor } from "@/lib/utils";
+import { PROJECTS, PROJECT_COOKIE } from "@/lib/supabase/projects";
+import { getPortalSwitchLink } from "@/app/actions/switchProject";
 import type { PackageType } from "@/types";
+import type { ProjectId } from "@/lib/supabase/projects";
 
 interface Props {
   sponsor: { id: string; name: string; package_type: string };
   userEmail: string;
+  activeProjectId: ProjectId;
+  otherProjectId?: ProjectId;
 }
 
 const navItems = [
@@ -18,12 +23,16 @@ const navItems = [
   { href: "/portal/sponsor", label: "Sponzor", icon: Building2 },
 ];
 
-export default function PortalSidebar({ sponsor, userEmail }: Props) {
+export default function PortalSidebar({ sponsor, userEmail, activeProjectId, otherProjectId }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const supabase = createClient();
+
+  const activeLabel = PROJECTS[activeProjectId].label;
+  const otherLabel = otherProjectId ? PROJECTS[otherProjectId].label : null;
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -31,11 +40,25 @@ export default function PortalSidebar({ sponsor, userEmail }: Props) {
     router.push("/login");
   }
 
+  async function handleSwitch() {
+    if (!otherProjectId) return;
+    setSwitching(true);
+    // Set project cookie client-side before navigation
+    document.cookie = `${PROJECT_COOKIE}=${otherProjectId}; path=/; max-age=31536000`;
+    const actionLink = await getPortalSwitchLink(otherProjectId);
+    if (actionLink) {
+      window.location.href = actionLink;
+    } else {
+      setSwitching(false);
+    }
+  }
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Logo + sponsor */}
+      {/* Logo + project + sponsor */}
       <div className="p-5 border-b border-gray-100">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">CRO Commerce</p>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">CRO Commerce</p>
+        <p className="text-xs text-brand-600 font-medium mb-3">{activeLabel}</p>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-brand-100 rounded-lg flex items-center justify-center flex-shrink-0">
             <Building2 size={15} className="text-brand-600" />
@@ -47,6 +70,18 @@ export default function PortalSidebar({ sponsor, userEmail }: Props) {
             </span>
           </div>
         </div>
+
+        {/* Project switcher */}
+        {otherProjectId && otherLabel && (
+          <button
+            onClick={handleSwitch}
+            disabled={switching}
+            className="mt-3 w-full flex items-center gap-1.5 text-xs text-gray-500 hover:text-brand-600 transition-colors bg-gray-50 hover:bg-brand-50 rounded-lg px-2.5 py-1.5"
+          >
+            <ArrowLeftRight size={12} />
+            {switching ? "Prebacivanje..." : `Prebaci na ${otherLabel}`}
+          </button>
+        )}
       </div>
 
       {/* Nav */}
