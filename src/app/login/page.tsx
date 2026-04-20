@@ -2,14 +2,14 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createBrowserClient } from "@supabase/ssr";
+import { PROJECTS, PROJECT_COOKIE } from "@/lib/supabase/projects";
 import { Eye, EyeOff, LogIn, Loader2 } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const noAccess = searchParams.get("error") === "no_access";
-  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,18 +21,20 @@ function LoginForm() {
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      setError("Neispravni podaci za prijavu. Provjerite email i lozinku.");
-      setLoading(false);
-      return;
+    // Try both projects — user may exist in either 2026 or 2025
+    for (const projectId of ["2026", "2025"] as const) {
+      const client = createBrowserClient(PROJECTS[projectId].url, PROJECTS[projectId].anonKey);
+      const { data, error: authError } = await client.auth.signInWithPassword({ email, password });
+      if (!authError && data.user) {
+        document.cookie = `${PROJECT_COOKIE}=${projectId}; path=/; max-age=31536000`;
+        router.push("/admin/dashboard");
+        router.refresh();
+        return;
+      }
     }
 
-    if (data.user) {
-      router.push("/admin/dashboard");
-      router.refresh();
-    }
+    setError("Neispravni podaci za prijavu. Provjerite email i lozinku.");
+    setLoading(false);
   }
 
   return (
