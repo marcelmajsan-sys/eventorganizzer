@@ -3,7 +3,12 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import { PROJECTS, PROJECT_COOKIE } from "@/lib/supabase/projects";
+import { PROJECT_COOKIE } from "@/lib/supabase/projects";
+
+const SUPABASE_PROJECTS = {
+  "2026": { url: "https://qpspkvswfbtivxvsateg.supabase.co", anonKey: "sb_publishable_AdkY0bbhIBUOXfmGJG4iyg_yd7OCTsH" },
+  "2025": { url: "https://bpybtjwdrnuufxmgczus.supabase.co", anonKey: "sb_publishable_ys-Q9yxUQ7Z53CoK68Y4sg_OeJ8OZEs" },
+} as const;
 import { Eye, EyeOff, LogIn, Loader2, Building2 } from "lucide-react";
 
 function PartnerLoginForm() {
@@ -24,8 +29,8 @@ function PartnerLoginForm() {
     let successProject: "2026" | "2025" | null = null;
 
     for (const projectId of ["2026", "2025"] as const) {
-      const p = PROJECTS[projectId];
-      if (successProject && PROJECTS[successProject].url === p.url) continue;
+      const p = SUPABASE_PROJECTS[projectId];
+      if (successProject && SUPABASE_PROJECTS[successProject].url === p.url) continue;
       const client = createBrowserClient(p.url, p.anonKey);
       const { data, error: authError } = await client.auth.signInWithPassword({ email, password });
       if (!authError && data.user) {
