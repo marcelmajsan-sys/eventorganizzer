@@ -7,7 +7,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { packageColor } from "@/lib/utils";
 import { PROJECTS } from "@/lib/supabase/projects";
-import { getPortalSwitchLink } from "@/app/actions/switchProject";
+import { switchPortalProject } from "@/app/actions/switchProject";
 import type { PackageType } from "@/types";
 import type { ProjectId } from "@/lib/supabase/projects";
 
@@ -43,9 +43,9 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
   async function handleSwitch() {
     if (!otherProjectId) return;
     setSwitching(true);
-    const actionLink = await getPortalSwitchLink(otherProjectId);
-    if (actionLink) {
-      window.location.href = actionLink;
+    const ok = await switchPortalProject(otherProjectId);
+    if (ok) {
+      window.location.href = "/portal/benefits";
     } else {
       setSwitching(false);
     }
