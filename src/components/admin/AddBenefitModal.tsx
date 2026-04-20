@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2, ChevronDown } from "lucide-react";
 import type { BenefitStatus } from "@/types";
 
-const CATEGORIES = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
+const CATEGORIES = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community", "EXPO", "Party", "Drinks"];
 
 interface SponsorOption {
   id: string;

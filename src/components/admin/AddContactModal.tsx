@@ -14,7 +14,7 @@ const CONTACT_TYPES = [
 ];
 
 const empty = {
-  name: "", email: "", phone: "", company: "", role: "", notes: "",
+  name: "", email: "", phone: "", company: "", role: "",
   type: "partner",
 };
 
@@ -41,7 +41,6 @@ export default function AddContactModal() {
       phone:      form.phone    || null,
       company:    form.company  || null,
       role:       form.role     || null,
-      notes:      form.notes    || null,
       type:       form.type,
       sponsor_id: null,
     });
@@ -113,10 +112,6 @@ export default function AddContactModal() {
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Funkcija</label>
               <input type="text" value={form.role} onChange={f("role")} className="input-field" placeholder="npr. Marketing Manager" />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Napomena</label>
-              <textarea value={form.notes} onChange={f("notes")} className="input-field resize-none" rows={3} placeholder="Interne napomene..." />
             </div>
           </div>
 

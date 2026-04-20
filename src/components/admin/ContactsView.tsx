@@ -48,12 +48,16 @@ interface Props {
 
 export default function ContactsView({ contacts, sponsors }: Props) {
   const [selectedSponsor, setSelectedSponsor] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
   const [query, setQuery] = useState("");
 
   const sponsorMap = Object.fromEntries(sponsors.map((s) => [s.id, s.name]));
 
+  const usedTypes = Array.from(new Set(contacts.map((c) => c.type))).sort();
+
   const filtered = contacts.filter((c) => {
     const matchesSponsor = selectedSponsor === "all" || c.sponsor_id === selectedSponsor;
+    const matchesType = selectedType === "all" || c.type === selectedType;
     const q = query.toLowerCase();
     const matchesSearch =
       !q ||
@@ -62,7 +66,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
       (c.role ?? "").toLowerCase().includes(q) ||
       (c.company ?? "").toLowerCase().includes(q) ||
       (c.sponsor_id ? sponsorMap[c.sponsor_id] ?? "" : "").toLowerCase().includes(q);
-    return matchesSponsor && matchesSearch;
+    return matchesSponsor && matchesType && matchesSearch;
   });
 
   const sponsorsWithContacts = sponsors.filter((s) =>
@@ -98,6 +102,36 @@ export default function ContactsView({ contacts, sponsors }: Props) {
         )}
       </div>
 
+      {/* Type filters */}
+      <div className="flex gap-2 flex-wrap mb-3">
+        <button
+          onClick={() => setSelectedType("all")}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+            selectedType === "all"
+              ? "bg-brand-600 text-white border-brand-600"
+              : "bg-white border-gray-200 text-gray-600 hover:border-brand-300"
+          }`}
+        >
+          Svi tipovi
+        </button>
+        {usedTypes.map((t) => {
+          const count = contacts.filter((c) => c.type === t).length;
+          return (
+            <button
+              key={t}
+              onClick={() => setSelectedType(t)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                selectedType === t
+                  ? "bg-brand-600 text-white border-brand-600"
+                  : `${TYPE_STYLE[t] ?? "bg-gray-100 text-gray-600 border-gray-200"} hover:border-brand-300`
+              }`}
+            >
+              {TYPE_LABELS[t] ?? t} ({count})
+            </button>
+          );
+        })}
+      </div>
+
       {/* Sponsor filters */}
       <div className="flex gap-2 flex-wrap mb-6">
         <button
@@ -108,7 +142,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
               : "bg-white border-gray-200 text-gray-600 hover:border-brand-300"
           }`}
         >
-          Svi ({contacts.length})
+          Sve tvrtke ({contacts.length})
         </button>
         {sponsorsWithContacts.map((s) => {
           const count = contacts.filter((c) => c.sponsor_id === s.id).length;
@@ -139,7 +173,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Telefon</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Funkcija</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Sponzor/partner</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Tvrtka</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Tip</th>
                 <th className="px-4 py-3"></th>
               </tr>
