@@ -22,6 +22,7 @@ function LoginForm() {
     setError("");
 
     let successProject: "2026" | "2025" | null = null;
+    const loginErrors: string[] = [];
 
     // Try both projects — user may exist in either or both.
     // Sign into ALL matching projects so sessions are stored for portal switcher.
@@ -31,6 +32,9 @@ function LoginForm() {
       if (successProject && PROJECTS[successProject].url === p.url) continue;
       const client = createBrowserClient(p.url, p.anonKey);
       const { data, error: authError } = await client.auth.signInWithPassword({ email, password });
+      if (authError) {
+        loginErrors.push(`${projectId}: ${authError.message}`);
+      }
       if (!authError && data.user) {
         if (!successProject) successProject = projectId;
         // Don't break — continue to sign into other project too
@@ -44,7 +48,7 @@ function LoginForm() {
       return;
     }
 
-    setError("Neispravni podaci za prijavu. Provjerite email i lozinku.");
+    setError(`Neispravni podaci za prijavu. (${loginErrors.join(" | ")})`);
     setLoading(false);
   }
 
