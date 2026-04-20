@@ -1,12 +1,13 @@
 import { cookies } from "next/headers";
 import { Settings } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { PROJECT_COOKIE, PROJECTS, resolveProjectId } from "@/lib/supabase/projects";
 import ProjectSettingsForm from "@/components/admin/ProjectSettingsForm";
 import UserManagementSection from "@/components/admin/UserManagementSection";
 import PartnerManagementSection from "@/components/admin/PartnerManagementSection";
 import { listUsersWithMeta } from "@/app/actions/userManagement";
-import { listPartnerUsers, listSponsorsForSelect } from "@/app/actions/partnerManagement";
+import type { PartnerUser } from "@/app/actions/partnerManagement";
 
 export default async function SettingsPage() {
   const cookieStore = await cookies();
@@ -23,11 +24,37 @@ export default async function SettingsPage() {
   let users: { email: string; name: string | null; id2026: string | null; id2025: string | null }[] = [];
   try { users = await listUsersWithMeta(); } catch {}
 
-  let partners: Awaited<ReturnType<typeof listPartnerUsers>> = [];
-  try { partners = await listPartnerUsers(); } catch {}
-
+  // Partneri — inline fetch bez "use server" konteksta
+  let partners: PartnerUser[] = [];
   let sponsors: { id: string; name: string }[] = [];
-  try { sponsors = await listSponsorsForSelect(); } catch {}
+  try {
+    const [sponsorUsersRes, sponsorsRes] = await Promise.all([
+      supabase.from("sponsor_users").select("id, user_id, sponsor_id").order("created_at"),
+      supabase.from("sponsors").select("id, name").order("name"),
+    ]);
+
+    sponsors = sponsorsRes.data ?? [];
+    const sponsorsMap = Object.fromEntries(sponsors.map((s) => [s.id, s.name]));
+    const sponsorUsers = sponsorUsersRes.data ?? [];
+
+    if (sponsorUsers.length > 0) {
+      const adminClient = createAdminClientForProject(projectId);
+      const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+      const authUsers = authData?.users ?? [];
+
+      partners = sponsorUsers.map((su) => {
+        const authUser = authUsers.find((u) => u.id === su.user_id);
+        return {
+          id: su.id,
+          user_id: su.user_id,
+          sponsor_id: su.sponsor_id,
+          sponsor_name: sponsorsMap[su.sponsor_id] ?? "—",
+          email: authUser?.email ?? su.user_id,
+          name: (authUser?.user_metadata?.name as string | null) ?? null,
+        };
+      });
+    }
+  } catch {}
 
   return (
     <div>
