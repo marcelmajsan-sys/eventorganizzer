@@ -6,6 +6,7 @@ Admin portal za upravljanje CRO Commerce konferencijom. Omogućuje:
 
 - Praćenje sponzora, njihovih paketa i statusa plaćanja
 - Upravljanje benefitima sponzora s rokovima i statusima
+- Email obavijesti za benefite s praćenjem zadnjeg slanja
 - Kontakt osobe i osobe za ulaznice po sponzoru
 - Upload datoteka po sponzoru
 - Program konferencije po pozornicama (Future / Action / Wonderland Stage)
@@ -26,7 +27,7 @@ eventorganizzer/
 ├── src/                          ← Vercel deploya odavde (root)
 │   ├── app/
 │   │   ├── admin/
-│   │   │   ├── layout.tsx        ← Auth guard + sidebar layout
+│   │   │   ├── layout.tsx        ← Auth guard + sidebar layout (scroll container: <main overflow-y-auto>)
 │   │   │   ├── dashboard/        ← Nadzorna ploča
 │   │   │   ├── sponsors/         ← Lista + detalji sponzora
 │   │   │   ├── benefits/         ← Svi benefiti (filter po statusu via ?status=)
@@ -41,7 +42,10 @@ eventorganizzer/
 │   │   │   ├── projectSettings.ts ← Server action: datum konferencije
 │   │   │   └── userManagement.ts ← Server action: CRUD korisnika u svim bazama
 │   │   ├── api/
-│   │   │   ├── cron/reminders/   ← Cron job za email podsjetnike
+│   │   │   ├── benefits/[id]/
+│   │   │   │   ├── notify/       ← POST: šalje email obavijest + logira u email_logs
+│   │   │   │   └── remind/       ← POST: šalje podsjetnik (s predloškom) + logira u email_logs
+│   │   │   ├── cron/reminders/   ← Cron job za automatske email podsjetnike
 │   │   │   └── sponsors/         ← REST API za sponzore
 │   │   ├── login/                ← Login stranica (email + lozinka)
 │   │   └── portal/               ← Sponzorski portal (javni)
@@ -53,7 +57,7 @@ eventorganizzer/
 │   │   │   ├── UserManagementSection.tsx ← CRUD korisnika (modal)
 │   │   │   ├── CalendarView.tsx          ← Rokovnik (zadaci + edit modal)
 │   │   │   ├── TaskDetailActions.tsx     ← Edit/delete na stranici zadatka
-│   │   │   ├── BenefitsView.tsx
+│   │   │   ├── BenefitsView.tsx          ← Prikaz benefita + scroll-to-top pri otvaranju modala
 │   │   │   ├── BudgetView.tsx
 │   │   │   ├── ProgramView.tsx
 │   │   │   ├── ContactsSection.tsx
@@ -65,10 +69,11 @@ eventorganizzer/
 │   │   │   ├── AddTaskModal.tsx
 │   │   │   ├── EditSponsorForm.tsx
 │   │   │   ├── EditBenefitModal.tsx
-│   │   │   ├── EditBenefitDialog.tsx
+│   │   │   ├── EditBenefitDialog.tsx     ← Edit + slanje obavijesti (router.refresh() nakon notify)
 │   │   │   ├── RenameBenefitDialog.tsx
 │   │   │   ├── BenefitStatusSelect.tsx
-│   │   │   └── DeleteBenefitButton.tsx
+│   │   │   ├── DeleteBenefitButton.tsx
+│   │   │   └── DeleteSponsorButton.tsx   ← Brisanje sponzora s potvrdom
 │   │   └── portal/
 │   ├── lib/
 │   │   ├── supabase/
@@ -76,7 +81,7 @@ eventorganizzer/
 │   │   │   ├── server.ts         ← Server Supabase klijent (SSR)
 │   │   │   ├── projects.ts       ← Konfiguracija projekata (2025/2026)
 │   │   │   └── adminProjectClient.ts ← Service role klijent za bilo koji projekt
-│   │   ├── email.ts              ← Resend email helper
+│   │   ├── email.ts              ← Resend email helper (deadline reminder, welcome mail)
 │   │   └── utils.ts              ← Utility funkcije (boje, formatiranje)
 │   ├── middleware.ts              ← Auth guard (samo autentikacija, ne autorizacija)
 │   └── types/index.ts
@@ -89,6 +94,10 @@ eventorganizzer/
 │   ├── migration_006_sponsor_contacts.sql
 │   ├── migration_007_program_budget.sql
 │   ├── migration_008_project_id.sql
+│   ├── migration_009_email_system.sql    ← email_templates, email_automations, email_logs, reminder_email
+│   ├── migration_010_package_types.sql
+│   ├── migration_011_contact_notes.sql
+│   ├── migration_012_contact_company.sql
 │   └── seed_2025_program.sql     ← Seed podaci za 2025 (program + troškovi)
 ├── cro-commerce-portal/
 │   └── cro-commerce-portal/      ← Dev working dir (lokalni dev)
@@ -109,7 +118,7 @@ eventorganizzer/
 | Tablica | Opis |
 |---------|------|
 | `sponsors` | Sponzori — naziv, paket, kontakt, status plaćanja |
-| `sponsor_benefits` | Benefiti sponzora s rokovima i statusima |
+| `sponsor_benefits` | Benefiti sponzora s rokovima, statusima, `reminder_email`, `assigned_to` |
 | `sponsor_contacts` | Kontakt osobe i osobe za ulaznice po sponzoru |
 | `files` | Upload datoteke vezane za sponzore |
 | `tasks` | Kanban zadaci |
@@ -119,6 +128,11 @@ eventorganizzer/
 | `project_admins` | Email adrese koje imaju pristup portalu |
 | `program_sessions` | Sesije programa konferencije (s `project_id`) |
 | `budget_items` | Stavke troškova (s `project_id`) |
+| `email_templates` | Predlošci za email podsjetnike (subject, body, button) |
+| `email_automations` | Automatizacije slanja (trigger_type, days_before, template_id) |
+| `email_logs` | Log svakog poslanog maila (benefit_id, recipient, subject, **sent_at**, status) |
+
+> **Važno**: Timestamp kolona u `email_logs` je `sent_at`, **ne** `created_at`.
 
 ### Tipovi paketa
 `'Glavni' | 'Zlatni' | 'Srebrni' | 'Brončani' | 'Medijski' | 'Community'`
@@ -180,7 +194,7 @@ cd cro-commerce-portal/cro-commerce-portal
 # 2. Instaliraj dependencije
 npm install
 
-# 3. Kreiraj .env.local s gore navedenim varijablama
+# 3. Kreiraj .env.local s gore navedenim varijablama (uključi RESEND_API_KEY!)
 
 # 4. Pokreni dev server
 npm run dev
@@ -207,6 +221,10 @@ migration_005_project_settings         ← Tablice project_settings i project_ad
 migration_006_sponsor_contacts         ← Tablica sponsor_contacts
 migration_007_program_budget           ← Tablice program_sessions i budget_items
 migration_008_project_id               ← Kolona project_id na program/budget tablicama
+migration_009_email_system             ← Tablice email_templates, email_automations, email_logs + reminder_email kolona
+migration_010_package_types            ← Ažurirani tipovi paketa
+migration_011_contact_notes            ← Napomene na kontaktima
+migration_012_contact_company          ← Tvrtka na kontaktima
 ```
 
 ### Seed podaci za 2025
@@ -271,18 +289,11 @@ Potrebno zbog peer dependency konflikata s dnd-kit paketima.
 ## Branching strategija
 
 - `main` — produkcija (Vercel deploya odavde)
-- `develop` — razvoj
 - Direktni commit na main je OK za ovaj projekt
 
 ```bash
-# Razvoj
-git checkout develop
 git add .
 git commit -m "Opis promjene"
-
-# Deploy na produkciju
-git checkout main
-git merge develop
 git push
 ```
 
@@ -295,12 +306,24 @@ git push
 - Detaljna stranica sponzora (`/admin/sponsors/[id]`)
 - Edit forma s paketom, kontaktom, statusom plaćanja
 - Upload datoteka po sponzoru
+- **Brisanje sponzora** s potvrdom (`DeleteSponsorButton`) — redirect na `/admin/sponsors`
 
 ### Benefiti
 - Kliktabilne stat kartice — filtriranje po statusu via `?status=X` URL param
 - Dodavanje benefita s benefiti stranice (multi-select sponzori + kategorije)
-- Edit benefit modal (inline edit + rename dialog)
+- Edit benefit modal (`EditBenefitDialog`) — inline edit, rename, slanje obavijesti
 - Tražilica (client-side, pretražuje naziv i sponzora)
+- **Auto-scroll na vrh** pri otvaranju edit modala (`document.querySelector("main")?.scrollTo`)
+- **"Zadnji podsjetnik"** — datum zadnjeg poslanog maila vidljiv u accordion headeru benefita
+
+### Email obavijesti za benefite
+- Gumb **"Pošalji obavijest"** u `EditBenefitDialog`
+- Poziva `/api/benefits/[id]/notify` — šalje mail odgovornoj osobi
+- **Subject**: `CRO Commerce [GODINA] - Podsjetnik za [naziv benefita]` (godina iz cookieja `cro_active_project`)
+- **Tijelo**: "Poštovani, podsjećamo vas na rok za korištenje benefita [naziv]..."
+- Nakon slanja: upisuje zapis u `email_logs` + `router.refresh()` — badge se odmah prikazuje
+- Tablica `email_logs` koristi kolonu `sent_at` (ne `created_at`)
+- FROM adresa: `konferencija@ecommerce.hr` (verificirana domena na Resend)
 
 ### Kontakti sponzora
 - Dvije sekcije: **Kontakt osobe** i **Osobe za ulaznice**
@@ -340,6 +363,7 @@ git push
 ### UI
 - Svi modalni prozori otvaraju se pri **vrhu viewporta** (`items-start pt-8`)
 - Modali koriste fixed overlay s Tailwind klasama (ne `<dialog>` element)
+- Klik na benefit red skrola stranicu na vrh (`<main>` element, ne `window`)
 
 ---
 
@@ -350,3 +374,7 @@ git push
 - `useState + useEffect([initial])` pattern koristi se u klijentskim komponentama za sync s novim props-ima
 - Graceful degradation: sve stranice rade i bez migriranih tablica (try/catch s fallbackom)
 - Ako je samo jedna Supabase instanca, `program_sessions` i `budget_items` koriste `project_id` za izolaciju; ostale tablice dijele podatke
+- **Scroll container** u admin layoutu je `<main className="overflow-y-auto">` — koristiti `document.querySelector("main")` za programatski scroll, ne `window`
+- **Resend SDK** vraća `{ data, error }` — ne baca exception. Uvijek provjeriti `error` nakon `resend.emails.send()`
+- `email_logs.sent_at` je timestamp kolona (ne `created_at`) — query i order moraju koristiti `sent_at`
+- `RESEND_API_KEY` mora biti postavljen i u Vercel env i u lokalnom `.env.local`
