@@ -60,7 +60,7 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
     if (!confirm(`Obriši partnera ${partner.email}?`)) return;
     setDeletingId(partner.id);
     try {
-      await deletePartnerUser(partner.id, partner.user_id);
+      await deletePartnerUser(partner.id, partner.user_id, partner.projectId);
       setPartners((prev) => prev.filter((p) => p.id !== partner.id));
       flash("Partner obrisan.");
     } catch (e: any) {

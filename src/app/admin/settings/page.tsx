@@ -62,6 +62,7 @@ export default async function SettingsPage() {
           sponsor_name: pidSponsorsMap[su.sponsor_id] ?? "—",
           email,
           name: (authUser?.user_metadata?.name as string | null) ?? null,
+          projectId: pid,
         });
       }
     }

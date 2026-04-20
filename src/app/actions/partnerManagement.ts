@@ -13,6 +13,7 @@ export interface PartnerUser {
   sponsor_name: string;
   email: string;
   name: string | null;
+  projectId: "2026" | "2025";
 }
 
 export async function createPartnerUser(
@@ -58,13 +59,9 @@ export async function createPartnerUser(
   if (suError) throw new Error(`sponsor_users: ${suError.message}`);
 }
 
-export async function deletePartnerUser(sponsorUsersId: string, userId: string) {
-  const supabase = await createAdminClient();
-  await supabase.from("sponsor_users").delete().eq("id", sponsorUsersId);
-
-  const cookieStore = await cookies();
-  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+export async function deletePartnerUser(sponsorUsersId: string, userId: string, projectId: "2026" | "2025") {
   const adminClient = createAdminClientForProject(projectId);
+  await adminClient.from("sponsor_users").delete().eq("id", sponsorUsersId);
   await adminClient.auth.admin.deleteUser(userId);
 }
 
