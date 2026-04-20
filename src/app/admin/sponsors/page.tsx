@@ -132,7 +132,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
                 return (
                   <tr key={sponsor.id} className="hover:bg-gray-50/60 transition-colors group">
                     <td className="py-3 px-4">
-                      <p className="font-semibold text-gray-900">{sponsor.name}</p>
+                      <a href={`/admin/sponsors/${sponsor.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">{sponsor.name}</a>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`badge ${packageColor(sponsor.package_type as PackageType)}`}>
