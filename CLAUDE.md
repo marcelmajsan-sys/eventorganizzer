@@ -15,7 +15,7 @@ Admin portal za upravljanje CRO Commerce konferencijom. Omogućuje:
 - Rokovnik — godišnji pregled zadataka po rokovima s filtrom po odgovornoj osobi
 - Postavke projekta (datum konferencije, upravljanje korisnicima)
 - **Multi-projekt**: CRO Commerce 2026 i 2025 — prebacivanje bez ponovnog logina
-- **Sponzorski portal** — read-only portal za sponzore na `/portal`
+- **Sponzorski portal** — read-only portal za sponzore na `/portal` i `/partner`
 
 Deployano na: https://eventorganizzer.vercel.app
 
@@ -38,11 +38,13 @@ eventorganizzer/
 │   │   │   ├── tasks/            ← Kanban zadaci
 │   │   │   │   └── [id]/         ← Detaljna stranica zadatka
 │   │   │   ├── calendar/         ← Rokovnik (zadaci po rokovima)
-│   │   │   └── settings/         ← Datum konferencije + upravljanje korisnicima
+│   │   │   └── settings/         ← Datum konferencije + upravljanje korisnicima + partneri
 │   │   ├── actions/
-│   │   │   ├── switchProject.ts  ← Server action: promjena projekta
-│   │   │   ├── projectSettings.ts ← Server action: datum konferencije
-│   │   │   └── userManagement.ts ← Server action: CRUD korisnika u svim bazama
+│   │   │   ├── switchProject.ts      ← Admin projekt switch + portal projekt switch (server-side)
+│   │   │   ├── projectSettings.ts    ← Server action: datum konferencije
+│   │   │   ├── userManagement.ts     ← Server action: CRUD admin korisnika u svim bazama
+│   │   │   ├── partnerManagement.ts  ← Server action: CRUD partner korisnika (sponsor_users)
+│   │   │   └── findPartnerProject.ts ← Server action: pronađi u kojoj bazi postoji email
 │   │   ├── api/
 │   │   │   ├── benefits/[id]/
 │   │   │   │   ├── notify/       ← POST: šalje email obavijest + logira u email_logs
@@ -50,7 +52,10 @@ eventorganizzer/
 │   │   │   ├── cron/reminders/   ← Cron job za automatske email podsjetnike
 │   │   │   ├── portal/invite/    ← POST: šalje Supabase invite + upisuje sponsor_users
 │   │   │   └── sponsors/         ← REST API za sponzore
-│   │   ├── login/                ← Login stranica (email + lozinka; ?error=no_access poruka)
+│   │   ├── auth/
+│   │   │   └── callback/         ← Client page: PKCE/implicit flow fallback (zamjena projekta)
+│   │   ├── login/                ← Login stranica za admins (email + lozinka)
+│   │   ├── partner/              ← Login stranica za partnere/sponzore (/partner)
 │   │   └── portal/               ← Sponzorski portal
 │   │       ├── layout.tsx        ← Auth: admin → /admin/dashboard, bez pristupa → /login?error=no_access
 │   │       ├── page.tsx          ← Redirect na /portal/benefits
@@ -61,14 +66,15 @@ eventorganizzer/
 │   │   │   ├── AdminSidebar.tsx
 │   │   │   ├── ProjectSwitcher.tsx
 │   │   │   ├── ProjectSettingsForm.tsx
-│   │   │   ├── UserManagementSection.tsx ← CRUD korisnika (modal)
-│   │   │   ├── CalendarView.tsx          ← Rokovnik (zadaci + edit modal)
-│   │   │   ├── TaskDetailActions.tsx     ← Edit/delete na stranici zadatka
-│   │   │   ├── BenefitsView.tsx          ← Prikaz benefita + scroll-to-top pri otvaranju modala
+│   │   │   ├── UserManagementSection.tsx     ← CRUD admin korisnika (modal)
+│   │   │   ├── PartnerManagementSection.tsx  ← CRUD partner korisnika (modal)
+│   │   │   ├── CalendarView.tsx              ← Rokovnik (zadaci + edit modal)
+│   │   │   ├── TaskDetailActions.tsx         ← Edit/delete na stranici zadatka
+│   │   │   ├── BenefitsView.tsx              ← Prikaz benefita + scroll-to-top pri otvaranju modala
 │   │   │   ├── BudgetView.tsx
 │   │   │   ├── ProgramView.tsx
-│   │   │   ├── ContactsSection.tsx       ← Kontakti + mail ikona za slanje portal pozivnice
-│   │   │   ├── FileUploadSection.tsx     ← Upload na Supabase Storage (sponsor-files bucket)
+│   │   │   ├── ContactsSection.tsx           ← Kontakti + mail ikona za slanje portal pozivnice
+│   │   │   ├── FileUploadSection.tsx         ← Upload na Supabase Storage (sponsor-files bucket)
 │   │   │   ├── KanbanBoard.tsx
 │   │   │   ├── SearchInput.tsx
 │   │   │   ├── AddBenefitModal.tsx
@@ -76,19 +82,19 @@ eventorganizzer/
 │   │   │   ├── AddTaskModal.tsx
 │   │   │   ├── EditSponsorForm.tsx
 │   │   │   ├── EditBenefitModal.tsx
-│   │   │   ├── EditBenefitDialog.tsx     ← Edit + slanje obavijesti (router.refresh() nakon notify)
+│   │   │   ├── EditBenefitDialog.tsx         ← Edit + slanje obavijesti (router.refresh() nakon notify)
 │   │   │   ├── RenameBenefitDialog.tsx
 │   │   │   ├── BenefitStatusSelect.tsx
 │   │   │   ├── DeleteBenefitButton.tsx
-│   │   │   └── DeleteSponsorButton.tsx   ← Brisanje sponzora s potvrdom
+│   │   │   └── DeleteSponsorButton.tsx       ← Brisanje sponzora s potvrdom
 │   │   └── portal/
-│   │       ├── PortalSidebar.tsx         ← Sidebar s navom: Benefiti, Sponzor
-│   │       └── PortalBenefitCard.tsx     ← Read-only benefit kartica
+│   │       ├── PortalSidebar.tsx             ← Sidebar s navom: Benefiti, Sponzor + projekt switcher
+│   │       └── PortalBenefitCard.tsx         ← Read-only benefit kartica
 │   ├── lib/
 │   │   ├── supabase/
-│   │   │   ├── client.ts         ← Browser Supabase klijent
-│   │   │   ├── server.ts         ← Server Supabase klijent (SSR)
-│   │   │   ├── projects.ts       ← Konfiguracija projekata (2025/2026)
+│   │   │   ├── client.ts             ← Browser Supabase klijent
+│   │   │   ├── server.ts             ← Server Supabase klijent (SSR)
+│   │   │   ├── projects.ts           ← Konfiguracija projekata (2025/2026) — URL-ovi hardkodirani
 │   │   │   └── adminProjectClient.ts ← Service role klijent za bilo koji projekt
 │   │   ├── email.ts              ← Resend email helper (deadline reminder, welcome mail)
 │   │   └── utils.ts              ← Utility funkcije (boje, formatiranje)
@@ -205,7 +211,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 # Resend (email podsjetnici)
 RESEND_API_KEY=re_...
 
-# URL aplikacije
+# URL aplikacije — OBAVEZNO postaviti na produkcijski URL
 NEXT_PUBLIC_APP_URL=https://eventorganizzer.vercel.app
 
 # Admin email (prima cron obavijesti)
@@ -216,6 +222,8 @@ CRON_SECRET=...
 ```
 
 Nađi Supabase ključeve u: **Supabase Dashboard → Settings → API**
+
+> **Napomena**: `projects.ts` ima hardkodirane URL-ove i anon ključeve za 2025 i 2026 kao fallback kad env varijable nisu postavljene. Service role ključevi moraju ostati isključivo u env varijablama.
 
 ---
 
@@ -308,11 +316,11 @@ Potrebno zbog peer dependency konflikata s dnd-kit paketima.
 - Novi admin korisnik se kreira u **obje baze** (2025 i 2026) i dodaje u `project_admins` tablicu
 - Svi korisnici u `project_admins` imaju puni pristup admin panelu
 
-### Sponzorski portal korisnici
-- Isti login: `/login` s email + lozinka
+### Sponzorski portal korisnici (partneri)
+- Login: **email + lozinka** na `/partner` (namjenska stranica za sponzore)
 - Korisnik mora biti u tablici `sponsor_users` (mapiranje `user_id` → `sponsor_id`)
 - **Ne smije** biti u `project_admins` — inače će biti redirectan na admin panel
-- Kreiranje korisnika: Supabase Auth → Add user → zatim INSERT u `sponsor_users`
+- Kreiranje: Admin panel → Postavke → Partneri → Novi partner (kreira u aktivnom projektu)
 - Pozivnica putem admin panela: detalji sponzora → Kontakt osobe → mail ikona → `/api/portal/invite`
 
 ```sql
@@ -328,32 +336,45 @@ UPDATE auth.users SET email_confirmed_at = NOW() WHERE id = 'uuid-korisnika';
 
 - **`middleware.ts`** — samo provjera je li korisnik **prijavljen**. Ne radi provjeru admin/sponzor liste (service role ključevi nisu dostupni u Edge runtimeu).
 - **`admin/layout.tsx`** — provjerava `project_admins` tablicu (server-side). Ako nije admin → redirect na `/portal`.
-- **`portal/layout.tsx`** — provjerava `project_admins` (ako admin → `/admin/dashboard`), zatim `sponsor_users` (ako nema → sign out + `/login?error=no_access`).
-- **`login/page.tsx`** — nakon prijave redirecta na `/admin/dashboard`. Prikazuje grešku za `?error=no_access`.
+- **`portal/layout.tsx`** — provjerava `project_admins` (ako admin → `/admin/dashboard`), zatim `sponsor_users` (ako nema → sign out + `/login?error=no_access`). UUID korisnika se traži po emailu jer su UUID-ovi različiti između projekata.
+- **`login/page.tsx`** — admin login, nakon prijave redirecta na `/admin/dashboard`.
+- **`partner/page.tsx`** — partner login. Poziva `findPartnerProject(email)` server action da pronađe u kojoj bazi postoji email, pa kreira **jedan** `createBrowserClient` za točan projekt. Izbjegava singleton problem `@supabase/ssr`.
 
 > **Važno**: Ne pokušavati raditi DB upite sa service role klijentom u `middleware.ts` — Edge runtime ne može pristupiti `SUPABASE_SERVICE_ROLE_KEY`.
 
-### Promjena projekta (admin)
+> **Važno**: `createBrowserClient` iz `@supabase/ssr` je **singleton po modulu** — drugi poziv s različitim URL-om vraća isti (prvi) klijent. Uvijek kreirati samo jedan klijent po modulu, ili koristiti server action za određivanje projekta.
+
+### Promjena projekta — admin
 - Cookie `cro_active_project` (`'2026'` | `'2025'`)
 - Prebacivanje bez ponovnog logina putem `ProjectSwitcher` komponente u sidebaru
+
+### Promjena projekta — partner (sponzorski portal)
+- Gumb "Prebaci na CRO Commerce 20XX" vidljiv samo ako partner postoji u obje baze (`sponsor_users` u oba projekta)
+- `switchPortalProject(targetProjectId)` server action radi **sve server-side**:
+  1. Generira magic link u target projektu (`admin.generateLink`)
+  2. Fetchuje action_link server-side s `redirect: "manual"`
+  3. Izvlači `access_token` + `refresh_token` iz `Location` headera (implicit flow)
+  4. Poziva `setSession` server-side → cookie store prima novu sesiju
+  5. Postavlja `cro_active_project` cookie
+  6. Vraća `true` — klijent radi `window.location.href = "/portal/benefits"`
+- **Nema browser magic link redirecta** — sve se izvršava server-side, bez `/auth/callback` roundtripa
+- Partner mora imati account u oba projekta + `sponsor_users` unos u oba projekta
+
+### Supabase konfiguracija za projekt switch
+U **oba** Supabase projekta (2025 i 2026):
+- **Authentication → URL Configuration → Redirect URLs**: dodati `https://eventorganizzer.vercel.app/auth/callback`
+- **Authentication → URL Configuration → Site URL**: `https://eventorganizzer.vercel.app`
 
 ---
 
 ## Branching strategija
 
 - `main` — produkcija (Vercel deploya odavde)
-- `develop` — nove funkcionalnosti, merge u main kad je stabilno
+- Direktni commit na main je OK za ovaj projekt
 
 ```bash
-# Razvoj na develop
-git checkout develop
 git add .
 git commit -m "Opis promjene"
-git push origin develop
-
-# Merge u main
-git checkout main
-git merge develop --no-ff
 git push origin main
 ```
 
@@ -391,11 +412,17 @@ git push origin main
 - **Mail ikona** na hover — šalje Supabase pozivnicu za sponzorski portal + upisuje `sponsor_users`
 
 ### Sponzorski portal (`/portal`)
-- Sidebar s navom: **Benefiti** i **Sponzor**
+- Login na `/partner` — namjenska stranica s "Prijava za sponzore" dizajnom
+- Sidebar s navom: **Benefiti** i **Sponzor** + gumb za promjenu projekta (ako postoji u oba)
 - **`/portal/benefits`** — read-only lista benefita s progress barom, kliktabilne status kartice za filter (`?status=X`), prikaz roka, napomena i odgovorne osobe
 - **`/portal/sponsor`** — read-only info: naziv, paket, status plaćanja, kontakt osobe, osobe za ulaznice, datoteke
 - Pristup samo korisnicima u `sponsor_users` tablici
 - Admin korisnici se automatski redirectaju na `/admin/dashboard`
+
+### Upravljanje partnerima (Postavke)
+- `PartnerManagementSection` — lista partner korisnika s delete
+- Novi partner: ime, email, lozinka, sponzor (kreira u aktivnom projektu)
+- Prikaz deduplikacira po emailu i preskače orphaned `sponsor_users` unose (bez matching auth usera)
 
 ### Upload datoteka
 - Komponenta `FileUploadSection` — drag & drop ili odabir datoteka
@@ -438,6 +465,7 @@ git push origin main
 - Svi modalni prozori otvaraju se pri **vrhu viewporta** (`items-start pt-8`)
 - Modali koriste fixed overlay s Tailwind klasama (ne `<dialog>` element)
 - Klik na benefit red skrola stranicu na vrh (`<main>` element, ne `window`)
+- Naslov aplikacije: `EventOrganizzer - CRO Commerce Conference`
 
 ---
 
@@ -455,3 +483,8 @@ git push origin main
 - **Supabase join** vraća array u TypeScript tipu ali objekt u runtime — koristiti `Array.isArray(raw) ? raw[0] : raw` za sigurno castanje
 - **`useSearchParams()`** mora biti unutar `<Suspense>` wrappera u Next.js 14 App Routeru
 - **Storage bucket** `sponsor-files` mora biti kreiran kao Public u Supabase Dashboard + RLS politike za `authenticated` korisnike
+- **`createBrowserClient` singleton**: `@supabase/ssr` kešira klijent po modulu — nikad ne pozivati s dva različita URL-a u istom modulu. Koristiti `findPartnerProject` server action za određivanje projekta prije kreiranja klijenta
+- **Portal projekt switch** ide potpuno server-side: `admin.generateLink` → `fetch(url, {redirect:"manual"})` → parse Location header → `setSession`. Ne koristi browser redirect niti `/auth/callback` stranicu
+- **UUID-ovi korisnika su različiti** između projekata (2025 i 2026 su zasebne Supabase instance). `portal/layout.tsx` traži korisnika po emailu u admin API, ne po UUID-u iz sesije
+- **Orphaned `sponsor_users` unosi** (bez matching auth usera) se preskaču u prikazu na settings stranici
+- `NEXT_PUBLIC_APP_URL` mora biti postavljen u Vercel env varijablama na `https://eventorganizzer.vercel.app` — koristi se za `redirectTo` u magic link generaciji
