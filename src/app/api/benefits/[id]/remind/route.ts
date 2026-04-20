@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -17,8 +18,10 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { template_id, recipient_email } = await req.json();
-    const supabase = await createAdminClient();
+    const { template_id, recipient_email, project_id } = await req.json();
+    const supabase = project_id === "2025" || project_id === "2026"
+      ? createAdminClientForProject(project_id)
+      : await createAdminClient();
 
     // Dohvati benefit + sponzora
     const { data: benefit } = await supabase
