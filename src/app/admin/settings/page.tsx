@@ -4,7 +4,9 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { PROJECT_COOKIE, PROJECTS, resolveProjectId } from "@/lib/supabase/projects";
 import ProjectSettingsForm from "@/components/admin/ProjectSettingsForm";
 import UserManagementSection from "@/components/admin/UserManagementSection";
+import PartnerManagementSection from "@/components/admin/PartnerManagementSection";
 import { listUsersWithMeta } from "@/app/actions/userManagement";
+import { listPartnerUsers, listSponsorsForSelect } from "@/app/actions/partnerManagement";
 
 export default async function SettingsPage() {
   const cookieStore = await cookies();
@@ -19,9 +21,13 @@ export default async function SettingsPage() {
     project.conferenceDate;
 
   let users: { email: string; name: string | null; id2026: string | null; id2025: string | null }[] = [];
-  try {
-    users = await listUsersWithMeta();
-  } catch {}
+  try { users = await listUsersWithMeta(); } catch {}
+
+  let partners: Awaited<ReturnType<typeof listPartnerUsers>> = [];
+  try { partners = await listPartnerUsers(); } catch {}
+
+  let sponsors: { id: string; name: string }[] = [];
+  try { sponsors = await listSponsorsForSelect(); } catch {}
 
   return (
     <div>
@@ -42,6 +48,7 @@ export default async function SettingsPage() {
         />
 
         <UserManagementSection users={users} />
+        <PartnerManagementSection partners={partners} sponsors={sponsors} />
       </div>
     </div>
   );
