@@ -86,7 +86,6 @@ export async function createPartnerUser(
     .upsert({ user_id: userId, sponsor_id: sponsorId, invited_by: "admin" }, { onConflict: "user_id" });
 
   if (suError) throw new Error(suError.message);
-  revalidatePath("/admin/settings");
 }
 
 export async function deletePartnerUser(sponsorUsersId: string, userId: string) {
@@ -98,8 +97,6 @@ export async function deletePartnerUser(sponsorUsersId: string, userId: string) 
   const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
   const adminClient = createAdminClientForProject(projectId);
   await adminClient.auth.admin.deleteUser(userId);
-
-  revalidatePath("/admin/settings");
 }
 
 export async function listSponsorsForSelect(): Promise<{ id: string; name: string }[]> {

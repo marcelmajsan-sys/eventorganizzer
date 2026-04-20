@@ -38,9 +38,16 @@ export default async function SettingsPage() {
     const sponsorUsers = sponsorUsersRes.data ?? [];
 
     if (sponsorUsers.length > 0) {
-      const adminClient = createAdminClientForProject(projectId);
-      const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-      const authUsers = authData?.users ?? [];
+      const admin2026 = createAdminClientForProject("2026");
+      const admin2025 = createAdminClientForProject("2025");
+      const [res2026, res2025] = await Promise.all([
+        admin2026.auth.admin.listUsers({ perPage: 1000 }),
+        admin2025.auth.admin.listUsers({ perPage: 1000 }),
+      ]);
+      const authUsers = [
+        ...(res2026.data?.users ?? []),
+        ...(res2025.data?.users ?? []),
+      ];
 
       partners = sponsorUsers.map((su) => {
         const authUser = authUsers.find((u) => u.id === su.user_id);
