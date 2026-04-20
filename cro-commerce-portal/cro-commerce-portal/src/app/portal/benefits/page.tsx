@@ -1,11 +1,25 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { CheckCircle2, Clock, AlertTriangle, XCircle, Gift } from "lucide-react";
-import { benefitStatusLabel, benefitStatusColor, formatDate, daysUntil } from "@/lib/utils";
+import Link from "next/link";
+import { benefitStatusLabel, benefitStatusColor } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
 import PortalBenefitCard from "@/components/portal/PortalBenefitCard";
 
-export default async function PortalBenefitsPage() {
+const statusIcon: Record<string, React.ReactNode> = {
+  completed: <CheckCircle2 size={15} className="text-emerald-500" />,
+  in_progress: <Clock size={15} className="text-blue-500" />,
+  not_started: <XCircle size={15} className="text-gray-400" />,
+  overdue: <AlertTriangle size={15} className="text-red-500" />,
+};
+
+const STATUSES: BenefitStatus[] = ["not_started", "in_progress", "completed", "overdue"];
+
+export default async function PortalBenefitsPage({
+  searchParams,
+}: {
+  searchParams: { status?: string };
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -30,19 +44,15 @@ export default async function PortalBenefitsPage() {
   const total = rows.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  const statusIcon: Record<string, React.ReactNode> = {
-    completed: <CheckCircle2 size={15} className="text-emerald-500" />,
-    in_progress: <Clock size={15} className="text-blue-500" />,
-    not_started: <XCircle size={15} className="text-gray-400" />,
-    overdue: <AlertTriangle size={15} className="text-red-500" />,
-  };
+  const activeStatus = searchParams.status as BenefitStatus | undefined;
+  const filtered = activeStatus ? rows.filter((b) => b.status === activeStatus) : rows;
 
   return (
     <div className="animate-enter">
       <div className="page-header">
         <div>
           <h1 className="page-title">Moji benefiti</h1>
-          <p className="page-subtitle">Pregled i upravljanje vašim sponzorskim benefitima</p>
+          <p className="page-subtitle">Pregled vaših sponzorskih benefita</p>
         </div>
       </div>
 
@@ -61,16 +71,25 @@ export default async function PortalBenefitsPage() {
 
         {/* Status kartice */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-          {(["not_started", "in_progress", "completed", "overdue"] as BenefitStatus[]).map((status) => {
+          {STATUSES.map((status) => {
             const count = rows.filter((b) => b.status === status).length;
+            const isActive = activeStatus === status;
             return (
-              <div key={status} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+              <Link
+                key={status}
+                href={isActive ? "/portal/benefits" : `/portal/benefits?status=${status}`}
+                className={`flex items-center gap-2 p-3 rounded-lg transition-colors border ${
+                  isActive
+                    ? "bg-brand-50 border-brand-200"
+                    : "bg-gray-50 border-transparent hover:bg-gray-100"
+                }`}
+              >
                 {statusIcon[status]}
                 <div>
                   <p className="text-lg font-bold text-gray-900">{count}</p>
                   <p className="text-xs text-gray-500">{benefitStatusLabel(status)}</p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -78,13 +97,20 @@ export default async function PortalBenefitsPage() {
 
       {/* Lista benefita */}
       <div className="space-y-3">
-        {rows.map((benefit) => (
+        {filtered.map((benefit) => (
           <PortalBenefitCard key={benefit.id} benefit={benefit} />
         ))}
-        {rows.length === 0 && (
+        {filtered.length === 0 && (
           <div className="card p-12 text-center">
             <Gift size={32} className="text-gray-200 mx-auto mb-3" />
-            <p className="text-gray-400 text-sm">Nema definiranih benefita</p>
+            <p className="text-gray-400 text-sm">
+              {activeStatus ? `Nema benefita s ovim statusom` : "Nema definiranih benefita"}
+            </p>
+            {activeStatus && (
+              <Link href="/portal/benefits" className="text-xs text-brand-600 hover:underline mt-2 block">
+                Prikaži sve
+              </Link>
+            )}
           </div>
         )}
       </div>
