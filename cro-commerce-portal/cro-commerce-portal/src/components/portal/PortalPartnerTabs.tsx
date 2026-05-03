@@ -60,14 +60,26 @@ export default function PortalPartnerTabs({ sponsor, contacts, files }: Props) {
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-bold text-gray-900">{sponsor.name}</h2>
-            <div className="flex items-center gap-3 mt-2 flex-wrap">
-              <span className={`badge text-sm ${packageColor(sponsor.package_type as PackageType)}`}>
-                {sponsor.package_type}
-              </span>
+            <div className="flex items-center gap-6 mt-3 flex-wrap">
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Kategorija</p>
+                <button
+                  onClick={() => setActiveTab("dokumenti")}
+                  className={`badge text-sm cursor-pointer hover:opacity-75 transition-opacity ${packageColor(sponsor.package_type as PackageType)}`}
+                >
+                  {sponsor.package_type}
+                </button>
+              </div>
               {sponsor.payment_status && (
-                <span className={`badge text-sm ${paymentStatusColor(sponsor.payment_status as PaymentStatus)}`}>
-                  {paymentStatusLabel(sponsor.payment_status as PaymentStatus)}
-                </span>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Plaćanje</p>
+                  <button
+                    onClick={() => setActiveTab("dokumenti")}
+                    className={`badge text-sm cursor-pointer hover:opacity-75 transition-opacity ${paymentStatusColor(sponsor.payment_status as PaymentStatus)}`}
+                  >
+                    {paymentStatusLabel(sponsor.payment_status as PaymentStatus)}
+                  </button>
+                </div>
               )}
             </div>
           </div>
