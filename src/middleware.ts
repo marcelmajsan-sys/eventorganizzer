@@ -2,6 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { PROJECT_COOKIE, PROJECTS, resolveProjectId } from "@/lib/supabase/projects";
 
+async function getSessionWithTimeout(supabase: ReturnType<typeof createServerClient>, ms: number) {
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), ms));
+  const session = supabase.auth.getSession().then((r) => r.data.session).catch(() => null);
+  return Promise.race([session, timeout]);
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -21,14 +27,13 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const { data: { session } } = await supabase.auth.getSession();
+  // 1200ms timeout — if Supabase is slow (cold start after pause), pass through.
+  // Real auth enforcement happens in admin/layout.tsx and portal/layout.tsx.
+  const session = await getSessionWithTimeout(supabase, 1200);
   const user = session?.user ?? null;
 
   const pathname = request.nextUrl.pathname;
 
-  // Protect admin routes — only require authentication here.
-  // Admin authorization (project_admins check) is done in admin/layout.tsx
-  // which runs server-side and can access service role keys.
   if (pathname.startsWith("/admin")) {
     if (!user) return NextResponse.redirect(new URL("/login", request.url));
   }
@@ -37,8 +42,6 @@ export async function middleware(request: NextRequest) {
     if (!user) return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Redirect authenticated users away from login page to admin dashboard.
-  // Admin authorization will gate access from within layout.tsx.
   if (pathname === "/login" && user) {
     return NextResponse.redirect(new URL("/admin/dashboard", request.url));
   }
