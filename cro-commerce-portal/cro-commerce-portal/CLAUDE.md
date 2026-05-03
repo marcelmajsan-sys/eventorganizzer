@@ -15,7 +15,7 @@ Admin portal za upravljanje CRO Commerce konferencijom. Omogućuje:
 - Rokovnik — godišnji pregled zadataka po rokovima s filtrom po odgovornoj osobi
 - Postavke projekta (datum konferencije, upravljanje korisnicima)
 - **Multi-projekt**: CRO Commerce 2026 i 2025 — prebacivanje bez ponovnog logina
-- **Sponzorski portal** — read-only portal za sponzore na `/portal` i `/partner`
+- **Sponzorski portal** — portal za sponzore na `/portal` i `/partner` s mogućnošću uređivanja kontakata
 
 Deployano na: https://eventorganizzer.vercel.app
 
@@ -40,10 +40,10 @@ eventorganizzer/
 │   │   │   ├── calendar/         ← Rokovnik (zadaci po rokovima)
 │   │   │   └── settings/         ← Datum konferencije + upravljanje korisnicima + partneri
 │   │   ├── actions/
-│   │   │   ├── switchProject.ts      ← Admin projekt switch + portal projekt switch (server-side)
+│   │   │   ├── switchProject.ts      ← Admin projekt switch (token exchange) + portal projekt switch
 │   │   │   ├── projectSettings.ts    ← Server action: datum konferencije
 │   │   │   ├── userManagement.ts     ← Server action: CRUD admin korisnika u svim bazama
-│   │   │   ├── partnerManagement.ts  ← Server action: CRUD partner korisnika (sponsor_users)
+│   │   │   ├── partnerManagement.ts  ← Server action: CRUD partner korisnika + updatePrimaryContact
 │   │   │   └── findPartnerProject.ts ← Server action: pronađi u kojoj bazi postoji email
 │   │   ├── api/
 │   │   │   ├── benefits/[id]/
@@ -58,16 +58,17 @@ eventorganizzer/
 │   │   ├── partner/              ← Login stranica za partnere/sponzore (/partner)
 │   │   └── portal/               ← Sponzorski portal
 │   │       ├── layout.tsx        ← Auth: admin → /admin/dashboard, bez pristupa → /login?error=no_access
-│   │       ├── page.tsx          ← Redirect na /portal/benefits
+│   │       ├── page.tsx          ← Redirect na /portal/sponsor (Partner je homepage)
 │   │       ├── benefits/         ← Read-only lista benefita s filterom po statusu
-│   │       └── sponsor/          ← Read-only info o sponzoru (kontakti, datoteke)
+│   │       ├── program/          ← Read-only program konferencije (bez uređivanja)
+│   │       └── sponsor/          ← Partner info: kontakti (editable), datoteke, primarni kontakt
 │   ├── components/
 │   │   ├── admin/
 │   │   │   ├── AdminSidebar.tsx
-│   │   │   ├── ProjectSwitcher.tsx
+│   │   │   ├── ProjectSwitcher.tsx         ← window.location.href za reset browser klijenta
 │   │   │   ├── ProjectSettingsForm.tsx
 │   │   │   ├── UserManagementSection.tsx     ← CRUD admin korisnika (modal)
-│   │   │   ├── PartnerManagementSection.tsx  ← CRUD partner korisnika (modal)
+│   │   │   ├── PartnerManagementSection.tsx  ← CRUD partner korisnika + promjena lozinke
 │   │   │   ├── CalendarView.tsx              ← Rokovnik (zadaci + edit modal)
 │   │   │   ├── TaskDetailActions.tsx         ← Edit/delete na stranici zadatka
 │   │   │   ├── BenefitsView.tsx              ← Prikaz benefita + scroll-to-top pri otvaranju modala
@@ -80,7 +81,7 @@ eventorganizzer/
 │   │   │   ├── AddBenefitModal.tsx
 │   │   │   ├── AddSponsorModal.tsx
 │   │   │   ├── AddTaskModal.tsx
-│   │   │   ├── EditSponsorForm.tsx
+│   │   │   ├── EditSponsorForm.tsx           ← Sadrži lead_status select
 │   │   │   ├── EditBenefitModal.tsx
 │   │   │   ├── EditBenefitDialog.tsx         ← Edit + slanje obavijesti (router.refresh() nakon notify)
 │   │   │   ├── RenameBenefitDialog.tsx
@@ -88,8 +89,11 @@ eventorganizzer/
 │   │   │   ├── DeleteBenefitButton.tsx
 │   │   │   └── DeleteSponsorButton.tsx       ← Brisanje sponzora s potvrdom
 │   │   └── portal/
-│   │       ├── PortalSidebar.tsx             ← Sidebar s navom: Benefiti, Sponzor + projekt switcher
-│   │       └── PortalBenefitCard.tsx         ← Read-only benefit kartica
+│   │       ├── PortalSidebar.tsx             ← Nav: Partner → Benefiti → Program + projekt switcher
+│   │       ├── PortalBenefitCard.tsx         ← Read-only benefit kartica
+│   │       ├── PortalPartnerTabs.tsx         ← Tabovi: Informacije / Dokumenti
+│   │       ├── PortalContactsSection.tsx     ← Editable: primarni kontakt + kontakt osobe + ulaznice
+│   │       └── PortalProgramView.tsx         ← Read-only program (tabovi po pozornici)
 │   ├── lib/
 │   │   ├── supabase/
 │   │   │   ├── client.ts             ← Browser Supabase klijent
@@ -97,9 +101,9 @@ eventorganizzer/
 │   │   │   ├── projects.ts           ← Konfiguracija projekata (2025/2026) — URL-ovi hardkodirani
 │   │   │   └── adminProjectClient.ts ← Service role klijent za bilo koji projekt
 │   │   ├── email.ts              ← Resend email helper (deadline reminder, welcome mail)
-│   │   └── utils.ts              ← Utility funkcije (boje, formatiranje)
-│   ├── middleware.ts              ← Auth guard (samo autentikacija, ne autorizacija)
-│   └── types/index.ts
+│   │   └── utils.ts              ← Utility funkcije (boje, formatiranje, leadStatusLabel/Color)
+│   ├── middleware.ts              ← Auth guard (getSession + 1200ms timeout, ne getUser)
+│   └── types/index.ts            ← Sadrži LeadStatus tip + Sponsor interface s lead_status
 ├── supabase/                     ← SQL migracije
 │   ├── migration_001_initial.sql
 │   ├── migration_002_nullable_sponsor_benefit.sql
@@ -109,11 +113,13 @@ eventorganizzer/
 │   ├── migration_006_sponsor_contacts.sql
 │   ├── migration_007_program_budget.sql
 │   ├── migration_008_project_id.sql
-│   ├── migration_009_email_system.sql    ← email_templates, email_automations, email_logs, reminder_email
+│   ├── migration_009_email_system.sql
 │   ├── migration_010_package_types.sql
 │   ├── migration_011_contact_notes.sql
 │   ├── migration_012_contact_company.sql
-│   └── migration_013_sponsor_portal.sql ← sponsor_users tablica + RLS politike za portal
+│   ├── migration_013_sponsor_portal.sql  ← sponsor_users + RLS + helper funkcije
+│   ├── migration_014_lead_status.sql     ← lead_status kolona na sponsors tablici
+│   └── migration_015_contacts_partner_rls.sql ← RLS na sponsor_contacts za partnere
 ├── cro-commerce-portal/
 │   └── cro-commerce-portal/      ← Dev working dir (lokalni dev)
 │       └── src/                  ← Kopija root src/ za lokalni rad
@@ -132,9 +138,9 @@ eventorganizzer/
 
 | Tablica | Opis |
 |---------|------|
-| `sponsors` | Sponzori — naziv, paket, kontakt, status plaćanja |
+| `sponsors` | Sponzori — naziv, paket, kontakt, status plaćanja, `lead_status` |
 | `sponsor_benefits` | Benefiti sponzora s rokovima, statusima, `reminder_email`, `assigned_to` |
-| `sponsor_contacts` | Kontakt osobe i osobe za ulaznice po sponzoru |
+| `sponsor_contacts` | Kontakt osobe i osobe za ulaznice po sponzoru (RLS: partneri mogu upravljati vlastitima) |
 | `sponsor_users` | Mapiranje auth korisnika → sponsor_id (za sponzorski portal) |
 | `files` | Upload datoteke vezane za sponzore |
 | `tasks` | Kanban zadaci |
@@ -158,6 +164,10 @@ eventorganizzer/
 
 ### Tipovi statusa plaćanja
 `'paid' | 'pending' | 'overdue'`
+
+### Tipovi lead statusa (sponsors.lead_status)
+`'cold_lead' | 'hot_lead' | 'confirmed_new' | 'confirmed_returning'`
+- cold_lead = plava boja, hot_lead = crvena, confirmed_new = zelena, confirmed_returning = ljubičasta
 
 ### Izolacija podataka po projektu
 Tablice `program_sessions` i `budget_items` koriste `project_id TEXT` kolonu (`'2025'` ili `'2026'`) za izolaciju podataka između projekata. Ostale tablice (sponzori, benefiti, zadaci) koriste zasebne Supabase instance ako su konfigurirani zasebni URL-ovi.
@@ -250,7 +260,7 @@ npm run dev
 1. Idi na **Supabase Dashboard → SQL Editor → New query**
 2. Kopiraj sadržaj migracije (iz `supabase/` foldera)
 3. Klikni **Run**
-4. Ponovi za svaki projekt (2025 i 2026) ako dijele istu bazu
+4. Ponovi za svaki projekt (2025 i 2026)
 
 ### Redoslijed migracija (kronološki)
 
@@ -267,8 +277,12 @@ migration_009_email_system             ← Tablice email_templates, email_automa
 migration_010_package_types            ← Ažurirani tipovi paketa
 migration_011_contact_notes            ← Napomene na kontaktima
 migration_012_contact_company          ← Tvrtka na kontaktima
-migration_013_sponsor_portal           ← Tablica sponsor_users + RLS politike za portal
+migration_013_sponsor_portal           ← Tablica sponsor_users + RLS politike + helper funkcije
+migration_014_lead_status              ← Kolona lead_status na sponsors tablici
+migration_015_contacts_partner_rls     ← RLS na sponsor_contacts: partneri mogu CRUD vlastite kontakte
 ```
+
+> **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.
 
 ### Seed podaci za 2025
 
@@ -322,6 +336,7 @@ Potrebno zbog peer dependency konflikata s dnd-kit paketima.
 - **Ne smije** biti u `project_admins` — inače će biti redirectan na admin panel
 - Kreiranje: Admin panel → Postavke → Partneri → Novi partner (kreira u aktivnom projektu)
 - Pozivnica putem admin panela: detalji sponzora → Kontakt osobe → mail ikona → `/api/portal/invite`
+- Promjena lozinke partnera: Admin panel → Postavke → Partneri → ikona ključa na retku korisnika
 
 ```sql
 -- Ručno dodavanje sponzor korisnika
@@ -334,11 +349,11 @@ UPDATE auth.users SET email_confirmed_at = NOW() WHERE id = 'uuid-korisnika';
 
 ### Arhitektura auth-a (važno!)
 
-- **`middleware.ts`** — samo provjera je li korisnik **prijavljen**. Ne radi provjeru admin/sponzor liste (service role ključevi nisu dostupni u Edge runtimeu).
+- **`middleware.ts`** — samo provjera je li korisnik **prijavljen**, koristi `getSession()` (čita cookie, bez network calla) s `Promise.race` timeoutom od 1200ms. Ne radi provjeru admin/sponzor liste.
 - **`admin/layout.tsx`** — provjerava `project_admins` tablicu (server-side). Ako nije admin → redirect na `/portal`.
 - **`portal/layout.tsx`** — provjerava `project_admins` (ako admin → `/admin/dashboard`), zatim `sponsor_users` (ako nema → sign out + `/login?error=no_access`). UUID korisnika se traži po emailu jer su UUID-ovi različiti između projekata.
 - **`login/page.tsx`** — admin login, nakon prijave redirecta na `/admin/dashboard`.
-- **`partner/page.tsx`** — partner login. Poziva `findPartnerProject(email)` server action da pronađe u kojoj bazi postoji email, pa kreira **jedan** `createBrowserClient` za točan projekt. Izbjegava singleton problem `@supabase/ssr`.
+- **`partner/page.tsx`** — partner login. Poziva `findPartnerProject(email)` server action da pronađe u kojoj bazi postoji email, pa kreira **jedan** `createBrowserClient` za točan projekt.
 
 > **Važno**: Ne pokušavati raditi DB upite sa service role klijentom u `middleware.ts` — Edge runtime ne može pristupiti `SUPABASE_SERVICE_ROLE_KEY`.
 
@@ -346,18 +361,18 @@ UPDATE auth.users SET email_confirmed_at = NOW() WHERE id = 'uuid-korisnika';
 
 ### Promjena projekta — admin
 - Cookie `cro_active_project` (`'2026'` | `'2025'`)
-- Prebacivanje bez ponovnog logina putem `ProjectSwitcher` komponente u sidebaru
+- `switchProject` server action radi **token exchange** server-side:
+  1. Čita korisnika iz TRENUTNOG projekta
+  2. Provjerava access u ciljanom projektu (`project_admins`)
+  3. Generira magic link u ciljanom projektu → fetchuje server-side → izvlači tokene
+  4. Postavlja novu sesiju via `setSession` → cookie store
+  5. Postavlja `cro_active_project` cookie
+  6. Vraća `"dashboard"` ili `"login"` string — klijent navigira s `window.location.href`
+- `window.location.href` (full page reload) resetira `createBrowserClient` singleton
 
 ### Promjena projekta — partner (sponzorski portal)
-- Gumb "Prebaci na CRO Commerce 20XX" vidljiv samo ako partner postoji u obje baze (`sponsor_users` u oba projekta)
-- `switchPortalProject(targetProjectId)` server action radi **sve server-side**:
-  1. Generira magic link u target projektu (`admin.generateLink`)
-  2. Fetchuje action_link server-side s `redirect: "manual"`
-  3. Izvlači `access_token` + `refresh_token` iz `Location` headera (implicit flow)
-  4. Poziva `setSession` server-side → cookie store prima novu sesiju
-  5. Postavlja `cro_active_project` cookie
-  6. Vraća `true` — klijent radi `window.location.href = "/portal/benefits"`
-- **Nema browser magic link redirecta** — sve se izvršava server-side, bez `/auth/callback` roundtripa
+- Gumb "Prebaci na CRO Commerce 20XX" vidljiv samo ako partner postoji u obje baze
+- `switchPortalProject(targetProjectId)` — isti token exchange flow kao admin switch
 - Partner mora imati account u oba projekta + `sponsor_users` unos u oba projekta
 
 ### Supabase konfiguracija za projekt switch
@@ -384,8 +399,10 @@ git push origin main
 
 ### Sponzori
 - Lista sponzora s tražilicom (`?q=` URL param) — naziv tvrtke je klikabilan link na profil
-- Detaljna stranica sponzora (`/admin/sponsors/[id]`)
-- Edit forma s paketom, kontaktom, statusom plaćanja
+- **Multi-select filter paketa** — comma-separated `?package=Zlatni,Srebrni` URL param
+- **Lead status filter** — `?lead=cold_lead` itd., s obojenim badge-evima u tablici
+- Detaljna stranica sponzora (`/admin/sponsors/[id]`) — prikazuje lead_status badge
+- Edit forma s paketom, kontaktom, statusom plaćanja i **lead statusom**
 - Upload datoteka po sponzoru (Supabase Storage)
 - **Brisanje sponzora** s potvrdom (`DeleteSponsorButton`) — redirect na `/admin/sponsors`
 
@@ -401,70 +418,68 @@ git push origin main
 - Gumb **"Pošalji obavijest"** u `EditBenefitDialog`
 - Poziva `/api/benefits/[id]/notify` — šalje mail odgovornoj osobi
 - **Subject**: `CRO Commerce [GODINA] - Podsjetnik za [naziv benefita]` (godina iz cookieja `cro_active_project`)
-- **Tijelo**: "Poštovani, podsjećamo vas na rok za korištenje benefita [naziv]..."
 - Nakon slanja: upisuje zapis u `email_logs` + `router.refresh()` — badge se odmah prikazuje
 - Tablica `email_logs` koristi kolonu `sent_at` (ne `created_at`)
 - FROM adresa: `konferencija@ecommerce.hr` (verificirana domena na Resend)
 
-### Kontakti sponzora
+### Kontakti sponzora (admin)
 - Dvije sekcije: **Kontakt osobe** i **Osobe za ulaznice**
 - Inline dodavanje, uređivanje i brisanje
 - **Mail ikona** na hover — šalje Supabase pozivnicu za sponzorski portal + upisuje `sponsor_users`
 
 ### Sponzorski portal (`/portal`)
 - Login na `/partner` — namjenska stranica s "Prijava za sponzore" dizajnom
-- Sidebar s navom: **Benefiti** i **Sponzor** + gumb za promjenu projekta (ako postoji u oba)
-- **`/portal/benefits`** — read-only lista benefita s progress barom, kliktabilne status kartice za filter (`?status=X`), prikaz roka, napomena i odgovorne osobe
-- **`/portal/sponsor`** — read-only info: naziv, paket, status plaćanja, kontakt osobe, osobe za ulaznice, datoteke
+- **Homepage: `/portal/sponsor`** (Partner) — `/portal` redirecta ovdje
+- Nav redoslijed: **Partner → Benefiti → Program** + gumb za promjenu projekta
+- **`/portal/sponsor`** (tab Informacije):
+  - **Primarni kontakt** — editable inline (ime, email, mobitel); ažurira `sponsors` tablicu via server action
+  - **Kontakt osobe** — partneri mogu dodavati, uređivati i brisati; koristi `createClient()` direktno (RLS migration_015)
+  - **Osobe za ulaznice** — isti CRUD kao kontakt osobe
+- **`/portal/sponsor`** (tab Dokumenti) — read-only lista uploadanih datoteka s veličinom i datumom
+- **`/portal/benefits`** — read-only lista benefita s progress barom, kliktabilne status kartice za filter
+- **`/portal/program`** — read-only program konferencije, tabovi po pozornici, bez uređivanja
 - Pristup samo korisnicima u `sponsor_users` tablici
 - Admin korisnici se automatski redirectaju na `/admin/dashboard`
 
 ### Upravljanje partnerima (Postavke)
 - `PartnerManagementSection` — lista partner korisnika s delete
 - Novi partner: ime, email, lozinka, sponzor (kreira u aktivnom projektu)
-- Prikaz deduplikacira po emailu i preskače orphaned `sponsor_users` unose (bez matching auth usera)
+- **Promjena lozinke** — ikona ključa na retku korisnika, inline input s potvrdom
+- Prikaz deduplikacira po emailu i preskače orphaned `sponsor_users` unose
 
 ### Upload datoteka
 - Komponenta `FileUploadSection` — drag & drop ili odabir datoteka
 - Upload na Supabase Storage bucket `sponsor-files`
 - Prikazuje vidljivi error u UI ako upload ne uspije
-- Datoteke vidljive i na sponzorskom portalu (`/portal/sponsor`)
+- Datoteke vidljive i na sponzorskom portalu (`/portal/sponsor` tab Dokumenti)
 
 ### Program konferencije
-- Stranica `/admin/program`
-- Tabovi po pozornici: Sve / Future Stage / Action Stage / Wonderland Stage
+- Admin: `/admin/program` — tabovi po pozornici, CRUD sesija + tražilica
+- Portal: `/portal/program` — isti prikaz, read-only (nema add/edit/delete)
 - Timeline prikaz grupiran po vremenskim slotovima; paralelne sesije side-by-side
 - Badge za tip sesije (Predavanje, Panel, Fireside, Keynote, Pauza, Networking)
-- CRUD: dodaj/uredi/briši sesiju + tražilica
 
 ### Troškovi eventa
 - Stranica `/admin/troskovi`
 - 4 summary kartice: Ukupni budžet, Plaćeno (s progress barom), Na čekanju, Preostalo
-- Tablica s filterom po statusu + tražilica
-- CRUD: dodaj/uredi/briši stavku
-- Izolacija po projektu putem `project_id` kolone
+- Tablica s filterom po statusu + tražilica; CRUD; izolacija po `project_id`
 
 ### Zadaci
 - Kanban board — kliktabilni naslovi kartica vode na detaljnu stranicu
 - Detaljna stranica zadatka (`/admin/tasks/[id]`) — prikaz svih podataka + edit + delete
-- `AddTaskModal` — polja: naziv, opis, rok, status, odgovorna osoba
 
 ### Rokovnik
 - Ruta `/admin/calendar`
 - Godišnji pregled svih zadataka iz DB-a po rokovima i mjesecima
-- Filtar po odgovornoj osobi (gumbi s imenima iz `assigned_to`)
-- Klik na zadatak otvara modal s detaljima + inline edit + brisanje
+- Filtar po odgovornoj osobi; klik otvara modal s detaljima + inline edit + brisanje
 
 ### Upravljanje korisnicima (Postavke)
 - `UserManagementSection` — lista admin korisnika s edit i delete
-- Novi korisnik modal: ime, email, lozinka (s show/hide)
-- Uredi korisnika modal: ime, email, opcijska nova lozinka
 - Kreiranje u **svim Supabase bazama** (2025 i 2026) automatski
 
 ### UI
 - Svi modalni prozori otvaraju se pri **vrhu viewporta** (`items-start pt-8`)
 - Modali koriste fixed overlay s Tailwind klasama (ne `<dialog>` element)
-- Klik na benefit red skrola stranicu na vrh (`<main>` element, ne `window`)
 - Naslov aplikacije: `EventOrganizzer - CRO Commerce Conference`
 
 ---
@@ -475,7 +490,6 @@ git push origin main
 - `router.refresh()` koristi se za re-fetch server komponenti nakon mutacija
 - `useState + useEffect([initial])` pattern koristi se u klijentskim komponentama za sync s novim props-ima
 - Graceful degradation: sve stranice rade i bez migriranih tablica (try/catch s fallbackom)
-- Ako je samo jedna Supabase instanca, `program_sessions` i `budget_items` koriste `project_id` za izolaciju; ostale tablice dijele podatke
 - **Scroll container** u admin layoutu je `<main className="overflow-y-auto">` — koristiti `document.querySelector("main")` za programatski scroll, ne `window`
 - **Resend SDK** vraća `{ data, error }` — ne baca exception. Uvijek provjeriti `error` nakon `resend.emails.send()`
 - `email_logs.sent_at` je timestamp kolona (ne `created_at`) — query i order moraju koristiti `sent_at`
@@ -483,8 +497,10 @@ git push origin main
 - **Supabase join** vraća array u TypeScript tipu ali objekt u runtime — koristiti `Array.isArray(raw) ? raw[0] : raw` za sigurno castanje
 - **`useSearchParams()`** mora biti unutar `<Suspense>` wrappera u Next.js 14 App Routeru
 - **Storage bucket** `sponsor-files` mora biti kreiran kao Public u Supabase Dashboard + RLS politike za `authenticated` korisnike
-- **`createBrowserClient` singleton**: `@supabase/ssr` kešira klijent po modulu — nikad ne pozivati s dva različita URL-a u istom modulu. Koristiti `findPartnerProject` server action za određivanje projekta prije kreiranja klijenta
-- **Portal projekt switch** ide potpuno server-side: `admin.generateLink` → `fetch(url, {redirect:"manual"})` → parse Location header → `setSession`. Ne koristi browser redirect niti `/auth/callback` stranicu
-- **UUID-ovi korisnika su različiti** između projekata (2025 i 2026 su zasebne Supabase instance). `portal/layout.tsx` traži korisnika po emailu u admin API, ne po UUID-u iz sesije
+- **`createBrowserClient` singleton**: `@supabase/ssr` kešira klijent po modulu — nikad ne pozivati s dva različita URL-a u istom modulu. Koristiti `findPartnerProject` server action za određivanje projekta
+- **Admin i partner projekt switch** rade identično — server-side token exchange: `admin.generateLink` → `fetch(url, {redirect:"manual"})` → parse Location header → `setSession`
+- **UUID-ovi korisnika su različiti** između projekata (2025 i 2026 su zasebne Supabase instance)
 - **Orphaned `sponsor_users` unosi** (bez matching auth usera) se preskaču u prikazu na settings stranici
-- `NEXT_PUBLIC_APP_URL` mora biti postavljen u Vercel env varijablama na `https://eventorganizzer.vercel.app` — koristi se za `redirectTo` u magic link generaciji
+- `NEXT_PUBLIC_APP_URL` mora biti postavljen na `https://eventorganizzer.vercel.app` — koristi se za `redirectTo` u magic link generaciji
+- **`updatePrimaryContact` server action** koristi admin klijent za update `contact_name/email/phone` na `sponsors` tablici — partneri nemaju direktan UPDATE RLS na `sponsors`
+- **`sponsor_contacts` RLS** (migration_015): partneri mogu SELECT/INSERT/UPDATE/DELETE samo za vlastiti `sponsor_id` (via `get_my_sponsor_id()` helper funkcija)
