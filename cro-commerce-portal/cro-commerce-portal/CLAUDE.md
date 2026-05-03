@@ -402,7 +402,7 @@ git push origin main
 
 ### Sponzori
 - Lista sponzora s tražilicom (`?q=` URL param) — naziv tvrtke je klikabilan link na profil
-- **Multi-select filter paketa** — comma-separated `?package=Zlatni,Srebrni` URL param
+- **Multi-select filter paketa** (`PackageTypeManager`) — comma-separated `?package=Zlatni,Srebrni` URL param; × ikonica se prikazuje samo na aktivnom filteru i uklanja ga (ne briše kategoriju iz baze); uz "+" gumb postoji i olovka gumb koji ulazi u **edit mode** gdje se svaka kategorija može preimenovati (inline input + ✓) ili obrisati (trash + potvrda Da/Ne)
 - **Lead status filter** — `?lead=cold_lead` itd., s obojenim badge-evima u tablici
 - Detaljna stranica sponzora (`/admin/sponsors/[id]`) — prikazuje lead_status badge
 - Edit forma s paketom, kontaktom, statusom plaćanja i **lead statusom**
