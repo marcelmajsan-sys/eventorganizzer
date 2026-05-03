@@ -19,6 +19,7 @@ import EditBenefitModal from "@/components/admin/EditBenefitModal";
 import AddBenefitModal from "@/components/admin/AddBenefitModal";
 import DeleteBenefitButton from "@/components/admin/DeleteBenefitButton";
 import ContactsSection from "@/components/admin/ContactsSection";
+import DeleteSponsorButton from "@/components/admin/DeleteSponsorButton";
 
 interface Props {
   params: { id: string };
@@ -76,7 +77,10 @@ export default async function SponsorDetailPage({ params }: Props) {
             </h1>
             <p className="page-subtitle">Detalji sponzora i upravljanje benefitima</p>
           </div>
-          <EditSponsorForm sponsor={sponsor} packageTypes={packageTypeNames} />
+          <div className="flex items-center gap-2">
+            <DeleteSponsorButton sponsorId={sponsor.id} sponsorName={sponsor.name} />
+            <EditSponsorForm sponsor={sponsor} packageTypes={packageTypeNames} />
+          </div>
         </div>
       </div>
 
