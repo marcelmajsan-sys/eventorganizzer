@@ -1,21 +1,42 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Search, Filter } from "lucide-react";
-import { packageColor, paymentStatusColor, paymentStatusLabel } from "@/lib/utils";
-import type { PackageType, PaymentStatus } from "@/types";
+import { Filter } from "lucide-react";
+import { packageColor, paymentStatusColor, paymentStatusLabel, leadStatusColor, leadStatusLabel } from "@/lib/utils";
+import type { PackageType, PaymentStatus, LeadStatus } from "@/types";
 import AddSponsorModal from "@/components/admin/AddSponsorModal";
 import SearchInput from "@/components/admin/SearchInput";
 import PackageTypeManager from "@/components/admin/PackageTypeManager";
 import { ChevronRight } from "lucide-react";
 
 interface Props {
-  searchParams: { package?: string; payment?: string; q?: string };
+  searchParams: { package?: string; payment?: string; lead?: string; q?: string };
 }
 
 function parsePackages(raw?: string): string[] {
   if (!raw) return [];
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
+
+function buildUrl(params: { package?: string; payment?: string; lead?: string }) {
+  const p = new URLSearchParams();
+  if (params.package) p.set("package", params.package);
+  if (params.payment) p.set("payment", params.payment);
+  if (params.lead)    p.set("lead", params.lead);
+  return `/admin/sponsors${p.size ? "?" + p.toString() : ""}`;
+}
+
+const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
+  { value: "cold_lead",           label: "Cold Lead" },
+  { value: "hot_lead",            label: "Hot Lead" },
+  { value: "confirmed_new",       label: "Potvrđeno Novi" },
+  { value: "confirmed_returning", label: "Potvrđeno Stari" },
+];
+
+const PAYMENT_STATUSES: { value: PaymentStatus; label: string }[] = [
+  { value: "paid",    label: "Plaćeno" },
+  { value: "pending", label: "Na čekanju" },
+  { value: "overdue", label: "Kasni" },
+];
 
 export default async function SponsorsPage({ searchParams }: Props) {
   const supabase = await createClient();
@@ -28,9 +49,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
   let packageTypesRes: { data: { id: string; name: string }[] | null } = { data: null };
   try {
     packageTypesRes = await supabase.from("package_types").select("id, name").order("sort_order");
-  } catch {
-    // table doesn't exist yet, use fallback
-  }
+  } catch {}
 
   const packageTypes = (packageTypesRes as any)?.data ?? [
     { id: "1", name: "Glavni" }, { id: "2", name: "Zlatni" },
@@ -48,20 +67,15 @@ export default async function SponsorsPage({ searchParams }: Props) {
   if (searchParams.payment) {
     sponsors = sponsors.filter((s) => s.payment_status === searchParams.payment);
   }
+  if (searchParams.lead) {
+    sponsors = sponsors.filter((s) => s.lead_status === searchParams.lead);
+  }
   if (searchParams.q) {
     const q = searchParams.q.toLowerCase();
     sponsors = sponsors.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        s.contact_name?.toLowerCase().includes(q)
+      (s) => s.name.toLowerCase().includes(q) || s.contact_name?.toLowerCase().includes(q)
     );
   }
-
-  const paymentStatuses: { value: PaymentStatus; label: string }[] = [
-    { value: "paid", label: "Plaćeno" },
-    { value: "pending", label: "Na čekanju" },
-    { value: "overdue", label: "Kasni" },
-  ];
 
   return (
     <div className="animate-enter">
@@ -74,39 +88,81 @@ export default async function SponsorsPage({ searchParams }: Props) {
       </div>
 
       {/* Filters */}
-      <div className="card p-4 mb-6 flex flex-wrap gap-3 items-center">
-        <SearchInput placeholder="Pretraži sponzore..." />
+      <div className="card p-4 mb-6 space-y-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          <SearchInput placeholder="Pretraži sponzore..." />
 
-        <div className="w-px h-6 bg-gray-200 hidden sm:block" />
+          <div className="w-px h-6 bg-gray-200 hidden sm:block" />
 
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Filter size={14} />
-          <span>Kategorija:</span>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Filter size={14} />
+            <span>Kategorija:</span>
+          </div>
+
+          <PackageTypeManager
+            packageTypes={packageTypes}
+            activePackages={activePackages}
+            activePayment={searchParams.payment}
+          />
         </div>
 
-        <PackageTypeManager
-          packageTypes={packageTypes}
-          activePackages={activePackages}
-          activePayment={searchParams.payment}
-        />
-
-        <div className="w-px h-6 bg-gray-200 hidden sm:block" />
-
-        {/* Payment filter */}
-        <div className="flex gap-2 flex-wrap">
-          {paymentStatuses.map((s) => (
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Payment filter */}
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Filter size={14} />
+            <span>Plaćanje:</span>
+          </div>
+          <div className="flex gap-2 flex-wrap">
             <a
-              key={s.value}
-              href={`/admin/sponsors?${searchParams.package ? `package=${searchParams.package}&` : ""}payment=${s.value}`}
+              href={buildUrl({ package: searchParams.package, lead: searchParams.lead })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                searchParams.payment === s.value
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                !searchParams.payment ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              {s.label}
+              Svi
             </a>
-          ))}
+            {PAYMENT_STATUSES.map((s) => (
+              <a
+                key={s.value}
+                href={buildUrl({ package: searchParams.package, lead: searchParams.lead, payment: s.value })}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  searchParams.payment === s.value ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {s.label}
+              </a>
+            ))}
+          </div>
+
+          <div className="w-px h-6 bg-gray-200 hidden sm:block" />
+
+          {/* Lead status filter */}
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Status:</span>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <a
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment })}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                !searchParams.lead ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Svi
+            </a>
+            {LEAD_STATUSES.map((s) => (
+              <a
+                key={s.value}
+                href={buildUrl({ package: searchParams.package, payment: searchParams.payment, lead: s.value })}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                  searchParams.lead === s.value
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : `${leadStatusColor(s.value)} hover:opacity-80`
+                }`}
+              >
+                {s.label}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -118,6 +174,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
               <tr>
                 <th className="text-left py-3 px-4 text-gray-500 font-medium">Tvrtka</th>
                 <th className="text-left py-3 px-4 text-gray-500 font-medium">Paket</th>
+                <th className="text-left py-3 px-4 text-gray-500 font-medium">Status</th>
                 <th className="text-left py-3 px-4 text-gray-500 font-medium">Kontakt</th>
                 <th className="text-left py-3 px-4 text-gray-500 font-medium">Plaćanje</th>
                 <th className="text-left py-3 px-4 text-gray-500 font-medium">Benefiti</th>
@@ -144,6 +201,15 @@ export default async function SponsorsPage({ searchParams }: Props) {
                       <span className={`badge ${packageColor(sponsor.package_type as PackageType)}`}>
                         {sponsor.package_type}
                       </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      {sponsor.lead_status ? (
+                        <span className={`badge border ${leadStatusColor(sponsor.lead_status as LeadStatus)}`}>
+                          {leadStatusLabel(sponsor.lead_status as LeadStatus)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <p className="text-gray-700">{contactName}</p>
@@ -176,7 +242,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
               })}
               {sponsors.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center">
+                  <td colSpan={7} className="py-16 text-center">
                     <p className="text-gray-400">Nema sponzora koji odgovaraju filteru</p>
                   </td>
                 </tr>

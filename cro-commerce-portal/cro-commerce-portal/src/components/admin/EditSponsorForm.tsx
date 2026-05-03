@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Save } from "lucide-react";
-import type { Sponsor, PackageType } from "@/types";
+import type { Sponsor, PackageType, LeadStatus } from "@/types";
 
 const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
@@ -21,13 +21,15 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
     contact_email: sponsor.contact_email,
     contact_name: sponsor.contact_name,
     payment_status: sponsor.payment_status,
+    lead_status: sponsor.lead_status ?? ("" as LeadStatus | ""),
     notes: sponsor.notes ?? "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await supabase.from("sponsors").update(form).eq("id", sponsor.id);
+    const payload = { ...form, lead_status: form.lead_status || null };
+    await supabase.from("sponsors").update(payload).eq("id", sponsor.id);
     setLoading(false);
     setOpen(false);
     router.refresh();
@@ -70,6 +72,16 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
                 <option value="pending">Na čekanju</option>
                 <option value="paid">Plaćeno</option>
                 <option value="overdue">Kasni</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+              <select value={form.lead_status} onChange={(e) => setForm({ ...form, lead_status: e.target.value as LeadStatus | "" })} className="input-field">
+                <option value="">— Nije postavljeno —</option>
+                <option value="cold_lead">Cold Lead</option>
+                <option value="hot_lead">Hot Lead</option>
+                <option value="confirmed_new">Potvrđeno Novi</option>
+                <option value="confirmed_returning">Potvrđeno Stari</option>
               </select>
             </div>
             <div>

@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { PackageType, PaymentStatus, BenefitStatus } from "@/types";
+import { PackageType, PaymentStatus, BenefitStatus, LeadStatus } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -64,6 +64,26 @@ export function benefitStatusColor(status: BenefitStatus): string {
     in_progress: "text-blue-700 bg-blue-100",
     completed: "text-emerald-700 bg-emerald-100",
     overdue: "text-red-700 bg-red-100",
+  };
+  return colors[status];
+}
+
+export function leadStatusLabel(status: LeadStatus): string {
+  const labels: Record<LeadStatus, string> = {
+    cold_lead:            "Cold Lead",
+    hot_lead:             "Hot Lead",
+    confirmed_new:        "Potvrđeno Novi",
+    confirmed_returning:  "Potvrđeno Stari",
+  };
+  return labels[status];
+}
+
+export function leadStatusColor(status: LeadStatus): string {
+  const colors: Record<LeadStatus, string> = {
+    cold_lead:            "text-blue-600 bg-blue-50 border-blue-200",
+    hot_lead:             "text-red-700 bg-red-50 border-red-200",
+    confirmed_new:        "text-emerald-700 bg-emerald-50 border-emerald-200",
+    confirmed_returning:  "text-purple-700 bg-purple-50 border-purple-200",
   };
   return colors[status];
 }

@@ -9,9 +9,9 @@ import {
 } from "lucide-react";
 import {
   packageColor, paymentStatusColor, paymentStatusLabel,
-  benefitStatusColor, benefitStatusLabel, formatDate, daysUntil
+  benefitStatusColor, benefitStatusLabel, leadStatusColor, leadStatusLabel, formatDate, daysUntil
 } from "@/lib/utils";
-import type { PackageType, PaymentStatus, BenefitStatus } from "@/types";
+import type { PackageType, PaymentStatus, BenefitStatus, LeadStatus } from "@/types";
 import BenefitStatusSelect from "@/components/admin/BenefitStatusSelect";
 import FileUploadSection from "@/components/admin/FileUploadSection";
 import EditSponsorForm from "@/components/admin/EditSponsorForm";
@@ -105,6 +105,19 @@ export default async function SponsorDetailPage({ params }: Props) {
                   </dd>
                 </div>
               </div>
+              {sponsor.lead_status && (
+                <div className="flex items-start gap-3">
+                  <FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <dt className="text-gray-500 text-xs">Status</dt>
+                    <dd className="mt-0.5">
+                      <span className={`badge border ${leadStatusColor(sponsor.lead_status as LeadStatus)}`}>
+                        {leadStatusLabel(sponsor.lead_status as LeadStatus)}
+                      </span>
+                    </dd>
+                  </div>
+                </div>
+              )}
             </dl>
             {sponsor.notes && (
               <div className="mt-4 pt-4 border-t border-gray-100">
