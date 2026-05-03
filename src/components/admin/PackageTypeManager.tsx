@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 interface PackageTypeRow {
   id: string;
@@ -22,7 +21,6 @@ export default function PackageTypeManager({ packageTypes, activePackages, activ
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
-  const supabase = createClient();
 
   function buildUrl(packages: string[]) {
     const params = new URLSearchParams();
@@ -65,30 +63,18 @@ export default function PackageTypeManager({ packageTypes, activePackages, activ
       {packageTypes.map((pkg) => {
         const isActive = activePackages.includes(pkg.name);
         return (
-          <div key={pkg.id} className="relative group/pkg flex items-center">
-            <a
-              href={toggle(pkg.name)}
-              className={`px-3 py-1.5 pr-7 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {pkg.name}
-            </a>
-            <button
-              onClick={async (e) => {
-                e.preventDefault();
-                if (!confirm(`Obriši kategoriju "${pkg.name}"?`)) return;
-                await supabase.from("package_types").delete().eq("id", pkg.id);
-                router.refresh();
-              }}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/pkg:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
-              title="Obriši kategoriju"
-            >
-              <X size={12} />
-            </button>
-          </div>
+          <a
+            key={pkg.id}
+            href={toggle(pkg.name)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              isActive
+                ? "bg-gray-900 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {pkg.name}
+            {isActive && <X size={11} className="opacity-70" />}
+          </a>
         );
       })}
 
