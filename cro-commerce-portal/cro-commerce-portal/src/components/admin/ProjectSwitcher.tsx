@@ -38,14 +38,10 @@ export default function ProjectSwitcher({ activeProject, conferenceDates }: Prop
     if (id === activeProject || switching) { setOpen(false); return; }
     setSwitching(id);
     setOpen(false);
-    try {
-      await switchProject(id);
-    } catch {
-      // redirect() in server action throws — ignore
-    }
-    // Full page reload resets the createBrowserClient singleton so file uploads
-    // go to the correct project after switch.
-    window.location.href = "/admin/dashboard";
+    const dest = await switchProject(id);
+    // Full page reload resets the createBrowserClient singleton so uploads
+    // always go to the correct project after switch.
+    window.location.href = dest === "dashboard" ? "/admin/dashboard" : "/login";
   }
 
   return (
