@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { Plus, X, Loader2 } from "lucide-react";
 
 interface PackageTypeRow {
   id: string;
@@ -21,6 +22,7 @@ export default function PackageTypeManager({ packageTypes, activePackages, activ
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const supabase = createClient();
 
   function buildUrl(packages: string[]) {
     const params = new URLSearchParams();
