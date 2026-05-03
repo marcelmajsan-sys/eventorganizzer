@@ -34,6 +34,7 @@ export default async function PortalSponsorPage() {
       </div>
 
       <PortalPartnerTabs
+        sponsorId={sponsorUser.sponsor_id}
         sponsor={sponsor}
         contacts={contacts ?? []}
         files={files ?? []}
