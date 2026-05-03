@@ -12,7 +12,7 @@ interface Contact {
   role: string | null;
   email: string | null;
   phone: string | null;
-  type: string;
+  type: "contact" | "ticket";
 }
 
 interface FileRecord {
