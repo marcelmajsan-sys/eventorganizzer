@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight } from "lucide-react";
+import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight, CalendarDays } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { packageColor } from "@/lib/utils";
@@ -20,7 +20,8 @@ interface Props {
 
 const navItems = [
   { href: "/portal/benefits", label: "Benefiti", icon: Gift },
-  { href: "/portal/sponsor", label: "Sponzor", icon: Building2 },
+  { href: "/portal/program",  label: "Program",  icon: CalendarDays },
+  { href: "/portal/sponsor",  label: "Sponzor",  icon: Building2 },
 ];
 
 export default function PortalSidebar({ sponsor, userEmail, activeProjectId, otherProjectId }: Props) {
