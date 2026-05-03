@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Mail, Phone, User, Users, Ticket, File, FileText, FolderOpen } from "lucide-react";
+import { Building2, File, FileText, FolderOpen } from "lucide-react";
 import { packageColor, paymentStatusLabel, paymentStatusColor, formatDate, formatFileSize } from "@/lib/utils";
 import type { PackageType, PaymentStatus } from "@/types";
+import PortalContactsSection from "@/components/portal/PortalContactsSection";
 
 interface Contact {
   id: string;
@@ -11,7 +12,7 @@ interface Contact {
   role: string | null;
   email: string | null;
   phone: string | null;
-  type: string;
+  type: "contact" | "ticket";
 }
 
 interface FileRecord {
@@ -32,6 +33,7 @@ interface Sponsor {
 }
 
 interface Props {
+  sponsorId: string;
   sponsor: Sponsor;
   contacts: Contact[];
   files: FileRecord[];
@@ -44,11 +46,8 @@ const TABS = [
 
 type Tab = typeof TABS[number]["id"];
 
-export default function PortalPartnerTabs({ sponsor, contacts, files }: Props) {
+export default function PortalPartnerTabs({ sponsorId, sponsor, contacts, files }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("info");
-
-  const mainContacts   = contacts.filter((c) => c.type === "contact");
-  const ticketContacts = contacts.filter((c) => c.type === "ticket");
 
   return (
     <div>
@@ -110,89 +109,15 @@ export default function PortalPartnerTabs({ sponsor, contacts, files }: Props) {
 
       {/* Tab: Informacije */}
       {activeTab === "info" && (
-        <div className="space-y-4">
-          {(sponsor.contact_name || sponsor.contact_email || sponsor.contact_phone) && (
-            <div className="card p-5">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Primarni kontakt</p>
-              <div className="space-y-2">
-                {sponsor.contact_name && (
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <User size={14} className="text-gray-400" />
-                    {sponsor.contact_name}
-                  </div>
-                )}
-                {sponsor.contact_email && (
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <Mail size={14} className="text-gray-400" />
-                    <a href={`mailto:${sponsor.contact_email}`} className="text-brand-600 hover:underline">
-                      {sponsor.contact_email}
-                    </a>
-                  </div>
-                )}
-                {sponsor.contact_phone && (
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <Phone size={14} className="text-gray-400" />
-                    {sponsor.contact_phone}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {mainContacts.length > 0 && (
-            <div className="card p-5">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-sm">
-                <Users size={15} className="text-gray-400" />
-                Kontakt osobe
-              </h3>
-              <div className="space-y-3">
-                {mainContacts.map((c) => (
-                  <div key={c.id} className="flex items-start gap-3">
-                    <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User size={12} className="text-gray-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{c.name}</p>
-                      {c.role  && <p className="text-xs text-gray-400">{c.role}</p>}
-                      {c.email && <p className="text-xs text-gray-500">{c.email}</p>}
-                      {c.phone && <p className="text-xs text-gray-500">{c.phone}</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {ticketContacts.length > 0 && (
-            <div className="card p-5">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-sm">
-                <Ticket size={15} className="text-gray-400" />
-                Osobe za ulaznice
-              </h3>
-              <div className="space-y-3">
-                {ticketContacts.map((c) => (
-                  <div key={c.id} className="flex items-start gap-3">
-                    <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User size={12} className="text-gray-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{c.name}</p>
-                      {c.role  && <p className="text-xs text-gray-400">{c.role}</p>}
-                      {c.email && <p className="text-xs text-gray-500">{c.email}</p>}
-                      {c.phone && <p className="text-xs text-gray-500">{c.phone}</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {mainContacts.length === 0 && ticketContacts.length === 0 && !sponsor.contact_name && (
-            <div className="card p-10 text-center">
-              <p className="text-gray-400 text-sm">Nema kontakt podataka.</p>
-            </div>
-          )}
-        </div>
+        <PortalContactsSection
+          sponsorId={sponsorId}
+          primaryContact={{
+            name: sponsor.contact_name,
+            email: sponsor.contact_email,
+            phone: sponsor.contact_phone,
+          }}
+          contacts={contacts}
+        />
       )}
 
       {/* Tab: Dokumenti */}

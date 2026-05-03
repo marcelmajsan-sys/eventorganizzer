@@ -2,7 +2,6 @@
 
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId, type ProjectId } from "@/lib/supabase/projects";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 
 const FALLBACK_ADMIN_EMAILS = [
@@ -12,19 +11,20 @@ const FALLBACK_ADMIN_EMAILS = [
 ];
 
 export async function switchProject(projectId: ProjectId): Promise<"dashboard" | "login"> {
-  const currentSupabase = await createClient();
-  const { data: { user } } = await currentSupabase.auth.getUser();
-
   const cookieStore = await cookies();
-  cookieStore.set(PROJECT_COOKIE, projectId, {
-    path: "/",
-    httpOnly: false,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 365,
-  });
+  const currentProjectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
 
+  const { createServerClient } = await import("@supabase/ssr");
+  const { PROJECTS: PROJ } = await import("@/lib/supabase/projects");
+
+  // Get current user from the CURRENT project's Supabase instance
+  const currentClient = createServerClient(PROJ[currentProjectId].url, PROJ[currentProjectId].anonKey, {
+    cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
+  });
+  const { data: { user } } = await currentClient.auth.getUser();
   if (!user?.email) return "login";
 
+  // Check access in target project
   const targetAdmin = createAdminClientForProject(projectId);
   const { data: adminRow } = await targetAdmin
     .from("project_admins")
@@ -32,12 +32,47 @@ export async function switchProject(projectId: ProjectId): Promise<"dashboard" |
     .eq("email", user.email)
     .maybeSingle();
 
-  const hasAccess = adminRow !== null || FALLBACK_ADMIN_EMAILS.includes(user.email!);
+  const hasAccess = adminRow !== null || FALLBACK_ADMIN_EMAILS.includes(user.email);
+  if (!hasAccess) return "login";
 
-  if (!hasAccess) {
-    await currentSupabase.auth.signOut();
-    return "login";
+  // Token exchange: generate magic link in target project and set session server-side
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://eventorganizzer.vercel.app";
+  const { data: linkData, error: linkError } = await targetAdmin.auth.admin.generateLink({
+    type: "magiclink",
+    email: user.email,
+    options: { redirectTo: `${appUrl}/auth/callback` },
+  });
+
+  if (!linkError && linkData?.properties?.action_link) {
+    try {
+      const resp = await fetch(linkData.properties.action_link, { redirect: "manual" });
+      const location = resp.headers.get("location") ?? "";
+      const hashStart = location.indexOf("#");
+      if (hashStart !== -1) {
+        const params = new URLSearchParams(location.substring(hashStart + 1));
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+        if (accessToken && refreshToken) {
+          const targetClient = createServerClient(PROJ[projectId].url, PROJ[projectId].anonKey, {
+            cookies: {
+              getAll: () => cookieStore.getAll(),
+              setAll: (cs) => cs.forEach(({ name, value, options }) => cookieStore.set(name, value, options)),
+            },
+          });
+          await targetClient.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        }
+      }
+    } catch {
+      // Token exchange failed — proceed anyway (same-instance fallback)
+    }
   }
+
+  cookieStore.set(PROJECT_COOKIE, projectId, {
+    path: "/",
+    httpOnly: false,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365,
+  });
 
   return "dashboard";
 }

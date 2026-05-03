@@ -4,7 +4,7 @@ import { PROJECT_COOKIE } from "@/lib/supabase/projects";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Building2, FileText,
+  ArrowLeft, Building2, FileText, User, Mail, Phone,
   Calendar, CheckCircle2, Clock, AlertTriangle, XCircle
 } from "lucide-react";
 import {
@@ -119,6 +119,33 @@ export default async function SponsorDetailPage({ params }: Props) {
                 </div>
               )}
             </dl>
+            {(sponsor.contact_name || sponsor.contact_email || sponsor.contact_phone) && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Primarni kontakt</p>
+                <div className="space-y-1.5">
+                  {sponsor.contact_name && (
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <User size={13} className="text-gray-400 flex-shrink-0" />
+                      {sponsor.contact_name}
+                    </div>
+                  )}
+                  {sponsor.contact_email && (
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <Mail size={13} className="text-gray-400 flex-shrink-0" />
+                      <a href={`mailto:${sponsor.contact_email}`} className="text-brand-600 hover:underline truncate">
+                        {sponsor.contact_email}
+                      </a>
+                    </div>
+                  )}
+                  {sponsor.contact_phone && (
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <Phone size={13} className="text-gray-400 flex-shrink-0" />
+                      {sponsor.contact_phone}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {sponsor.notes && (
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-500 mb-1">Napomene</p>
