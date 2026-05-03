@@ -187,10 +187,8 @@ export default async function SponsorsPage({ searchParams }: Props) {
                 const completed = benefits.filter((b: { status: string }) => b.status === "completed").length;
                 const total = benefits.length;
                 const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-                const mainContact = (sponsor.sponsor_contacts as { name: string; email: string; type: string }[] | null)
-                  ?.find((x) => x.type === "contact");
-                const contactName = mainContact?.name ?? sponsor.contact_name;
-                const contactEmail = mainContact?.email ?? sponsor.contact_email;
+                const contactName = sponsor.contact_name;
+                const contactEmail = sponsor.contact_email;
 
                 return (
                   <tr key={sponsor.id} className="hover:bg-gray-50/60 transition-colors group">
