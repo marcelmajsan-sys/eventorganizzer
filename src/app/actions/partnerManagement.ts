@@ -76,3 +76,21 @@ export async function listSponsorsForSelect(): Promise<{ id: string; name: strin
   const { data } = await supabase.from("sponsors").select("id, name").order("name");
   return data ?? [];
 }
+
+export async function updatePrimaryContact(
+  sponsorId: string,
+  data: { contact_name: string | null; contact_email: string | null; contact_phone: string | null }
+) {
+  const cookieStore = await cookies();
+  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+  const adminClient = createAdminClientForProject(projectId);
+  const { error } = await adminClient
+    .from("sponsors")
+    .update({
+      contact_name: data.contact_name || null,
+      contact_email: data.contact_email || null,
+      contact_phone: data.contact_phone || null,
+    })
+    .eq("id", sponsorId);
+  if (error) throw new Error(error.message);
+}

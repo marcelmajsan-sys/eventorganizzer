@@ -109,7 +109,15 @@ export default function PortalPartnerTabs({ sponsorId, sponsor, contacts, files 
 
       {/* Tab: Informacije */}
       {activeTab === "info" && (
-        <PortalContactsSection sponsorId={sponsorId} contacts={contacts} />
+        <PortalContactsSection
+          sponsorId={sponsorId}
+          primaryContact={{
+            name: sponsor.contact_name,
+            email: sponsor.contact_email,
+            phone: sponsor.contact_phone,
+          }}
+          contacts={contacts}
+        />
       )}
 
       {/* Tab: Dokumenti */}

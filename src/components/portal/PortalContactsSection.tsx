@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket, User } from "lucide-react";
+import { updatePrimaryContact } from "@/app/actions/partnerManagement";
 
 type ContactType = "contact" | "ticket";
 
@@ -286,11 +287,117 @@ function AddContactForm({
   );
 }
 
+interface PrimaryContact {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+function PrimaryContactSection({
+  sponsorId,
+  initial,
+}: {
+  sponsorId: string;
+  initial: PrimaryContact;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    name: initial.name ?? "",
+    email: initial.email ?? "",
+    phone: initial.phone ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const router = useRouter();
+
+  async function handleSave() {
+    setSaving(true);
+    await updatePrimaryContact(sponsorId, {
+      contact_name: form.name || null,
+      contact_email: form.email || null,
+      contact_phone: form.phone || null,
+    });
+    setSaving(false);
+    setEditing(false);
+    router.refresh();
+  }
+
+  if (editing) {
+    return (
+      <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="col-span-2">
+            <label className="text-xs text-gray-500 mb-1 block">Ime i prezime</label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="input-field text-sm py-1.5"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Email</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="input-field text-sm py-1.5"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Mobitel</label>
+            <input
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              className="input-field text-sm py-1.5"
+              placeholder="+385 91 ..."
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => setEditing(false)} className="btn-secondary text-xs py-1 px-2">
+            <X size={12} /> Odustani
+          </button>
+          <button onClick={handleSave} disabled={saving} className="btn-primary text-xs py-1 px-2">
+            {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+            Spremi
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const hasData = initial.name || initial.email || initial.phone;
+
+  return (
+    <div className="flex items-start gap-3 py-2.5 px-3 rounded-lg hover:bg-gray-50 group">
+      <div className="flex-1 min-w-0">
+        {hasData ? (
+          <>
+            {initial.name && <p className="text-sm font-medium text-gray-900">{initial.name}</p>}
+            {initial.email && <p className="text-xs text-gray-500">{initial.email}</p>}
+            {initial.phone && <p className="text-xs text-gray-500">{initial.phone}</p>}
+          </>
+        ) : (
+          <p className="text-xs text-gray-400">Nije postavljeno</p>
+        )}
+      </div>
+      <button
+        onClick={() => setEditing(true)}
+        className="p-1 text-gray-400 hover:text-brand-600 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+      >
+        <Pencil size={13} />
+      </button>
+    </div>
+  );
+}
+
 export default function PortalContactsSection({
   sponsorId,
+  primaryContact,
   contacts: initial,
 }: {
   sponsorId: string;
+  primaryContact: PrimaryContact;
   contacts: Contact[];
 }) {
   const [contacts, setContacts] = useState(initial);
@@ -312,8 +419,17 @@ export default function PortalContactsSection({
 
   return (
     <div className="card p-5 space-y-5">
-      {/* Kontakt osobe */}
+      {/* Primarni kontakt */}
       <div>
+        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
+          <User size={15} className="text-gray-400" />
+          Primarni kontakt
+        </h3>
+        <PrimaryContactSection sponsorId={sponsorId} initial={primaryContact} />
+      </div>
+
+      {/* Kontakt osobe */}
+      <div className="border-t border-gray-100 pt-5">
         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
           <Users size={15} className="text-gray-400" />
           Kontakt osobe
@@ -329,8 +445,8 @@ export default function PortalContactsSection({
         <AddContactForm sponsorId={sponsorId} type="contact" onAdded={handleAdded} />
       </div>
 
+      {/* Osobe za ulaznice */}
       <div className="border-t border-gray-100 pt-5">
-        {/* Osobe za ulaznice */}
         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
           <Ticket size={15} className="text-gray-400" />
           Osobe za ulaznice
