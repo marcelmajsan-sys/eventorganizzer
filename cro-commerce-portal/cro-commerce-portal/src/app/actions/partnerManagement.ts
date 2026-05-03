@@ -80,17 +80,21 @@ export async function listSponsorsForSelect(): Promise<{ id: string; name: strin
 export async function updatePrimaryContact(
   sponsorId: string,
   data: { contact_name: string | null; contact_email: string | null; contact_phone: string | null }
-) {
-  const cookieStore = await cookies();
-  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
-  const adminClient = createAdminClientForProject(projectId);
-  const { error } = await adminClient
-    .from("sponsors")
-    .update({
-      contact_name: data.contact_name || null,
-      contact_email: data.contact_email || null,
-      contact_phone: data.contact_phone || null,
-    })
-    .eq("id", sponsorId);
-  if (error) throw new Error(error.message);
+): Promise<{ error: string | null }> {
+  try {
+    const cookieStore = await cookies();
+    const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+    const adminClient = createAdminClientForProject(projectId);
+    const { error } = await adminClient
+      .from("sponsors")
+      .update({
+        contact_name: data.contact_name || null,
+        contact_email: data.contact_email || null,
+        contact_phone: data.contact_phone || null,
+      })
+      .eq("id", sponsorId);
+    return { error: error ? error.message : null };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Nepoznata greška" };
+  }
 }

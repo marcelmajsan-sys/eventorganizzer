@@ -30,20 +30,16 @@ export default function AdminPrimaryContactEdit({ sponsorId, initial }: Props) {
   async function handleSave() {
     setSaving(true);
     setError(null);
-    try {
-      await updatePrimaryContact(sponsorId, {
-        contact_name: form.name || null,
-        contact_email: form.email || null,
-        contact_phone: form.phone || null,
-      });
-      setDisplayed({ name: form.name || null, email: form.email || null, phone: form.phone || null });
-      setEditing(false);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Greška pri spremanju");
-    } finally {
-      setSaving(false);
-    }
+    const { error: err } = await updatePrimaryContact(sponsorId, {
+      contact_name: form.name || null,
+      contact_email: form.email || null,
+      contact_phone: form.phone || null,
+    });
+    setSaving(false);
+    if (err) { setError(err); return; }
+    setDisplayed({ name: form.name || null, email: form.email || null, phone: form.phone || null });
+    setEditing(false);
+    router.refresh();
   }
 
   if (editing) {
