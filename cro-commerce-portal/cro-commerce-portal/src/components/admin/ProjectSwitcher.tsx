@@ -41,10 +41,11 @@ export default function ProjectSwitcher({ activeProject, conferenceDates }: Prop
     try {
       await switchProject(id);
     } catch {
-      // redirect() in Next.js throws — navigation is handled by the framework
-    } finally {
-      setSwitching(null);
+      // redirect() in server action throws — ignore
     }
+    // Full page reload resets the createBrowserClient singleton so file uploads
+    // go to the correct project after switch.
+    window.location.href = "/admin/dashboard";
   }
 
   return (
