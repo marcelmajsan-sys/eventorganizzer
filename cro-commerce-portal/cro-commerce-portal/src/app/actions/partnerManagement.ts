@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/server";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
@@ -14,41 +13,7 @@ export interface PartnerUser {
   sponsor_name: string;
   email: string;
   name: string | null;
-}
-
-export async function listPartnerUsers(): Promise<PartnerUser[]> {
-  const supabase = await createAdminClient();
-
-  const { data: sponsorUsers, error } = await supabase
-    .from("sponsor_users")
-    .select("id, user_id, sponsor_id")
-    .order("created_at");
-
-  if (error) throw new Error(error.message);
-  if (!sponsorUsers || sponsorUsers.length === 0) return [];
-
-  const { data: sponsorsData } = await supabase
-    .from("sponsors")
-    .select("id, name");
-  const sponsorsMap = Object.fromEntries((sponsorsData ?? []).map((s) => [s.id, s.name]));
-
-  const cookieStore = await cookies();
-  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
-  const adminClient = createAdminClientForProject(projectId);
-  const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-  const authUsers = authData?.users ?? [];
-
-  return sponsorUsers.map((su) => {
-    const authUser = authUsers.find((u) => u.id === su.user_id);
-    return {
-      id: su.id,
-      user_id: su.user_id,
-      sponsor_id: su.sponsor_id,
-      sponsor_name: sponsorsMap[su.sponsor_id] ?? "—",
-      email: authUser?.email ?? su.user_id,
-      name: authUser?.user_metadata?.name ?? null,
-    };
-  });
+  projectId: "2026" | "2025";
 }
 
 export async function createPartnerUser(
@@ -61,13 +26,19 @@ export async function createPartnerUser(
   const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
   const adminClient = createAdminClientForProject(projectId);
 
-  // Kreiraj korisnika u auth (samo aktivni projekt)
+  // Kreiraj/pronađi korisnika u aktivnom projektu
   let userId: string | null = null;
   const { data: existing } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
   const existingUser = existing?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
 
   if (existingUser) {
     userId = existingUser.id;
+    // Ažuriraj lozinku i ime — admin je možda unio novu lozinku
+    await adminClient.auth.admin.updateUserById(userId, {
+      password,
+      user_metadata: { name: name.trim() },
+      email_confirm: true,
+    });
   } else {
     const { data, error } = await adminClient.auth.admin.createUser({
       email: email.toLowerCase().trim(),
@@ -76,30 +47,28 @@ export async function createPartnerUser(
       email_confirm: true,
     });
     if (error) throw new Error(error.message);
+    if (!data.user) throw new Error("Greška pri kreiranju korisnika");
     userId = data.user.id;
   }
 
-  // Upsert u sponsor_users
-  const supabase = await createAdminClient();
-  const { error: suError } = await supabase
+  // Upsert sponsor_users samo u aktivnom projektu
+  const { error: suError } = await adminClient
     .from("sponsor_users")
     .upsert({ user_id: userId, sponsor_id: sponsorId, invited_by: "admin" }, { onConflict: "user_id" });
 
-  if (suError) throw new Error(suError.message);
-  revalidatePath("/admin/settings");
+  if (suError) throw new Error(`sponsor_users: ${suError.message}`);
 }
 
-export async function deletePartnerUser(sponsorUsersId: string, userId: string) {
-  const supabase = await createAdminClient();
-  await supabase.from("sponsor_users").delete().eq("id", sponsorUsersId);
-
-  // Obriši auth korisnika samo u aktivnom projektu
-  const cookieStore = await cookies();
-  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+export async function changePartnerPassword(userId: string, newPassword: string, projectId: "2026" | "2025") {
   const adminClient = createAdminClientForProject(projectId);
-  await adminClient.auth.admin.deleteUser(userId);
+  const { error } = await adminClient.auth.admin.updateUserById(userId, { password: newPassword });
+  if (error) throw new Error(error.message);
+}
 
-  revalidatePath("/admin/settings");
+export async function deletePartnerUser(sponsorUsersId: string, userId: string, projectId: "2026" | "2025") {
+  const adminClient = createAdminClientForProject(projectId);
+  await adminClient.from("sponsor_users").delete().eq("id", sponsorUsersId);
+  await adminClient.auth.admin.deleteUser(userId);
 }
 
 export async function listSponsorsForSelect(): Promise<{ id: string; name: string }[]> {

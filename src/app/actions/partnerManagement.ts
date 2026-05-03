@@ -59,6 +59,12 @@ export async function createPartnerUser(
   if (suError) throw new Error(`sponsor_users: ${suError.message}`);
 }
 
+export async function changePartnerPassword(userId: string, newPassword: string, projectId: "2026" | "2025") {
+  const adminClient = createAdminClientForProject(projectId);
+  const { error } = await adminClient.auth.admin.updateUserById(userId, { password: newPassword });
+  if (error) throw new Error(error.message);
+}
+
 export async function deletePartnerUser(sponsorUsersId: string, userId: string, projectId: "2026" | "2025") {
   const adminClient = createAdminClientForProject(projectId);
   await adminClient.from("sponsor_users").delete().eq("id", sponsorUsersId);
