@@ -21,7 +21,7 @@ interface Props {
 const navItems = [
   { href: "/portal/benefits", label: "Benefiti", icon: Gift },
   { href: "/portal/program",  label: "Program",  icon: CalendarDays },
-  { href: "/portal/sponsor",  label: "Sponzor",  icon: Building2 },
+  { href: "/portal/sponsor",  label: "Partner",  icon: Building2 },
 ];
 
 export default function PortalSidebar({ sponsor, userEmail, activeProjectId, otherProjectId }: Props) {
