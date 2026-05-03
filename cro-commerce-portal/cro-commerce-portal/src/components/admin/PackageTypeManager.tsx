@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
-import { packageColor } from "@/lib/utils";
-import type { PackageType } from "@/types";
 
 interface PackageTypeRow {
   id: string;
@@ -14,11 +12,11 @@ interface PackageTypeRow {
 
 interface Props {
   packageTypes: PackageTypeRow[];
-  activePackage?: string;
+  activePackages: string[];
   activePayment?: string;
 }
 
-export default function PackageTypeManager({ packageTypes, activePackage, activePayment }: Props) {
+export default function PackageTypeManager({ packageTypes, activePackages, activePayment }: Props) {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -26,11 +24,18 @@ export default function PackageTypeManager({ packageTypes, activePackage, active
   const router = useRouter();
   const supabase = createClient();
 
-  function buildUrl(pkg?: string) {
+  function buildUrl(packages: string[]) {
     const params = new URLSearchParams();
-    if (pkg) params.set("package", pkg);
+    if (packages.length > 0) params.set("package", packages.join(","));
     if (activePayment) params.set("payment", activePayment);
     return `/admin/sponsors${params.size ? "?" + params.toString() : ""}`;
+  }
+
+  function toggle(name: string) {
+    const next = activePackages.includes(name)
+      ? activePackages.filter((p) => p !== name)
+      : [...activePackages, name];
+    return buildUrl(next);
   }
 
   async function handleAdd() {
@@ -49,39 +54,43 @@ export default function PackageTypeManager({ packageTypes, activePackage, active
   return (
     <div className="flex gap-2 flex-wrap items-center">
       <a
-        href={buildUrl()}
+        href={buildUrl([])}
         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-          !activePackage ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          activePackages.length === 0 ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
         }`}
       >
         Svi
       </a>
 
-      {packageTypes.map((pkg) => (
-        <div key={pkg.id} className="relative group/pkg flex items-center">
-          <a
-            href={buildUrl(pkg.name)}
-            className={`px-3 py-1.5 pr-7 rounded-lg text-sm font-medium transition-colors ${
-              activePackage === pkg.name
-                ? "bg-gray-900 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {pkg.name}
-          </a>
-          <button
-            onClick={async () => {
-              if (!confirm(`Obriši kategoriju "${pkg.name}"?`)) return;
-              await supabase.from("package_types").delete().eq("id", pkg.id);
-              router.refresh();
-            }}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/pkg:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
-            title="Obriši kategoriju"
-          >
-            <X size={12} />
-          </button>
-        </div>
-      ))}
+      {packageTypes.map((pkg) => {
+        const isActive = activePackages.includes(pkg.name);
+        return (
+          <div key={pkg.id} className="relative group/pkg flex items-center">
+            <a
+              href={toggle(pkg.name)}
+              className={`px-3 py-1.5 pr-7 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-gray-900 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {pkg.name}
+            </a>
+            <button
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!confirm(`Obriši kategoriju "${pkg.name}"?`)) return;
+                await supabase.from("package_types").delete().eq("id", pkg.id);
+                router.refresh();
+              }}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/pkg:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+              title="Obriši kategoriju"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        );
+      })}
 
       {adding ? (
         <div className="flex items-center gap-1.5">

@@ -12,6 +12,11 @@ interface Props {
   searchParams: { package?: string; payment?: string; q?: string };
 }
 
+function parsePackages(raw?: string): string[] {
+  if (!raw) return [];
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 export default async function SponsorsPage({ searchParams }: Props) {
   const supabase = await createClient();
 
@@ -34,10 +39,11 @@ export default async function SponsorsPage({ searchParams }: Props) {
   ];
   const packageTypeNames: string[] = packageTypes.map((p: { name: string }) => p.name);
 
+  const activePackages = parsePackages(searchParams.package);
   let sponsors = sponsorsRes.data ?? [];
 
-  if (searchParams.package) {
-    sponsors = sponsors.filter((s) => s.package_type === searchParams.package);
+  if (activePackages.length > 0) {
+    sponsors = sponsors.filter((s) => activePackages.includes(s.package_type));
   }
   if (searchParams.payment) {
     sponsors = sponsors.filter((s) => s.payment_status === searchParams.payment);
@@ -80,7 +86,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
 
         <PackageTypeManager
           packageTypes={packageTypes}
-          activePackage={searchParams.package}
+          activePackages={activePackages}
           activePayment={searchParams.payment}
         />
 
