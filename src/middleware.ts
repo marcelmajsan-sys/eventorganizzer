@@ -4,8 +4,15 @@ import { PROJECT_COOKIE, PROJECTS, resolveProjectId } from "@/lib/supabase/proje
 
 async function getSessionWithTimeout(supabase: ReturnType<typeof createServerClient>, ms: number) {
   const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), ms));
-  const session = supabase.auth.getSession().then((r) => r.data.session).catch(() => null);
-  return Promise.race([session, timeout]);
+  async function fetchSession() {
+    try {
+      const { data } = await supabase.auth.getSession();
+      return data.session;
+    } catch {
+      return null;
+    }
+  }
+  return Promise.race([fetchSession(), timeout]);
 }
 
 export async function middleware(request: NextRequest) {
