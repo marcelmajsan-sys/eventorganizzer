@@ -87,7 +87,8 @@ eventorganizzer/
 │   │   │   ├── RenameBenefitDialog.tsx
 │   │   │   ├── BenefitStatusSelect.tsx
 │   │   │   ├── DeleteBenefitButton.tsx
-│   │   │   └── DeleteSponsorButton.tsx       ← Brisanje sponzora s potvrdom
+│   │   │   ├── DeleteSponsorButton.tsx       ← Brisanje sponzora s potvrdom
+│   │   │   └── AdminPrimaryContactEdit.tsx   ← Inline edit primarnog kontakta na stranici sponzora
 │   │   └── portal/
 │   │       ├── PortalSidebar.tsx             ← Nav: Partner → Benefiti → Program + projekt switcher
 │   │       ├── PortalBenefitCard.tsx         ← Read-only benefit kartica
@@ -119,7 +120,8 @@ eventorganizzer/
 │   ├── migration_012_contact_company.sql
 │   ├── migration_013_sponsor_portal.sql  ← sponsor_users + RLS + helper funkcije
 │   ├── migration_014_lead_status.sql     ← lead_status kolona na sponsors tablici
-│   └── migration_015_contacts_partner_rls.sql ← RLS na sponsor_contacts za partnere
+│   ├── migration_015_contacts_partner_rls.sql ← RLS na sponsor_contacts za partnere
+│   └── migration_016_sponsor_contact_phone.sql ← contact_phone kolona na sponsors tablici
 ├── cro-commerce-portal/
 │   └── cro-commerce-portal/      ← Dev working dir (lokalni dev)
 │       └── src/                  ← Kopija root src/ za lokalni rad
@@ -138,7 +140,7 @@ eventorganizzer/
 
 | Tablica | Opis |
 |---------|------|
-| `sponsors` | Sponzori — naziv, paket, kontakt, status plaćanja, `lead_status` |
+| `sponsors` | Sponzori — naziv, paket, `contact_name`, `contact_email`, `contact_phone`, `lead_status`, status plaćanja |
 | `sponsor_benefits` | Benefiti sponzora s rokovima, statusima, `reminder_email`, `assigned_to` |
 | `sponsor_contacts` | Kontakt osobe i osobe za ulaznice po sponzoru (RLS: partneri mogu upravljati vlastitima) |
 | `sponsor_users` | Mapiranje auth korisnika → sponsor_id (za sponzorski portal) |
@@ -280,6 +282,7 @@ migration_012_contact_company          ← Tvrtka na kontaktima
 migration_013_sponsor_portal           ← Tablica sponsor_users + RLS politike + helper funkcije
 migration_014_lead_status              ← Kolona lead_status na sponsors tablici
 migration_015_contacts_partner_rls     ← RLS na sponsor_contacts: partneri mogu CRUD vlastite kontakte
+migration_016_sponsor_contact_phone    ← Kolona contact_phone na sponsors tablici
 ```
 
 > **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.
@@ -403,6 +406,7 @@ git push origin main
 - **Lead status filter** — `?lead=cold_lead` itd., s obojenim badge-evima u tablici
 - Detaljna stranica sponzora (`/admin/sponsors/[id]`) — prikazuje lead_status badge
 - Edit forma s paketom, kontaktom, statusom plaćanja i **lead statusom**
+- **Primarni kontakt — inline edit** (`AdminPrimaryContactEdit`) u sekciji Informacije na stranici sponzora — hover olovka, uređivanje direktno bez otvaranja modala
 - Upload datoteka po sponzoru (Supabase Storage)
 - **Brisanje sponzora** s potvrdom (`DeleteSponsorButton`) — redirect na `/admin/sponsors`
 
@@ -502,5 +506,8 @@ git push origin main
 - **UUID-ovi korisnika su različiti** između projekata (2025 i 2026 su zasebne Supabase instance)
 - **Orphaned `sponsor_users` unosi** (bez matching auth usera) se preskaču u prikazu na settings stranici
 - `NEXT_PUBLIC_APP_URL` mora biti postavljen na `https://eventorganizzer.vercel.app` — koristi se za `redirectTo` u magic link generaciji
-- **`updatePrimaryContact` server action** koristi admin klijent za update `contact_name/email/phone` na `sponsors` tablici — partneri nemaju direktan UPDATE RLS na `sponsors`
+- **`updatePrimaryContact` server action** koristi admin klijent za update `contact_name/email/phone` na `sponsors` tablici — partneri nemaju direktan UPDATE RLS na `sponsors`. Vraća `{ error: string | null }` (ne baca exception) da se pravi Supabase error može prikazati u UI
 - **`sponsor_contacts` RLS** (migration_015): partneri mogu SELECT/INSERT/UPDATE/DELETE samo za vlastiti `sponsor_id` (via `get_my_sponsor_id()` helper funkcija)
+- **`contact_phone` kolona** dodana migration_016 — nije bila u inicijalnoj shemi; uzrokovala je grešku pri uređivanju primarnog kontakta
+- **Server action error pattern**: server actions ne smiju bacati exception ako želimo prikazati pravi error message u UI — Next.js sanitizira sve iznimke u produkciji u generičku poruku. Koristiti `return { error: message }` pattern
+- **Inline edit pattern** (`AdminPrimaryContactEdit`, `PrimaryContactSection` u `PortalContactsSection`): `useState displayed` za optimistički prikaz, `useEffect` za sync s props-ima, error state za prikaz greške
