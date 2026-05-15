@@ -42,7 +42,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
       if (sponsorError) throw sponsorError;
 
       // Auto-create benefits for the package
-      const benefits = PACKAGE_BENEFITS[form.package_type];
+      const benefits = PACKAGE_BENEFITS[form.package_type] ?? [];
       const conferenceDate = new Date("2026-06-10");
 
       const benefitsToInsert = benefits.map((benefit, i) => {
