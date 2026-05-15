@@ -114,7 +114,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
     const count = selectedIds.size;
     if (!confirm(`Obriši ${count} odabranih kontakata?`)) return;
     setDeleting(true);
-    await supabase.from("sponsor_contacts").delete().in("id", [...selectedIds]);
+    await supabase.from("sponsor_contacts").delete().in("id", Array.from(selectedIds));
     setSelectedIds(new Set());
     setDeleting(false);
     router.refresh();
