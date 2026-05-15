@@ -23,6 +23,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
     contact_email: "",
     contact_name: "",
     payment_status: "pending",
+    lead_status: "" as string,
     notes: "",
   });
 
@@ -35,7 +36,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
       // Insert sponsor
       const { data: sponsor, error: sponsorError } = await supabase
         .from("sponsors")
-        .insert(form)
+        .insert({ ...form, lead_status: form.lead_status || null })
         .select()
         .single();
 
@@ -59,7 +60,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
       await supabase.from("sponsor_benefits").insert(benefitsToInsert);
 
       setOpen(false);
-      setForm({ name: "", package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType, contact_email: "", contact_name: "", payment_status: "pending", notes: "" });
+      setForm({ name: "", package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "" });
       router.refresh();
     } catch (err: any) {
       setError(err.message ?? "Greška pri dodavanju sponzora");
@@ -120,6 +121,20 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
                 <option value="pending">Na čekanju</option>
                 <option value="paid">Plaćeno</option>
                 <option value="overdue">Kasni</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Status sponzora</label>
+              <select
+                value={form.lead_status}
+                onChange={(e) => setForm({ ...form, lead_status: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— Nije odabrano —</option>
+                <option value="cold_lead">Cold lead</option>
+                <option value="hot_lead">Hot lead</option>
+                <option value="confirmed_new">Potvrđeno novi</option>
+                <option value="confirmed_returning">Potvrđeno stari</option>
               </select>
             </div>
             <div>
