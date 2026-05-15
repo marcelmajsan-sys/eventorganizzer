@@ -99,7 +99,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
         return next;
       });
     } else {
-      setSelectedIds((prev) => new Set([...prev, ...allFilteredIds]));
+      setSelectedIds((prev) => new Set([...Array.from(prev), ...allFilteredIds]));
     }
   }
 
