@@ -34,6 +34,7 @@ export function paymentStatusLabel(status: PaymentStatus): string {
   const labels: Record<PaymentStatus, string> = {
     paid: "Plaćeno",
     pending: "Na čekanju",
+    partial: "Djelomično plaćeno",
     overdue: "Kasni",
   };
   return labels[status];
@@ -43,6 +44,7 @@ export function paymentStatusColor(status: PaymentStatus): string {
   const colors: Record<PaymentStatus, string> = {
     paid: "text-emerald-700 bg-emerald-100",
     pending: "text-yellow-700 bg-yellow-100",
+    partial: "text-sky-700 bg-sky-100",
     overdue: "text-red-700 bg-red-100",
   };
   return colors[status];

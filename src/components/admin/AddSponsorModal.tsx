@@ -119,6 +119,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
                 className="input-field"
               >
                 <option value="pending">Na čekanju</option>
+                <option value="partial">Djelomično plaćeno</option>
                 <option value="paid">Plaćeno</option>
                 <option value="overdue">Kasni</option>
               </select>

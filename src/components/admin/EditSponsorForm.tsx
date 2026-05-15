@@ -70,6 +70,7 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Plaćanje</label>
               <select value={form.payment_status} onChange={(e) => setForm({ ...form, payment_status: e.target.value as any })} className="input-field">
                 <option value="pending">Na čekanju</option>
+                <option value="partial">Djelomično plaćeno</option>
                 <option value="paid">Plaćeno</option>
                 <option value="overdue">Kasni</option>
               </select>
