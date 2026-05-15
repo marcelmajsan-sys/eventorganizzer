@@ -34,6 +34,7 @@ const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
 
 const PAYMENT_STATUSES: { value: PaymentStatus; label: string }[] = [
   { value: "paid",    label: "Plaćeno" },
+  { value: "partial", label: "Djelomično plaćeno" },
   { value: "pending", label: "Na čekanju" },
   { value: "overdue", label: "Kasni" },
 ];
@@ -72,9 +73,14 @@ export default async function SponsorsPage({ searchParams }: Props) {
   }
   if (searchParams.q) {
     const q = searchParams.q.toLowerCase();
-    sponsors = sponsors.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.contact_name?.toLowerCase().includes(q)
-    );
+    sponsors = sponsors.filter((s) => {
+      const contacts = (s.sponsor_contacts as { name: string | null; email: string | null }[]) ?? [];
+      return (
+        s.name.toLowerCase().includes(q) ||
+        s.contact_name?.toLowerCase().includes(q) ||
+        contacts.some((c) => c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q))
+      );
+    });
   }
 
   return (
@@ -187,8 +193,10 @@ export default async function SponsorsPage({ searchParams }: Props) {
                 const completed = benefits.filter((b: { status: string }) => b.status === "completed").length;
                 const total = benefits.length;
                 const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-                const contactName = sponsor.contact_name;
-                const contactEmail = sponsor.contact_email;
+                const contacts = (sponsor.sponsor_contacts as { name: string | null; email: string | null; type: string }[]) ?? [];
+                const primaryContact = contacts.find((c) => c.type === "contact") ?? contacts[0] ?? null;
+                const contactName = primaryContact?.name ?? sponsor.contact_name;
+                const contactEmail = primaryContact?.email ?? sponsor.contact_email;
 
                 return (
                   <tr key={sponsor.id} className="hover:bg-gray-50/60 transition-colors group">
