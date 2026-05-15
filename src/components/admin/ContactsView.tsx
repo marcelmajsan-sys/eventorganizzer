@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, X, ChevronRight } from "lucide-react";
+import { Search, X, ChevronRight, Trash2, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import AddContactModal from "@/components/admin/AddContactModal";
 
 interface Contact {
@@ -50,6 +52,10 @@ export default function ContactsView({ contacts, sponsors }: Props) {
   const [selectedSponsor, setSelectedSponsor] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [query, setQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
 
   const sponsorMap = Object.fromEntries(sponsors.map((s) => [s.id, s.name]));
 
@@ -73,6 +79,47 @@ export default function ContactsView({ contacts, sponsors }: Props) {
     contacts.some((c) => c.sponsor_id === s.id)
   );
 
+  const allFilteredIds = filtered.map((c) => c.id);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id) => selectedIds.has(id));
+  const someSelected = allFilteredIds.some((id) => selectedIds.has(id));
+
+  function toggleOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        allFilteredIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => new Set([...prev, ...allFilteredIds]));
+    }
+  }
+
+  async function handleDeleteOne(id: string, name: string) {
+    if (!confirm(`Obriši kontakt "${name}"?`)) return;
+    await supabase.from("sponsor_contacts").delete().eq("id", id);
+    setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    router.refresh();
+  }
+
+  async function handleBulkDelete() {
+    const count = selectedIds.size;
+    if (!confirm(`Obriši ${count} odabranih kontakata?`)) return;
+    setDeleting(true);
+    await supabase.from("sponsor_contacts").delete().in("id", [...selectedIds]);
+    setSelectedIds(new Set());
+    setDeleting(false);
+    router.refresh();
+  }
+
   return (
     <div className="animate-enter">
       <div className="page-header flex items-start justify-between">
@@ -82,6 +129,23 @@ export default function ContactsView({ contacts, sponsors }: Props) {
         </div>
         <AddContactModal />
       </div>
+
+      {/* Bulk delete bar */}
+      {someSelected && (
+        <div className="flex items-center justify-between bg-brand-50 border border-brand-200 rounded-xl px-4 py-2.5 mb-4">
+          <span className="text-sm font-medium text-brand-700">
+            {selectedIds.size} odabrano
+          </span>
+          <button
+            onClick={handleBulkDelete}
+            disabled={deleting}
+            className="flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+          >
+            {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+            Obriši odabrane
+          </button>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative mb-4">
@@ -168,6 +232,15 @@ export default function ContactsView({ contacts, sponsors }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
+                <th className="px-4 py-3 w-px">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                    onChange={toggleAll}
+                    className="rounded border-gray-300 text-brand-600 cursor-pointer"
+                  />
+                </th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ime</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Firma</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
@@ -180,7 +253,15 @@ export default function ContactsView({ contacts, sponsors }: Props) {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50 transition-colors group">
+                <tr key={c.id} className={`hover:bg-gray-50 transition-colors group ${selectedIds.has(c.id) ? "bg-brand-50/40" : ""}`}>
+                  <td className="px-4 py-3 w-px">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(c.id)}
+                      onChange={() => toggleOne(c.id)}
+                      className="rounded border-gray-300 text-brand-600 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
                     <Link href={`/admin/contacts/${c.id}`} className="hover:text-brand-600 transition-colors">
                       {c.name || <span className="text-gray-300">—</span>}
@@ -228,19 +309,28 @@ export default function ContactsView({ contacts, sponsors }: Props) {
                     </span>
                   </td>
                   <td className="px-4 py-3 w-px whitespace-nowrap">
-                    <Link
-                      href={`/admin/contacts/${c.id}`}
-                      className="inline-flex items-center gap-1 text-gray-400 hover:text-brand-600 transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <span className="text-xs">Detalji</span>
-                      <ChevronRight size={14} />
-                    </Link>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleDeleteOne(c.id, c.name)}
+                        className="text-gray-400 hover:text-red-600 transition-colors"
+                        title="Obriši"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                      <Link
+                        href={`/admin/contacts/${c.id}`}
+                        className="inline-flex items-center gap-1 text-gray-400 hover:text-brand-600 transition-colors"
+                      >
+                        <span className="text-xs">Detalji</span>
+                        <ChevronRight size={14} />
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm">
                     Nema kontakata
                   </td>
                 </tr>
