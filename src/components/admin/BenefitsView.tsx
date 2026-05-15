@@ -62,8 +62,8 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
         onClose={() => setEditing(false)}
       />
       <div
-        onClick={() => { setEditing(true); document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" }); }}
-        className={`group flex items-center gap-4 px-5 py-3 text-sm cursor-pointer transition-colors ${
+        onClick={() => setEditing(true)}
+        className={`group flex items-start gap-3 px-4 py-3 text-sm cursor-pointer transition-colors ${
           isOverdue
             ? "bg-red-50 hover:bg-red-100"
             : isUrgent
@@ -71,47 +71,46 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
             : "hover:bg-gray-50"
         }`}
       >
-        <span className="flex-shrink-0">{statusIcon[benefit.status]}</span>
+        <span className="flex-shrink-0 mt-0.5">{statusIcon[benefit.status]}</span>
 
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Link
-            href={`/admin/sponsors/${benefit.sponsors?.id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="font-medium text-gray-900 hover:text-brand-600 truncate"
-          >
-            {benefit.sponsors?.name}
-          </Link>
-          <span className={`badge text-xs flex-shrink-0 ${packageColor(benefit.sponsors?.package_type as PackageType)}`}>
-            {benefit.sponsors?.package_type}
-          </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              href={`/admin/sponsors/${benefit.sponsors?.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="font-medium text-gray-900 hover:text-brand-600"
+            >
+              {benefit.sponsors?.name}
+            </Link>
+            <span className={`badge text-xs flex-shrink-0 ${packageColor(benefit.sponsors?.package_type as PackageType)}`}>
+              {benefit.sponsors?.package_type}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className="text-gray-400 text-xs">
+              {benefit.deadline ? formatDate(benefit.deadline) : "Bez roka"}
+            </span>
+            {isOverdue && days !== null && (
+              <span className="text-xs text-red-600 font-medium">Kasni {Math.abs(days)}d</span>
+            )}
+            {isUrgent && days !== null && (
+              <span className="text-xs text-orange-600 font-medium">Za {days}d</span>
+            )}
+            <span className={`badge text-xs ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
+              {benefitStatusLabel(benefit.status as BenefitStatus)}
+            </span>
+            {benefit.last_reminded_at && (
+              <span
+                className="flex items-center gap-1 text-xs text-blue-500"
+                title={`Podsjetnik poslan: ${new Date(benefit.last_reminded_at).toLocaleString("hr-HR")}`}
+              >
+                <Mail size={12} />
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-gray-400 text-xs">
-            {benefit.deadline ? formatDate(benefit.deadline) : "Bez roka"}
-          </span>
-          {isOverdue && days !== null && (
-            <span className="text-xs text-red-600 font-medium">Kasni {Math.abs(days)}d</span>
-          )}
-          {isUrgent && days !== null && (
-            <span className="text-xs text-orange-600 font-medium">Za {days}d</span>
-          )}
-        </div>
-
-        <span className={`badge text-xs flex-shrink-0 ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
-          {benefitStatusLabel(benefit.status as BenefitStatus)}
-        </span>
-
-        {benefit.last_reminded_at && (
-          <span
-            className="flex items-center gap-1 text-xs text-blue-500 flex-shrink-0"
-            title={`Podsjetnik poslan: ${new Date(benefit.last_reminded_at).toLocaleString("hr-HR")}`}
-          >
-            <Mail size={12} />
-          </span>
-        )}
-
-        <Pencil size={13} className="flex-shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors" />
+        <Pencil size={13} className="flex-shrink-0 mt-0.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
       </div>
     </>
   );
@@ -150,24 +149,47 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
         currentName={renaming ? name : null}
         onClose={() => setRenaming(false)}
       />
-      <div className="flex items-center justify-between px-5 py-4 bg-gray-50">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="px-5 py-4 bg-gray-50">
+        <div className="flex items-start justify-between gap-3">
           <button
             onClick={() => setRenaming(true)}
-            className="group flex items-center gap-2.5 text-left hover:text-brand-700 transition-colors flex-shrink-0"
+            className="group flex items-center gap-2.5 text-left hover:text-brand-700 transition-colors min-w-0"
             title="Klikni za preimenovanje"
           >
             <Gift size={14} className="text-brand-500 flex-shrink-0" />
             <span className="font-semibold text-gray-900 text-sm group-hover:text-brand-700">{name}</span>
-            <Pencil size={12} className="text-gray-300 group-hover:text-brand-500 transition-colors" />
+            <Pencil size={12} className="text-gray-300 group-hover:text-brand-500 transition-colors flex-shrink-0" />
           </button>
-          {lastReminded && (
-            <span className="text-xs text-gray-400">
-              Zadnji podsjetnik: {new Date(lastReminded).toLocaleDateString("hr-HR")}
-            </span>
-          )}
+          <div className="flex-shrink-0">
+            {confirming ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-red-600 font-medium hidden sm:inline">Obriši svugdje?</span>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="text-xs px-2 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1"
+                >
+                  {deleting ? <Loader2 size={11} className="animate-spin" /> : "Da"}
+                </button>
+                <button
+                  onClick={() => setConfirming(false)}
+                  className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Ne
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirming(true)}
+                className="p-1.5 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                title="Obriši benefit svugdje"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
           {overdueCount > 0 && (
             <span className="text-xs text-red-600 font-medium flex items-center gap-1">
               <AlertTriangle size={12} /> {overdueCount} kasni
@@ -175,31 +197,10 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
           )}
           <span className="text-xs text-gray-500">{rows.length} sponzora</span>
           <span className="text-xs text-gray-400">{doneCount}/{rows.length} završeno</span>
-          {confirming ? (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-red-600 font-medium">Obriši svugdje?</span>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="text-xs px-2 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1"
-              >
-                {deleting ? <Loader2 size={11} className="animate-spin" /> : "Da"}
-              </button>
-              <button
-                onClick={() => setConfirming(false)}
-                className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 transition-colors"
-              >
-                Ne
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirming(true)}
-              className="p-1.5 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-              title="Obriši benefit svugdje"
-            >
-              <Trash2 size={14} />
-            </button>
+          {lastReminded && (
+            <span className="text-xs text-gray-400">
+              Podsjetnik: {new Date(lastReminded).toLocaleDateString("hr-HR")}
+            </span>
           )}
         </div>
       </div>
@@ -326,41 +327,40 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
         onClose={() => setEditing(false)}
       />
       <div
-        onClick={() => { setEditing(true); document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" }); }}
-        className={`group flex items-center gap-4 px-5 py-3 text-sm cursor-pointer transition-colors ${
+        onClick={() => setEditing(true)}
+        className={`group flex items-start gap-3 px-4 py-3 text-sm cursor-pointer transition-colors ${
           isOverdue ? "bg-red-50 hover:bg-red-100" : isUrgent ? "bg-orange-50 hover:bg-orange-100" : "hover:bg-gray-50"
         }`}
       >
-        <span className="flex-shrink-0">{statusIcon[benefit.status]}</span>
+        <span className="flex-shrink-0 mt-0.5">{statusIcon[benefit.status]}</span>
 
-        <span className="flex-1 font-medium text-gray-900 truncate">{benefit.benefit_name}</span>
-
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-gray-400 text-xs">
-            {benefit.deadline ? formatDate(benefit.deadline) : "Bez roka"}
-          </span>
-          {isOverdue && days !== null && (
-            <span className="text-xs text-red-600 font-medium">Kasni {Math.abs(days)}d</span>
-          )}
-          {isUrgent && days !== null && (
-            <span className="text-xs text-orange-600 font-medium">Za {days}d</span>
-          )}
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-gray-900">{benefit.benefit_name}</div>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className="text-gray-400 text-xs">
+              {benefit.deadline ? formatDate(benefit.deadline) : "Bez roka"}
+            </span>
+            {isOverdue && days !== null && (
+              <span className="text-xs text-red-600 font-medium">Kasni {Math.abs(days)}d</span>
+            )}
+            {isUrgent && days !== null && (
+              <span className="text-xs text-orange-600 font-medium">Za {days}d</span>
+            )}
+            <span className={`badge text-xs ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
+              {benefitStatusLabel(benefit.status as BenefitStatus)}
+            </span>
+            {benefit.last_reminded_at && (
+              <span
+                className="flex items-center gap-1 text-xs text-blue-500"
+                title={`Podsjetnik poslan: ${new Date(benefit.last_reminded_at).toLocaleString("hr-HR")}`}
+              >
+                <Mail size={12} />
+              </span>
+            )}
+          </div>
         </div>
 
-        <span className={`badge text-xs flex-shrink-0 ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
-          {benefitStatusLabel(benefit.status as BenefitStatus)}
-        </span>
-
-        {benefit.last_reminded_at && (
-          <span
-            className="flex items-center gap-1 text-xs text-blue-500 flex-shrink-0"
-            title={`Podsjetnik poslan: ${new Date(benefit.last_reminded_at).toLocaleString("hr-HR")}`}
-          >
-            <Mail size={12} />
-          </span>
-        )}
-
-        <Pencil size={13} className="flex-shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors" />
+        <Pencil size={13} className="flex-shrink-0 mt-0.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
       </div>
     </>
   );
