@@ -83,7 +83,13 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="btn-primary">
+      <button
+        onClick={() => {
+          document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+          setOpen(true);
+        }}
+        className="btn-primary"
+      >
         <Plus size={15} />
         Dodaj benefit
       </button>

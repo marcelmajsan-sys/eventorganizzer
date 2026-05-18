@@ -131,7 +131,10 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+          setOpen(true);
+        }}
         className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
         title="Uredi benefit"
       >

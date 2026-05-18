@@ -77,7 +77,12 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
         onClose={() => setEditing(false)}
       />
       <div
-        onClick={() => !confirming && setEditing(true)}
+        onClick={() => {
+          if (!confirming) {
+            document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+            setEditing(true);
+          }
+        }}
         className={`group flex items-start gap-3 px-4 py-3 text-sm cursor-pointer transition-colors ${
           isOverdue
             ? "bg-red-50 hover:bg-red-100"
@@ -235,7 +240,10 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
       <div className="px-5 py-4 bg-gray-50">
         <div className="flex items-start justify-between gap-3">
           <button
-            onClick={() => setRenaming(true)}
+            onClick={() => {
+              document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+              setRenaming(true);
+            }}
             className="group flex items-center gap-2.5 text-left hover:text-brand-700 transition-colors min-w-0"
             title="Klikni za preimenovanje"
           >
@@ -378,7 +386,10 @@ function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[]
       />
       <div className="flex items-center gap-2 px-5 py-2.5 bg-white/40">
         <button
-          onClick={() => setRenaming(true)}
+          onClick={() => {
+            document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+            setRenaming(true);
+          }}
           className="group flex items-center gap-1.5 flex-1 min-w-0 text-left"
           title="Klikni za preimenovanje"
         >
@@ -465,7 +476,12 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
         onClose={() => setEditing(false)}
       />
       <div
-        onClick={() => !confirming && setEditing(true)}
+        onClick={() => {
+          if (!confirming) {
+            document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+            setEditing(true);
+          }
+        }}
         className={`group flex items-start gap-3 px-4 py-3 text-sm cursor-pointer transition-colors ${
           isOverdue ? "bg-red-50 hover:bg-red-100" : isUrgent ? "bg-orange-50 hover:bg-orange-100" : "hover:bg-gray-50"
         }`}
