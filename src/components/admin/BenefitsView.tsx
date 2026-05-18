@@ -131,7 +131,7 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
 }
 
 function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(rows.length === 1);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -239,7 +239,7 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
 }
 
 function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(rows.length === 1);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
