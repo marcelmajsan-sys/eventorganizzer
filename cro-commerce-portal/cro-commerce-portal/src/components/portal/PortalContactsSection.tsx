@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket, User } from "lucide-react";
 import { updatePrimaryContact } from "@/app/actions/partnerManagement";
+import { notifyAdminContactAdded } from "@/app/actions/notifications";
 
 type ContactType = "contact" | "ticket";
 
@@ -206,7 +207,10 @@ function AddContactForm({
       .single();
     setSaving(false);
     if (err) { setError(err.message); return; }
-    if (data) onAdded(data as Contact);
+    if (data) {
+      onAdded(data as Contact);
+      notifyAdminContactAdded(sponsorId, data.name, type);
+    }
     setForm(emptyForm);
     setOpen(false);
     router.refresh();

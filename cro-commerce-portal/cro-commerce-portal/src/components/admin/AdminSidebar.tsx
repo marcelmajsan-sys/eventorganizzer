@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard, Users, KanbanSquare, Calendar, Gift,
   LogOut, ChevronRight, Building2, Settings, ListVideo, Receipt,
-  Menu, X, Mail, Zap, Phone
+  Menu, X, Mail, Zap, Phone, Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProjectId } from "@/lib/supabase/projects";
@@ -15,6 +15,7 @@ import ProjectSwitcher from "@/components/admin/ProjectSwitcher";
 
 const navItems = [
   { href: "/admin/dashboard",       label: "Nadzorna ploča", icon: LayoutDashboard },
+  { href: "/admin/inbox",           label: "Inbox",           icon: Bell },
   { href: "/admin/sponsors",        label: "Sponzori",        icon: Users },
   { href: "/admin/benefits",        label: "Benefiti",        icon: Gift },
   { href: "/admin/contacts",        label: "Kontakti",        icon: Phone },
@@ -32,9 +33,10 @@ interface Props {
   activeProject: ProjectId;
   conferenceDate: string;
   conferenceDates: Record<ProjectId, string>;
+  unreadCount?: number;
 }
 
-export default function AdminSidebar({ userEmail, activeProject, conferenceDate, conferenceDates }: Props) {
+export default function AdminSidebar({ userEmail, activeProject, conferenceDate, conferenceDates, unreadCount = 0 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -117,6 +119,7 @@ export default function AdminSidebar({ userEmail, activeProject, conferenceDate,
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const badge = item.href === "/admin/inbox" && unreadCount > 0 ? unreadCount : null;
             return (
               <Link
                 key={item.href}
@@ -131,6 +134,11 @@ export default function AdminSidebar({ userEmail, activeProject, conferenceDate,
               >
                 <Icon size={17} />
                 <span className="flex-1">{item.label}</span>
+                {badge && !isActive && (
+                  <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
                 {isActive && <ChevronRight size={14} />}
               </Link>
             );

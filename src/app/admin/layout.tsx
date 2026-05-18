@@ -26,12 +26,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     "2026": PROJECTS["2026"].conferenceDate,
     "2025": PROJECTS["2025"].conferenceDate,
   };
+  let unreadCount = 0;
 
   try {
     const adminClient = await createAdminClient();
-    const [adminsRes, settingsRes] = await Promise.all([
+    const [adminsRes, settingsRes, notifRes] = await Promise.all([
       adminClient.from("project_admins").select("email"),
       adminClient.from("project_settings").select("key, value"),
+      adminClient.from("notifications").select("id", { count: "exact", head: true }).eq("read", false),
     ]);
     if (adminsRes.data && adminsRes.data.length > 0) {
       adminEmails = adminsRes.data.map((r) => r.email);
@@ -42,6 +44,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       "2026": settingsRes.data?.find((s) => s.key === "conference_date_2026")?.value ?? PROJECTS["2026"].conferenceDate,
       "2025": settingsRes.data?.find((s) => s.key === "conference_date_2025")?.value ?? PROJECTS["2025"].conferenceDate,
     };
+    unreadCount = notifRes.count ?? 0;
   } catch {
     // Tables not yet created — use hardcoded fallbacks
   }
@@ -55,6 +58,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         activeProject={activeProject}
         conferenceDate={conferenceDate}
         conferenceDates={conferenceDates}
+        unreadCount={unreadCount}
       />
       <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
         <div className="p-4 md:p-8 max-w-[1400px] mx-auto">
