@@ -41,11 +41,12 @@ export default async function PortalBenefitsPage({
     .order("deadline");
 
   if (benefitErr) {
-    ({ data: benefits } = await adminClient
+    const { data: fallback } = await adminClient
       .from("sponsor_benefits")
       .select("id, benefit_name, deadline, status, notes, assigned_to")
       .eq("sponsor_id", sponsorUser.sponsor_id)
-      .order("deadline"));
+      .order("deadline");
+    benefits = fallback as any;
   }
 
   const rows = benefits ?? [];
