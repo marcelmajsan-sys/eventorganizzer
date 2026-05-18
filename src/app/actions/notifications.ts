@@ -15,6 +15,8 @@ export async function notifyAdminContactAdded(
   const projectsToTry: ProjectId[] = projectId === "2026" ? ["2026", "2025"] : ["2025", "2026"];
   const typeLabel = contactType === "contact" ? "kontakt osoba" : "osoba za ulaznice";
 
+  console.log(`notifyAdminContactAdded: start sponsorId=${sponsorId} type=${contactType} projectId=${projectId}`);
+
   for (const pid of projectsToTry) {
     try {
       const adminClient = createAdminClientForProject(pid);
@@ -26,7 +28,7 @@ export async function notifyAdminContactAdded(
         .single();
 
       if (sponsorErr || !sponsor) {
-        console.error(`notifyAdminContactAdded [${pid}]: sponsor not found for ${sponsorId}`, sponsorErr?.message);
+        console.error(`notifyAdminContactAdded [${pid}]: sponsor not found`, sponsorErr?.message);
         continue;
       }
 
@@ -41,11 +43,14 @@ export async function notifyAdminContactAdded(
         continue;
       }
 
-      return; // success
+      console.log(`notifyAdminContactAdded [${pid}]: success`);
+      return;
     } catch (e) {
       console.error(`notifyAdminContactAdded [${pid}]: unexpected error`, e);
     }
   }
+
+  console.error(`notifyAdminContactAdded: all projects failed for sponsorId=${sponsorId}`);
 }
 
 export async function markNotificationRead(id: string) {

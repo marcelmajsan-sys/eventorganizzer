@@ -212,7 +212,7 @@ function AddContactForm({
     if (err) { setError(err.message); return; }
     if (data) {
       onAdded(data as Contact);
-      notifyAdminContactAdded(sponsorId, data.name, type, projectId);
+      await notifyAdminContactAdded(sponsorId, data.name, type, projectId).catch(() => {});
     }
     setForm(emptyForm);
     setOpen(false);
