@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { Bell, Building2 } from "lucide-react";
 import Link from "next/link";
 import { MarkAllReadButton, MarkReadButton } from "@/components/admin/InboxActions";
@@ -17,7 +17,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export default async function InboxPage() {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const { data: raw } = await supabase
     .from("notifications")

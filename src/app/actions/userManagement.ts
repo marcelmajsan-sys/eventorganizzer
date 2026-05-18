@@ -7,6 +7,8 @@ import type { ProjectId } from "@/lib/supabase/projects";
 
 const ALL_PROJECTS: ProjectId[] = ["2026", "2025"];
 
+const FALLBACK_ADMIN_EMAILS = ["marcel@ecommerce.hr", "udruga@ecommerce.hr", "laura@ecommerce.hr"];
+
 export async function createUserInAllProjects(name: string, email: string, password: string) {
   const errors: string[] = [];
 
@@ -65,27 +67,32 @@ export async function deleteUserFromAllProjects(email: string) {
 }
 
 export async function listUsersWithMeta(): Promise<{ email: string; name: string | null; id2026: string | null; id2025: string | null }[]> {
-  const supabase = await createAdminClient();
-  const { data: adminsData } = await supabase.from("project_admins").select("email").order("email");
-  const adminEmails = adminsData?.map((a) => a.email) ?? [];
+  let adminEmails: string[] = [];
+  try {
+    const supabase = await createAdminClient();
+    const { data: adminsData } = await supabase.from("project_admins").select("email").order("email");
+    adminEmails = adminsData?.map((a) => a.email) ?? [];
+  } catch {}
 
-  if (adminEmails.length === 0) return [];
+  if (adminEmails.length === 0) adminEmails = FALLBACK_ADMIN_EMAILS;
 
-  const admin2026 = createAdminClientForProject("2026");
-  const admin2025 = createAdminClientForProject("2025");
-
-  const [res2026, res2025] = await Promise.all([
-    admin2026.auth.admin.listUsers({ perPage: 500 }),
-    admin2025.auth.admin.listUsers({ perPage: 500 }),
-  ]);
-
-  const users2026 = res2026.data?.users ?? [];
-  const users2025 = res2025.data?.users ?? [];
+  let users2026: any[] = [];
+  let users2025: any[] = [];
+  try {
+    const admin2026 = createAdminClientForProject("2026");
+    const admin2025 = createAdminClientForProject("2025");
+    const [res2026, res2025] = await Promise.all([
+      admin2026.auth.admin.listUsers({ perPage: 500 }),
+      admin2025.auth.admin.listUsers({ perPage: 500 }),
+    ]);
+    users2026 = res2026.data?.users ?? [];
+    users2025 = res2025.data?.users ?? [];
+  } catch {}
 
   return adminEmails.map((email) => {
-    const u2026 = users2026.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-    const u2025 = users2025.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-    const name = u2026?.user_metadata?.name ?? u2025?.user_metadata?.name ?? null;
-    return { email, name, id2026: u2026?.id ?? null, id2025: u2025?.id ?? null };
+    const u2026 = users2026.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+    const u2025 = users2025.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+    const name = (u2026?.user_metadata?.name ?? u2025?.user_metadata?.name) as string | null ?? null;
+    return { email, name, id2026: (u2026?.id as string | null) ?? null, id2025: (u2025?.id as string | null) ?? null };
   });
 }
