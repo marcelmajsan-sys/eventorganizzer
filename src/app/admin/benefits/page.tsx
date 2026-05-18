@@ -85,7 +85,7 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
         })}
       </div>
 
-      <BenefitsView benefits={rows as any} filterStatus={activeStatus} />
+      <BenefitsView benefits={rows as any} filterStatus={activeStatus} sponsors={sponsorList} />
     </div>
   );
 }

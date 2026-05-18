@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   CheckCircle2, Clock, AlertTriangle, XCircle, Gift,
-  ChevronDown, LayoutList, Tag, Pencil, Trash2, Loader2, Users, Search, X, Mail
+  ChevronDown, LayoutList, Tag, Pencil, Trash2, Loader2, Users, Search, X, Mail, User, FileText, Plus
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -22,6 +22,8 @@ type BenefitRow = {
   status: string;
   notes?: string | null;
   assigned_to?: string | null;
+  description?: string | null;
+  contact_person_id?: string | null;
   last_reminded_at?: string | null;
   sponsors: { id: string; name: string; package_type: string } | null;
 };
@@ -51,19 +53,32 @@ const statusIcon: Record<string, React.ReactNode> = {
 
 function SponsorRow({ benefit }: { benefit: BenefitRow }) {
   const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
   const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
   const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
 
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDeleting(true);
+    await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
+    setDeleting(false);
+    setConfirming(false);
+    router.refresh();
+  }
+
   return (
     <>
       <EditBenefitDialog
-        benefit={editing ? { ...benefit, sponsor_name: benefit.sponsors?.name ?? undefined } : null}
+        benefit={editing ? { ...benefit, sponsor_name: benefit.sponsors?.name ?? undefined, sponsor_id: benefit.sponsors?.id } : null}
         onClose={() => setEditing(false)}
       />
       <div
-        onClick={() => setEditing(true)}
-        className={`group flex items-center gap-4 px-5 py-3 text-sm cursor-pointer transition-colors ${
+        onClick={() => !confirming && setEditing(true)}
+        className={`group flex items-start gap-3 px-4 py-3 text-sm cursor-pointer transition-colors ${
           isOverdue
             ? "bg-red-50 hover:bg-red-100"
             : isUrgent
@@ -71,57 +86,107 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
             : "hover:bg-gray-50"
         }`}
       >
-        <span className="flex-shrink-0">{statusIcon[benefit.status]}</span>
+        <span className="flex-shrink-0 mt-0.5">{statusIcon[benefit.status]}</span>
 
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Link
-            href={`/admin/sponsors/${benefit.sponsors?.id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="font-medium text-gray-900 hover:text-brand-600 truncate"
-          >
-            {benefit.sponsors?.name}
-          </Link>
-          <span className={`badge text-xs flex-shrink-0 ${packageColor(benefit.sponsors?.package_type as PackageType)}`}>
-            {benefit.sponsors?.package_type}
-          </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              href={`/admin/sponsors/${benefit.sponsors?.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="font-medium text-gray-900 hover:text-brand-600"
+            >
+              {benefit.sponsors?.name}
+            </Link>
+            <span className={`badge text-xs flex-shrink-0 ${packageColor(benefit.sponsors?.package_type as PackageType)}`}>
+              {benefit.sponsors?.package_type}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className="text-gray-400 text-xs">
+              {benefit.deadline ? formatDate(benefit.deadline) : "Bez roka"}
+            </span>
+            {isOverdue && days !== null && (
+              <span className="text-xs text-red-600 font-medium">Kasni {Math.abs(days)}d</span>
+            )}
+            {isUrgent && days !== null && (
+              <span className="text-xs text-orange-600 font-medium">Za {days}d</span>
+            )}
+            <span className={`badge text-xs ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
+              {benefitStatusLabel(benefit.status as BenefitStatus)}
+            </span>
+            {benefit.assigned_to && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <User size={11} />
+                {benefit.assigned_to}
+              </span>
+            )}
+            {benefit.last_reminded_at && (
+              <span
+                className="flex items-center gap-1 text-xs text-blue-500"
+                title={`Podsjetnik poslan: ${new Date(benefit.last_reminded_at).toLocaleString("hr-HR")}`}
+              >
+                <Mail size={12} />
+              </span>
+            )}
+          </div>
+          {benefit.notes && (
+            <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5 truncate">
+              <FileText size={11} className="flex-shrink-0" />
+              {benefit.notes}
+            </p>
+          )}
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-gray-400 text-xs">
-            {benefit.deadline ? formatDate(benefit.deadline) : "Bez roka"}
-          </span>
-          {isOverdue && days !== null && (
-            <span className="text-xs text-red-600 font-medium">Kasni {Math.abs(days)}d</span>
-          )}
-          {isUrgent && days !== null && (
-            <span className="text-xs text-orange-600 font-medium">Za {days}d</span>
+        <div
+          className="flex items-center gap-1 flex-shrink-0 mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {confirming ? (
+            <>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-xs px-1.5 py-0.5 bg-red-600 text-white rounded flex items-center gap-1"
+              >
+                {deleting ? <Loader2 size={10} className="animate-spin" /> : "Da"}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirming(false); }}
+                className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded"
+              >
+                Ne
+              </button>
+            </>
+          ) : (
+            <>
+              <Pencil size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
+                className="p-0.5 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                title="Obriši za ovog sponzora"
+              >
+                <Trash2 size={12} />
+              </button>
+            </>
           )}
         </div>
-
-        <span className={`badge text-xs flex-shrink-0 ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
-          {benefitStatusLabel(benefit.status as BenefitStatus)}
-        </span>
-
-        {benefit.last_reminded_at && (
-          <span
-            className="flex items-center gap-1 text-xs text-blue-500 flex-shrink-0"
-            title={`Podsjetnik poslan: ${new Date(benefit.last_reminded_at).toLocaleString("hr-HR")}`}
-          >
-            <Mail size={12} />
-          </span>
-        )}
-
-        <Pencil size={13} className="flex-shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors" />
       </div>
     </>
   );
 }
 
-function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
-  const [open, setOpen] = useState(false);
+function AccordionGroup({ name, rows, sponsors = [] }: {
+  name: string;
+  rows: BenefitRow[];
+  sponsors?: { id: string; name: string; package_type: string }[];
+}) {
+  const [open, setOpen] = useState(rows.length === 1);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [addingSponsor, setAddingSponsor] = useState(false);
+  const [selectedSponsorId, setSelectedSponsorId] = useState("");
+  const [addingLoading, setAddingLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
   const doneCount = rows.filter((r) => r.status === "completed").length;
@@ -136,11 +201,28 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
     (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed")
   ).length;
 
+  const assignedIds = new Set(rows.map((r) => r.sponsors?.id).filter(Boolean));
+  const availableSponsors = sponsors.filter((s) => !assignedIds.has(s.id));
+
   async function handleDelete() {
     setDeleting(true);
     await supabase.from("sponsor_benefits").delete().eq("benefit_name", name);
     setDeleting(false);
     setConfirming(false);
+    router.refresh();
+  }
+
+  async function handleAddSponsor() {
+    if (!selectedSponsorId) return;
+    setAddingLoading(true);
+    await supabase.from("sponsor_benefits").insert({
+      benefit_name: name,
+      sponsor_id: selectedSponsorId,
+      status: "not_started",
+    });
+    setAddingLoading(false);
+    setAddingSponsor(false);
+    setSelectedSponsorId("");
     router.refresh();
   }
 
@@ -150,24 +232,47 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
         currentName={renaming ? name : null}
         onClose={() => setRenaming(false)}
       />
-      <div className="flex items-center justify-between px-5 py-4 bg-gray-50">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="px-5 py-4 bg-gray-50">
+        <div className="flex items-start justify-between gap-3">
           <button
             onClick={() => setRenaming(true)}
-            className="group flex items-center gap-2.5 text-left hover:text-brand-700 transition-colors flex-shrink-0"
+            className="group flex items-center gap-2.5 text-left hover:text-brand-700 transition-colors min-w-0"
             title="Klikni za preimenovanje"
           >
             <Gift size={14} className="text-brand-500 flex-shrink-0" />
             <span className="font-semibold text-gray-900 text-sm group-hover:text-brand-700">{name}</span>
-            <Pencil size={12} className="text-gray-300 group-hover:text-brand-500 transition-colors" />
+            <Pencil size={12} className="text-gray-300 group-hover:text-brand-500 transition-colors flex-shrink-0" />
           </button>
-          {lastReminded && (
-            <span className="text-xs text-gray-400">
-              Zadnji podsjetnik: {new Date(lastReminded).toLocaleDateString("hr-HR")}
-            </span>
-          )}
+          <div className="flex-shrink-0">
+            {confirming ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-red-600 font-medium hidden sm:inline">Obriši svugdje?</span>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="text-xs px-2 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1"
+                >
+                  {deleting ? <Loader2 size={11} className="animate-spin" /> : "Da"}
+                </button>
+                <button
+                  onClick={() => setConfirming(false)}
+                  className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Ne
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirming(true)}
+                className="p-1.5 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                title="Obriši benefit svugdje"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
           {overdueCount > 0 && (
             <span className="text-xs text-red-600 font-medium flex items-center gap-1">
               <AlertTriangle size={12} /> {overdueCount} kasni
@@ -175,38 +280,59 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
           )}
           <span className="text-xs text-gray-500">{rows.length} sponzora</span>
           <span className="text-xs text-gray-400">{doneCount}/{rows.length} završeno</span>
-          {confirming ? (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-red-600 font-medium">Obriši svugdje?</span>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="text-xs px-2 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1"
-              >
-                {deleting ? <Loader2 size={11} className="animate-spin" /> : "Da"}
-              </button>
-              <button
-                onClick={() => setConfirming(false)}
-                className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 transition-colors"
-              >
-                Ne
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirming(true)}
-              className="p-1.5 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-              title="Obriši benefit svugdje"
-            >
-              <Trash2 size={14} />
-            </button>
+          {lastReminded && (
+            <span className="text-xs text-gray-400">
+              Podsjetnik: {new Date(lastReminded).toLocaleDateString("hr-HR")}
+            </span>
           )}
         </div>
       </div>
 
       {open && (
-        <div className="divide-y divide-gray-50 border-t border-gray-100">
-          {rows.map((b) => <SponsorRow key={b.id} benefit={b} />)}
+        <div className="border-t border-gray-100">
+          <div className="divide-y divide-gray-50">
+            {rows.map((b) => <SponsorRow key={b.id} benefit={b} />)}
+          </div>
+
+          {availableSponsors.length > 0 && (
+            <div className="px-4 py-2.5 bg-gray-50/70 border-t border-gray-100">
+              {addingSponsor ? (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedSponsorId}
+                    onChange={(e) => setSelectedSponsorId(e.target.value)}
+                    className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                  >
+                    <option value="">— odaberi sponzora —</option>
+                    {availableSponsors.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.package_type})</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleAddSponsor}
+                    disabled={!selectedSponsorId || addingLoading}
+                    className="text-xs px-3 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-40 flex items-center gap-1 transition-colors"
+                  >
+                    {addingLoading ? <Loader2 size={12} className="animate-spin" /> : "Dodaj"}
+                  </button>
+                  <button
+                    onClick={() => { setAddingSponsor(false); setSelectedSponsorId(""); }}
+                    className="text-xs text-gray-500 hover:text-gray-700 px-1"
+                  >
+                    Odustani
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAddingSponsor(true)}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors py-0.5"
+                >
+                  <Plus size={12} />
+                  Dodaj sponzora
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -224,7 +350,7 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
 }
 
 function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(rows.length === 1);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -315,52 +441,108 @@ function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[]
 
 function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
   const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
   const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
   const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
 
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDeleting(true);
+    await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
+    setDeleting(false);
+    setConfirming(false);
+    router.refresh();
+  }
+
   return (
     <>
       <EditBenefitDialog
-        benefit={editing ? { ...benefit, sponsor_name: benefit.sponsors?.name ?? undefined } : null}
+        benefit={editing ? { ...benefit, sponsor_name: benefit.sponsors?.name ?? undefined, sponsor_id: benefit.sponsors?.id } : null}
         onClose={() => setEditing(false)}
       />
       <div
-        onClick={() => setEditing(true)}
-        className={`group flex items-center gap-4 px-5 py-3 text-sm cursor-pointer transition-colors ${
+        onClick={() => !confirming && setEditing(true)}
+        className={`group flex items-start gap-3 px-4 py-3 text-sm cursor-pointer transition-colors ${
           isOverdue ? "bg-red-50 hover:bg-red-100" : isUrgent ? "bg-orange-50 hover:bg-orange-100" : "hover:bg-gray-50"
         }`}
       >
-        <span className="flex-shrink-0">{statusIcon[benefit.status]}</span>
+        <span className="flex-shrink-0 mt-0.5">{statusIcon[benefit.status]}</span>
 
-        <span className="flex-1 font-medium text-gray-900 truncate">{benefit.benefit_name}</span>
-
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-gray-400 text-xs">
-            {benefit.deadline ? formatDate(benefit.deadline) : "Bez roka"}
-          </span>
-          {isOverdue && days !== null && (
-            <span className="text-xs text-red-600 font-medium">Kasni {Math.abs(days)}d</span>
-          )}
-          {isUrgent && days !== null && (
-            <span className="text-xs text-orange-600 font-medium">Za {days}d</span>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-gray-900">{benefit.benefit_name}</div>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className="text-gray-400 text-xs">
+              {benefit.deadline ? formatDate(benefit.deadline) : "Bez roka"}
+            </span>
+            {isOverdue && days !== null && (
+              <span className="text-xs text-red-600 font-medium">Kasni {Math.abs(days)}d</span>
+            )}
+            {isUrgent && days !== null && (
+              <span className="text-xs text-orange-600 font-medium">Za {days}d</span>
+            )}
+            <span className={`badge text-xs ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
+              {benefitStatusLabel(benefit.status as BenefitStatus)}
+            </span>
+            {benefit.assigned_to && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <User size={11} />
+                {benefit.assigned_to}
+              </span>
+            )}
+            {benefit.last_reminded_at && (
+              <span
+                className="flex items-center gap-1 text-xs text-blue-500"
+                title={`Podsjetnik poslan: ${new Date(benefit.last_reminded_at).toLocaleString("hr-HR")}`}
+              >
+                <Mail size={12} />
+              </span>
+            )}
+          </div>
+          {benefit.notes && (
+            <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5 truncate">
+              <FileText size={11} className="flex-shrink-0" />
+              {benefit.notes}
+            </p>
           )}
         </div>
 
-        <span className={`badge text-xs flex-shrink-0 ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
-          {benefitStatusLabel(benefit.status as BenefitStatus)}
-        </span>
-
-        {benefit.last_reminded_at && (
-          <span
-            className="flex items-center gap-1 text-xs text-blue-500 flex-shrink-0"
-            title={`Podsjetnik poslan: ${new Date(benefit.last_reminded_at).toLocaleString("hr-HR")}`}
-          >
-            <Mail size={12} />
-          </span>
-        )}
-
-        <Pencil size={13} className="flex-shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors" />
+        <div
+          className="flex items-center gap-1 flex-shrink-0 mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {confirming ? (
+            <>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-xs px-1.5 py-0.5 bg-red-600 text-white rounded flex items-center gap-1"
+              >
+                {deleting ? <Loader2 size={10} className="animate-spin" /> : "Da"}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirming(false); }}
+                className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded"
+              >
+                Ne
+              </button>
+            </>
+          ) : (
+            <>
+              <Pencil size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
+                className="p-0.5 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                title="Obriši ovaj benefit"
+              >
+                <Trash2 size={12} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </>
   );
@@ -425,9 +607,10 @@ function SponsorGroup({ sponsorId, sponsorName, packageType, rows }: {
 interface Props {
   benefits: BenefitRow[];
   filterStatus?: string | null;
+  sponsors?: { id: string; name: string; package_type: string }[];
 }
 
-export default function BenefitsView({ benefits, filterStatus }: Props) {
+export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: Props) {
   const [view, setView] = useState<"benefit" | "category" | "sponsor">("benefit");
   const [query, setQuery] = useState("");
 
@@ -518,7 +701,7 @@ export default function BenefitsView({ benefits, filterStatus }: Props) {
       {view === "benefit" && (
         <div className="space-y-3">
           {benefitNames.map((name) => (
-            <AccordionGroup key={name} name={name} rows={groupedByBenefit[name]!} />
+            <AccordionGroup key={name} name={name} rows={groupedByBenefit[name]!} sponsors={sponsors} />
           ))}
           {benefitNames.length === 0 && (
             <div className="card p-12 text-center text-gray-400 text-sm">

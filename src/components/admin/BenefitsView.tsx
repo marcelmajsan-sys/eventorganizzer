@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   CheckCircle2, Clock, AlertTriangle, XCircle, Gift,
-  ChevronDown, LayoutList, Tag, Pencil, Trash2, Loader2, Users, Search, X, Mail, User, FileText
+  ChevronDown, LayoutList, Tag, Pencil, Trash2, Loader2, Users, Search, X, Mail, User, FileText, Plus
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -53,9 +53,22 @@ const statusIcon: Record<string, React.ReactNode> = {
 
 function SponsorRow({ benefit }: { benefit: BenefitRow }) {
   const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
   const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
   const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDeleting(true);
+    await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
+    setDeleting(false);
+    setConfirming(false);
+    router.refresh();
+  }
 
   return (
     <>
@@ -64,7 +77,7 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
         onClose={() => setEditing(false)}
       />
       <div
-        onClick={() => setEditing(true)}
+        onClick={() => !confirming && setEditing(true)}
         className={`group flex items-start gap-3 px-4 py-3 text-sm cursor-pointer transition-colors ${
           isOverdue
             ? "bg-red-50 hover:bg-red-100"
@@ -124,17 +137,56 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
           )}
         </div>
 
-        <Pencil size={13} className="flex-shrink-0 mt-0.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
+        <div
+          className="flex items-center gap-1 flex-shrink-0 mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {confirming ? (
+            <>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-xs px-1.5 py-0.5 bg-red-600 text-white rounded flex items-center gap-1"
+              >
+                {deleting ? <Loader2 size={10} className="animate-spin" /> : "Da"}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirming(false); }}
+                className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded"
+              >
+                Ne
+              </button>
+            </>
+          ) : (
+            <>
+              <Pencil size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
+                className="p-0.5 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                title="Obriši za ovog sponzora"
+              >
+                <Trash2 size={12} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </>
   );
 }
 
-function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
+function AccordionGroup({ name, rows, sponsors = [] }: {
+  name: string;
+  rows: BenefitRow[];
+  sponsors?: { id: string; name: string; package_type: string }[];
+}) {
   const [open, setOpen] = useState(rows.length === 1);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [addingSponsor, setAddingSponsor] = useState(false);
+  const [selectedSponsorId, setSelectedSponsorId] = useState("");
+  const [addingLoading, setAddingLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
   const doneCount = rows.filter((r) => r.status === "completed").length;
@@ -149,11 +201,28 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
     (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed")
   ).length;
 
+  const assignedIds = new Set(rows.map((r) => r.sponsors?.id).filter(Boolean));
+  const availableSponsors = sponsors.filter((s) => !assignedIds.has(s.id));
+
   async function handleDelete() {
     setDeleting(true);
     await supabase.from("sponsor_benefits").delete().eq("benefit_name", name);
     setDeleting(false);
     setConfirming(false);
+    router.refresh();
+  }
+
+  async function handleAddSponsor() {
+    if (!selectedSponsorId) return;
+    setAddingLoading(true);
+    await supabase.from("sponsor_benefits").insert({
+      benefit_name: name,
+      sponsor_id: selectedSponsorId,
+      status: "not_started",
+    });
+    setAddingLoading(false);
+    setAddingSponsor(false);
+    setSelectedSponsorId("");
     router.refresh();
   }
 
@@ -220,8 +289,50 @@ function AccordionGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
       </div>
 
       {open && (
-        <div className="divide-y divide-gray-50 border-t border-gray-100">
-          {rows.map((b) => <SponsorRow key={b.id} benefit={b} />)}
+        <div className="border-t border-gray-100">
+          <div className="divide-y divide-gray-50">
+            {rows.map((b) => <SponsorRow key={b.id} benefit={b} />)}
+          </div>
+
+          {availableSponsors.length > 0 && (
+            <div className="px-4 py-2.5 bg-gray-50/70 border-t border-gray-100">
+              {addingSponsor ? (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedSponsorId}
+                    onChange={(e) => setSelectedSponsorId(e.target.value)}
+                    className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                  >
+                    <option value="">— odaberi sponzora —</option>
+                    {availableSponsors.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.package_type})</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleAddSponsor}
+                    disabled={!selectedSponsorId || addingLoading}
+                    className="text-xs px-3 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-40 flex items-center gap-1 transition-colors"
+                  >
+                    {addingLoading ? <Loader2 size={12} className="animate-spin" /> : "Dodaj"}
+                  </button>
+                  <button
+                    onClick={() => { setAddingSponsor(false); setSelectedSponsorId(""); }}
+                    className="text-xs text-gray-500 hover:text-gray-700 px-1"
+                  >
+                    Odustani
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAddingSponsor(true)}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors py-0.5"
+                >
+                  <Plus size={12} />
+                  Dodaj sponzora
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -330,9 +441,22 @@ function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[]
 
 function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
   const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
   const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
   const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDeleting(true);
+    await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
+    setDeleting(false);
+    setConfirming(false);
+    router.refresh();
+  }
 
   return (
     <>
@@ -341,7 +465,7 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
         onClose={() => setEditing(false)}
       />
       <div
-        onClick={() => setEditing(true)}
+        onClick={() => !confirming && setEditing(true)}
         className={`group flex items-start gap-3 px-4 py-3 text-sm cursor-pointer transition-colors ${
           isOverdue ? "bg-red-50 hover:bg-red-100" : isUrgent ? "bg-orange-50 hover:bg-orange-100" : "hover:bg-gray-50"
         }`}
@@ -386,7 +510,39 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
           )}
         </div>
 
-        <Pencil size={13} className="flex-shrink-0 mt-0.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
+        <div
+          className="flex items-center gap-1 flex-shrink-0 mt-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {confirming ? (
+            <>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-xs px-1.5 py-0.5 bg-red-600 text-white rounded flex items-center gap-1"
+              >
+                {deleting ? <Loader2 size={10} className="animate-spin" /> : "Da"}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirming(false); }}
+                className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded"
+              >
+                Ne
+              </button>
+            </>
+          ) : (
+            <>
+              <Pencil size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
+                className="p-0.5 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                title="Obriši ovaj benefit"
+              >
+                <Trash2 size={12} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </>
   );
@@ -451,9 +607,10 @@ function SponsorGroup({ sponsorId, sponsorName, packageType, rows }: {
 interface Props {
   benefits: BenefitRow[];
   filterStatus?: string | null;
+  sponsors?: { id: string; name: string; package_type: string }[];
 }
 
-export default function BenefitsView({ benefits, filterStatus }: Props) {
+export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: Props) {
   const [view, setView] = useState<"benefit" | "category" | "sponsor">("benefit");
   const [query, setQuery] = useState("");
 
@@ -544,7 +701,7 @@ export default function BenefitsView({ benefits, filterStatus }: Props) {
       {view === "benefit" && (
         <div className="space-y-3">
           {benefitNames.map((name) => (
-            <AccordionGroup key={name} name={name} rows={groupedByBenefit[name]!} />
+            <AccordionGroup key={name} name={name} rows={groupedByBenefit[name]!} sponsors={sponsors} />
           ))}
           {benefitNames.length === 0 && (
             <div className="card p-12 text-center text-gray-400 text-sm">
