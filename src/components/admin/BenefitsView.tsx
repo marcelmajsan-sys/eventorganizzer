@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   CheckCircle2, Clock, AlertTriangle, XCircle, Gift,
-  ChevronDown, LayoutList, Tag, Pencil, Trash2, Loader2, Users, Search, X, Mail
+  ChevronDown, LayoutList, Tag, Pencil, Trash2, Loader2, Users, Search, X, Mail, User, FileText
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -101,6 +101,12 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
             <span className={`badge text-xs ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
               {benefitStatusLabel(benefit.status as BenefitStatus)}
             </span>
+            {benefit.assigned_to && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <User size={11} />
+                {benefit.assigned_to}
+              </span>
+            )}
             {benefit.last_reminded_at && (
               <span
                 className="flex items-center gap-1 text-xs text-blue-500"
@@ -110,6 +116,12 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
               </span>
             )}
           </div>
+          {benefit.notes && (
+            <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5 truncate">
+              <FileText size={11} className="flex-shrink-0" />
+              {benefit.notes}
+            </p>
+          )}
         </div>
 
         <Pencil size={13} className="flex-shrink-0 mt-0.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
@@ -351,6 +363,12 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
             <span className={`badge text-xs ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
               {benefitStatusLabel(benefit.status as BenefitStatus)}
             </span>
+            {benefit.assigned_to && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <User size={11} />
+                {benefit.assigned_to}
+              </span>
+            )}
             {benefit.last_reminded_at && (
               <span
                 className="flex items-center gap-1 text-xs text-blue-500"
@@ -360,6 +378,12 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
               </span>
             )}
           </div>
+          {benefit.notes && (
+            <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5 truncate">
+              <FileText size={11} className="flex-shrink-0" />
+              {benefit.notes}
+            </p>
+          )}
         </div>
 
         <Pencil size={13} className="flex-shrink-0 mt-0.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
