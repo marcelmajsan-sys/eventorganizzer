@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket, User } from "lucide-react";
 import { updatePrimaryContact } from "@/app/actions/partnerManagement";
 import { notifyAdminContactAdded } from "@/app/actions/notifications";
+import type { ProjectId } from "@/lib/supabase/projects";
 
 type ContactType = "contact" | "ticket";
 
@@ -177,10 +178,12 @@ function AddContactForm({
   sponsorId,
   type,
   onAdded,
+  projectId,
 }: {
   sponsorId: string;
   type: ContactType;
   onAdded: (c: Contact) => void;
+  projectId: ProjectId;
 }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -209,7 +212,7 @@ function AddContactForm({
     if (err) { setError(err.message); return; }
     if (data) {
       onAdded(data as Contact);
-      notifyAdminContactAdded(sponsorId, data.name, type);
+      notifyAdminContactAdded(sponsorId, data.name, type, projectId);
     }
     setForm(emptyForm);
     setOpen(false);
@@ -410,10 +413,12 @@ export default function PortalContactsSection({
   sponsorId,
   primaryContact,
   contacts: initial,
+  projectId,
 }: {
   sponsorId: string;
   primaryContact: PrimaryContact;
   contacts: Contact[];
+  projectId: ProjectId;
 }) {
   const [contacts, setContacts] = useState(initial);
 
@@ -457,7 +462,7 @@ export default function PortalContactsSection({
             <ContactRow key={c.id} contact={c} onDelete={handleDelete} />
           ))}
         </div>
-        <AddContactForm sponsorId={sponsorId} type="contact" onAdded={handleAdded} />
+        <AddContactForm sponsorId={sponsorId} type="contact" onAdded={handleAdded} projectId={projectId} />
       </div>
 
       {/* Osobe za ulaznice */}
@@ -474,7 +479,7 @@ export default function PortalContactsSection({
             <ContactRow key={c.id} contact={c} onDelete={handleDelete} />
           ))}
         </div>
-        <AddContactForm sponsorId={sponsorId} type="ticket" onAdded={handleAdded} />
+        <AddContactForm sponsorId={sponsorId} type="ticket" onAdded={handleAdded} projectId={projectId} />
       </div>
     </div>
   );

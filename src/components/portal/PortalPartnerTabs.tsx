@@ -5,6 +5,7 @@ import { Building2, File, FileText, FolderOpen } from "lucide-react";
 import { packageColor, paymentStatusLabel, paymentStatusColor, formatDate, formatFileSize } from "@/lib/utils";
 import type { PackageType, PaymentStatus } from "@/types";
 import PortalContactsSection from "@/components/portal/PortalContactsSection";
+import type { ProjectId } from "@/lib/supabase/projects";
 
 interface Contact {
   id: string;
@@ -37,6 +38,7 @@ interface Props {
   sponsor: Sponsor;
   contacts: Contact[];
   files: FileRecord[];
+  projectId: ProjectId;
 }
 
 const TABS = [
@@ -46,7 +48,7 @@ const TABS = [
 
 type Tab = typeof TABS[number]["id"];
 
-export default function PortalPartnerTabs({ sponsorId, sponsor, contacts, files }: Props) {
+export default function PortalPartnerTabs({ sponsorId, sponsor, contacts, files, projectId }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("info");
 
   return (
@@ -117,6 +119,7 @@ export default function PortalPartnerTabs({ sponsorId, sponsor, contacts, files 
             phone: sponsor.contact_phone,
           }}
           contacts={contacts}
+          projectId={projectId}
         />
       )}
 
