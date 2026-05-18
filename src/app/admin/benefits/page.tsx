@@ -30,10 +30,11 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
     .order("benefit_name");
 
   if (benefitErr) {
-    ({ data: benefits } = await supabase
+    const { data: fallback } = await supabase
       .from("sponsor_benefits")
       .select("id, benefit_name, deadline, status, notes, assigned_to, sponsors(id, name, package_type)")
-      .order("benefit_name"));
+      .order("benefit_name");
+    benefits = fallback as any;
   }
 
   const [{ data: sponsors }, { data: emailLogs }] = await Promise.all([
