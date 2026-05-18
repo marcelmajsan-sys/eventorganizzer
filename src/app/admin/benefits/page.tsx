@@ -17,32 +17,34 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
   const activeStatus = searchParams.status ?? null;
   const supabase = await createClient();
 
-  // Automatski označi benefite s prošlim rokom kao "overdue"
   await supabase
     .from("sponsor_benefits")
     .update({ status: "overdue" })
     .lt("deadline", new Date().toISOString())
     .not("status", "in", '("completed","overdue")');
 
-  const [{ data: benefits }, { data: sponsors }, { data: emailLogs }] = await Promise.all([
-    supabase
+  // Try with new columns (migration_018); fall back without them if not yet migrated
+  let { data: benefits, error: benefitErr } = await supabase
+    .from("sponsor_benefits")
+    .select("id, benefit_name, deadline, status, notes, assigned_to, description, contact_person_id, sponsors(id, name, package_type)")
+    .order("benefit_name");
+
+  if (benefitErr) {
+    ({ data: benefits } = await supabase
       .from("sponsor_benefits")
-      .select("id, benefit_name, deadline, status, notes, assigned_to, description, contact_person_id, sponsors(id, name, package_type)")
-      .order("benefit_name"),
-    supabase
-      .from("sponsors")
-      .select("id, name, package_type")
-      .order("name"),
-    supabase
-      .from("email_logs")
-      .select("benefit_id, created_at")
-      .order("created_at", { ascending: false }),
+      .select("id, benefit_name, deadline, status, notes, assigned_to, sponsors(id, name, package_type)")
+      .order("benefit_name"));
+  }
+
+  const [{ data: sponsors }, { data: emailLogs }] = await Promise.all([
+    supabase.from("sponsors").select("id, name, package_type").order("name"),
+    supabase.from("email_logs").select("benefit_id, sent_at").order("sent_at", { ascending: false }),
   ]);
 
   const lastRemindedMap: Record<string, string> = {};
   emailLogs?.forEach((log) => {
     if (log.benefit_id && !lastRemindedMap[log.benefit_id]) {
-      lastRemindedMap[log.benefit_id] = log.created_at;
+      lastRemindedMap[log.benefit_id] = log.sent_at;
     }
   });
 
@@ -62,7 +64,6 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
         <AddBenefitModal sponsors={sponsorList} />
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {(["not_started", "in_progress", "completed", "overdue"] as BenefitStatus[]).map((status) => {
           const count = rows.filter((b) => b.status === status).length;
