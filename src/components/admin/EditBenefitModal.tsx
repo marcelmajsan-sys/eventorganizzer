@@ -73,7 +73,7 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
     setLoading(true);
     setError("");
 
-    const { error: err } = await supabase
+    let { error: err } = await supabase
       .from("sponsor_benefits")
       .update({
         benefit_name: form.benefit_name,
@@ -86,6 +86,21 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
         contact_person_id: form.contact_person_id || null,
       })
       .eq("id", benefit.id);
+
+    // Fallback if migration_018 not yet run
+    if (err && (err.message.includes("contact_person_id") || err.message.includes("description"))) {
+      ({ error: err } = await supabase
+        .from("sponsor_benefits")
+        .update({
+          benefit_name: form.benefit_name,
+          deadline: form.deadline ? new Date(form.deadline).toISOString() : null,
+          status: form.status,
+          notes: form.notes || null,
+          assigned_to: form.assigned_to || null,
+          reminder_email: form.reminder_email || null,
+        })
+        .eq("id", benefit.id));
+    }
 
     if (err) { setError(err.message); setLoading(false); return; }
     setOpen(false);
