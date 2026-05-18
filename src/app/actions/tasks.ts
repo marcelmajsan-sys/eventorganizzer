@@ -34,17 +34,20 @@ export async function createTask(data: {
     const { data: admin } = await adminClient
       .from("project_admins")
       .select("email")
-      .eq("email", email)
+      .ilike("email", email)
       .maybeSingle();
 
     if (admin) {
-      try {
-        await adminClient.from("notifications").insert({
-          task_id: task.id,
-          title: "Novi zadatak",
-          message: `Dodijeljen vam je zadatak: ${data.title}`,
-        });
-      } catch { /* ne blokiraj kreiranje zadatka */ }
+      const { error: notifError } = await adminClient.from("notifications").insert({
+        task_id: task.id,
+        title: "Novi zadatak",
+        message: `Dodijeljen vam je zadatak: ${data.title}`,
+      });
+      if (notifError) {
+        console.error("createTask: notification insert failed:", notifError.message);
+      }
+    } else {
+      console.log(`createTask: no project_admin found for email=${email}, skipping notification`);
     }
   }
 
