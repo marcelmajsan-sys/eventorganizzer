@@ -149,7 +149,7 @@ eventorganizzer/
 | `sponsor_users` | Mapiranje auth korisnika → sponsor_id (za sponzorski portal) |
 | `files` | Upload datoteke — vezane za sponzora (`sponsor_id`) i/ili za benefit (`benefit_id`) |
 | `tasks` | Kanban zadaci |
-| `notifications` | Obavijesti |
+| `notifications` | Obavijesti — `sponsor_id` (nullable), `task_id` (nullable), `title`, `message`, `read`, `created_at` |
 | `packages` | Paketi sponzorstva |
 | `project_settings` | Postavke po projektu (datum konferencije: ključevi `conference_date_2026`, `conference_date_2025`) |
 | `project_admins` | Email adrese koje imaju pristup admin panelu |
@@ -294,7 +294,11 @@ migration_014_lead_status              ← Kolona lead_status na sponsors tablic
 migration_015_contacts_partner_rls     ← RLS na sponsor_contacts: partneri mogu CRUD vlastite kontakte
 migration_016_sponsor_contact_phone    ← Kolona contact_phone na sponsors tablici
 migration_017_partial_payment          ← payment_status CHECK proširen s 'partial' (Djelomično plaćeno)
+migration_017_enable_rls_all_tables    ← RLS na svim public tablicama + is_project_admin() helper funkcija
 migration_018_benefit_description_contact_docs ← description + contact_person_id na sponsor_benefits; benefit_id na files
+migration_019_contact_notification_trigger ← Postgres trigger: notifikacija pri dodavanju kontakta (SECURITY DEFINER)
+migration_020_notifications_task_support   ← notifications.sponsor_id postaje nullable; dodaje task_id kolonu
+migration_021_task_notification_trigger    ← Postgres trigger: notifikacija pri kreiranju zadatka s emailom (SECURITY DEFINER)
 ```
 
 > **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.
@@ -495,6 +499,14 @@ git push origin main
 ### Zadaci
 - Kanban board — kliktabilni naslovi kartica vode na detaljnu stranicu
 - Detaljna stranica zadatka (`/admin/tasks/[id]`) — prikaz svih podataka + edit + delete
+- **Inbox notifikacija pri dodjeli**: kad se kreira zadatak s emailom u `assigned_to`, Postgres trigger (`migration_021`) automatski upisuje notifikaciju u inbox — bez JS klijenta, SECURITY DEFINER zaobilazi RLS
+
+### Inbox obavijesti
+- Ruta `/admin/inbox` — prikazuje sve notifikacije (nepročitane + pročitane)
+- Badge s brojem nepročitanih vidljiv u sidebaru
+- Dva tipa notifikacija: **kontakt** (trigger iz `migration_019`) i **zadatak** (trigger iz `migration_021`)
+- Svaka notifikacija ima link na sponzora ili na zadatak
+- Akcije: označi kao pročitano / nepročitano (po notifikaciji), označi sve kao pročitano
 
 ### Rokovnik
 - Ruta `/admin/calendar`
@@ -538,3 +550,5 @@ git push origin main
 - **Graceful degradation pattern** za nove kolone: uvijek probati upit s novim kolonama; ako Supabase vrati error koji sadrži naziv kolone u poruci, ponoviti upit bez novih kolona. Koristiti `as any` cast na fallback varijablu da se izbjegnu TypeScript greške
 - **Brisanje benefita**: Trash2 ikona u svakom redu sponzora (ne samo na accordion headeru) briše specifičan `sponsor_benefits` zapis po `id` — ne sve zapise s istim `benefit_name`
 - **Spread operater na `Set`** (`[...new Set(...)]`) zahtijeva `downlevelIteration` ili `target: es2015+` — umjesto toga koristiti `forEach` + ručno deduplicirani array
+- **Notifikacije — koristiti Postgres trigere, NE JS klijent**: `createServerClient` iz `@supabase/ssr` s service role keyem ne bypassira RLS pouzdano za INSERT u `notifications`. Jedino sigurno rješenje je Postgres trigger s `SECURITY DEFINER` (kao migration_019 za kontakte i migration_021 za zadatke). Ne pokušavati insertati u `notifications` direktno iz server actiona.
+- **`notifications` tablica**: `sponsor_id` je nullable (od migration_020), `task_id` je nullable UUID FK na `tasks`. Inbox query uključuje `task_id` u SELECT — ako kolona ne postoji u DB-u, cijeli query faila i inbox je prazan. Obavezno pokrenuti migration_020.
