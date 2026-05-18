@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
@@ -21,6 +21,8 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [existingNames, setExistingNames] = useState<string[]>([]);
+  const [isNewBenefit, setIsNewBenefit] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -33,9 +35,24 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
     selected_sponsor_id: sponsorId ?? "",
   });
 
+  useEffect(() => {
+    if (!open) return;
+    supabase
+      .from("sponsor_benefits")
+      .select("benefit_name")
+      .then(({ data }) => {
+        const seen = new Set<string>();
+        const names: string[] = [];
+        (data ?? []).forEach((b) => { if (!seen.has(b.benefit_name)) { seen.add(b.benefit_name); names.push(b.benefit_name); } });
+        names.sort();
+        setExistingNames(names);
+      });
+  }, [open]);
+
   function handleClose() {
     setOpen(false);
     setError("");
+    setIsNewBenefit(false);
     setForm({ benefit_name: "", deadline: "", status: "not_started", notes: "", assigned_to: "", selected_sponsor_id: sponsorId ?? "" });
   }
 
@@ -114,15 +131,49 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Naziv benefita *</label>
-            <input
-              type="text"
-              value={form.benefit_name}
-              onChange={(e) => setForm({ ...form, benefit_name: e.target.value })}
-              className="input-field"
-              placeholder="npr. Oglas u magazinu"
-              autoFocus
-              required
-            />
+            {existingNames.length > 0 && !isNewBenefit ? (
+              <select
+                value={form.benefit_name}
+                onChange={(e) => {
+                  if (e.target.value === "__new__") {
+                    setIsNewBenefit(true);
+                    setForm({ ...form, benefit_name: "" });
+                  } else {
+                    setForm({ ...form, benefit_name: e.target.value });
+                  }
+                }}
+                className="input-field"
+                required
+                autoFocus
+              >
+                <option value="">— odaberi benefit —</option>
+                {existingNames.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+                <option value="__new__">+ Dodaj novi benefit</option>
+              </select>
+            ) : (
+              <div>
+                {existingNames.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => { setIsNewBenefit(false); setForm({ ...form, benefit_name: "" }); }}
+                    className="text-xs text-brand-600 hover:underline mb-1.5 block"
+                  >
+                    ← Odaberi postojeći benefit
+                  </button>
+                )}
+                <input
+                  type="text"
+                  value={form.benefit_name}
+                  onChange={(e) => setForm({ ...form, benefit_name: e.target.value })}
+                  className="input-field"
+                  placeholder="npr. Oglas u magazinu"
+                  autoFocus
+                  required
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
