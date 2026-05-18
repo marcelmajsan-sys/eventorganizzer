@@ -1,10 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/server";
-import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
-import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 
 export async function createTask(data: {
   title: string;
@@ -14,9 +11,6 @@ export async function createTask(data: {
   assigned_to: string;
 }) {
   const adminClient = await createAdminClient();
-  const cookieStore = await cookies();
-  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
-  const serviceClient = createAdminClientForProject(projectId);
 
   const payload: Record<string, any> = {
     title: data.title,
@@ -34,17 +28,7 @@ export async function createTask(data: {
 
   if (error) return { error: error.message };
 
-  // Kreiraj inbox notifikaciju ako je zadatak dodijeljen (bilo koji email)
-  if (data.assigned_to.trim().includes("@") && task) {
-    const { error: notifError } = await serviceClient.from("notifications").insert({
-      task_id: task.id,
-      title: "Novi zadatak",
-      message: `Dodijeljen vam je zadatak: ${data.title}`,
-    });
-    if (notifError) {
-      console.error("createTask: notification insert failed:", notifError.message);
-    }
-  }
+  // Notifikacija se kreira automatski via Postgres trigger (migration_021)
 
   revalidatePath("/admin/tasks");
   return { error: null };
