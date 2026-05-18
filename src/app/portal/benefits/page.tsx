@@ -35,17 +35,55 @@ export default async function PortalBenefitsPage({
 
   const { data: benefits } = await adminClient
     .from("sponsor_benefits")
-    .select("id, benefit_name, deadline, status, notes, assigned_to")
+    .select("id, benefit_name, deadline, status, notes, assigned_to, description, contact_person_id")
     .eq("sponsor_id", sponsorUser.sponsor_id)
     .order("deadline");
 
   const rows = benefits ?? [];
-  const completed = rows.filter((b) => b.status === "completed").length;
-  const total = rows.length;
+  const benefitIds = rows.map((b) => b.id);
+
+  // Fetch benefit-specific files
+  let filesMap: Record<string, { id: string; filename: string; storage_url: string; file_size: number | null }[]> = {};
+  try {
+    if (benefitIds.length > 0) {
+      const { data: benefitFiles } = await adminClient
+        .from("files")
+        .select("id, filename, storage_url, file_size, benefit_id")
+        .in("benefit_id", benefitIds);
+      (benefitFiles ?? []).forEach((f) => {
+        if (f.benefit_id) {
+          if (!filesMap[f.benefit_id]) filesMap[f.benefit_id] = [];
+          filesMap[f.benefit_id]!.push({ id: f.id, filename: f.filename, storage_url: f.storage_url, file_size: f.file_size });
+        }
+      });
+    }
+  } catch {}
+
+  // Fetch contact persons linked to benefits
+  let contactMap: Record<string, { id: string; name: string; email: string | null; phone: string | null }> = {};
+  try {
+    const contactIds = rows.filter((b) => b.contact_person_id).map((b) => b.contact_person_id!);
+    if (contactIds.length > 0) {
+      const { data: contactPersons } = await adminClient
+        .from("sponsor_contacts")
+        .select("id, name, email, phone")
+        .in("id", contactIds);
+      (contactPersons ?? []).forEach((c) => { contactMap[c.id] = c; });
+    }
+  } catch {}
+
+  const enrichedRows = rows.map((b) => ({
+    ...b,
+    contact_person: b.contact_person_id ? (contactMap[b.contact_person_id] ?? null) : null,
+    files: filesMap[b.id] ?? [],
+  }));
+
+  const completed = enrichedRows.filter((b) => b.status === "completed").length;
+  const total = enrichedRows.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   const activeStatus = searchParams.status as BenefitStatus | undefined;
-  const filtered = activeStatus ? rows.filter((b) => b.status === activeStatus) : rows;
+  const filtered = activeStatus ? enrichedRows.filter((b) => b.status === activeStatus) : enrichedRows;
 
   return (
     <div className="animate-enter">
@@ -72,7 +110,7 @@ export default async function PortalBenefitsPage({
         {/* Status kartice */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
           {STATUSES.map((status) => {
-            const count = rows.filter((b) => b.status === status).length;
+            const count = enrichedRows.filter((b) => b.status === status).length;
             const isActive = activeStatus === status;
             return (
               <Link

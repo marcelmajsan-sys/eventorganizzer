@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { X, Loader2, User, Send, CheckCircle } from "lucide-react";
 import type { BenefitStatus } from "@/types";
+import BenefitFileUpload from "@/components/admin/BenefitFileUpload";
 
 export type EditableBenefit = {
   id: string;
@@ -14,7 +15,23 @@ export type EditableBenefit = {
   notes?: string | null;
   assigned_to?: string | null;
   sponsor_name?: string;
+  sponsor_id?: string;
+  description?: string | null;
+  contact_person_id?: string | null;
 };
+
+interface Contact {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
+interface BenefitFile {
+  id: string;
+  filename: string;
+  storage_url: string;
+  file_size: number | null;
+}
 
 interface Props {
   benefit: EditableBenefit | null;
@@ -27,6 +44,8 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [benefitFiles, setBenefitFiles] = useState<BenefitFile[]>([]);
   const router = useRouter();
   const supabase = createClient();
 
@@ -36,6 +55,8 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
     status: "not_started" as BenefitStatus,
     notes: "",
     assigned_to: "",
+    description: "",
+    contact_person_id: "",
   });
 
   useEffect(() => {
@@ -46,10 +67,27 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
         status: benefit.status as BenefitStatus,
         notes: benefit.notes ?? "",
         assigned_to: benefit.assigned_to ?? "",
+        description: benefit.description ?? "",
+        contact_person_id: benefit.contact_person_id ?? "",
       });
       setError("");
+
+      if (benefit.sponsor_id) {
+        supabase
+          .from("sponsor_contacts")
+          .select("id, name, email")
+          .eq("sponsor_id", benefit.sponsor_id)
+          .eq("type", "contact")
+          .then(({ data }) => setContacts(data ?? []));
+      }
+
+      supabase
+        .from("files")
+        .select("id, filename, storage_url, file_size")
+        .eq("benefit_id", benefit.id)
+        .then(({ data }) => setBenefitFiles(data ?? []));
     }
-  }, [benefit]);
+  }, [benefit?.id]);
 
   if (!benefit) return null;
 
@@ -75,7 +113,6 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
     setSending(false);
     if (!res.ok) { setSendError(data.error ?? "Greška pri slanju."); return; }
     setSent(true);
-    router.refresh();
     setTimeout(() => setSent(false), 3000);
   }
 
@@ -92,6 +129,8 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
         status: form.status,
         notes: form.notes || null,
         assigned_to: form.assigned_to || null,
+        description: form.description || null,
+        contact_person_id: form.contact_person_id || null,
       })
       .eq("id", benefit!.id);
 
@@ -108,11 +147,11 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-enter"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-enter my-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between p-6 border-b border-gray-100">
@@ -145,7 +184,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
               Naziv benefita *
               {benefit.sponsor_name && (
                 <span className="ml-2 text-xs font-normal text-gray-400">
-                  (promjena naziva vrijedi samo za {benefit.sponsor_name})
+                  (promjena vrijedi samo za {benefit.sponsor_name})
                 </span>
               )}
             </label>
@@ -155,6 +194,17 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
               onChange={(e) => setForm({ ...form, benefit_name: e.target.value })}
               className="input-field"
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Opis</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="input-field resize-none"
+              rows={3}
+              placeholder="Kratki opis benefita vidljiv partneru..."
             />
           </div>
 
@@ -184,7 +234,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba (admin)</label>
             <input
               type="email"
               value={form.assigned_to}
@@ -194,16 +244,49 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
             />
           </div>
 
+          {contacts.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Kontakt osoba (vidljivo partneru)
+              </label>
+              <select
+                value={form.contact_person_id}
+                onChange={(e) => setForm({ ...form, contact_person_id: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— bez kontakt osobe —</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.email ? ` (${c.email})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Napomene</label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className="input-field resize-none"
-              rows={3}
-              placeholder="Dodatne napomene..."
+              rows={2}
+              placeholder="Interne napomene..."
             />
           </div>
+
+          {benefit.sponsor_id && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Dokumenti benefita (vidljivo partneru)
+              </label>
+              <BenefitFileUpload
+                benefitId={benefit.id}
+                sponsorId={benefit.sponsor_id}
+                initialFiles={benefitFiles}
+              />
+            </div>
+          )}
 
           <div className="border-t border-gray-100 pt-4">
             {sendError && <p className="text-xs text-red-600 mb-2">{sendError}</p>}

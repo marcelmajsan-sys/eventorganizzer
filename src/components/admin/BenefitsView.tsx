@@ -22,6 +22,8 @@ type BenefitRow = {
   status: string;
   notes?: string | null;
   assigned_to?: string | null;
+  description?: string | null;
+  contact_person_id?: string | null;
   last_reminded_at?: string | null;
   sponsors: { id: string; name: string; package_type: string } | null;
 };
@@ -58,7 +60,7 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
   return (
     <>
       <EditBenefitDialog
-        benefit={editing ? { ...benefit, sponsor_name: benefit.sponsors?.name ?? undefined } : null}
+        benefit={editing ? { ...benefit, sponsor_name: benefit.sponsors?.name ?? undefined, sponsor_id: benefit.sponsors?.id } : null}
         onClose={() => setEditing(false)}
       />
       <div
@@ -323,7 +325,7 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
   return (
     <>
       <EditBenefitDialog
-        benefit={editing ? { ...benefit, sponsor_name: benefit.sponsors?.name ?? undefined } : null}
+        benefit={editing ? { ...benefit, sponsor_name: benefit.sponsors?.name ?? undefined, sponsor_id: benefit.sponsors?.id } : null}
         onClose={() => setEditing(false)}
       />
       <div

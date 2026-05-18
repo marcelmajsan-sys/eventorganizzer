@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { CheckCircle2, Clock, AlertTriangle, XCircle } from "lucide-react";
 import { benefitStatusLabel } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
@@ -16,7 +16,6 @@ const statusIcon = {
 export default async function BenefitsPage({ searchParams }: { searchParams: { status?: string } }) {
   const activeStatus = searchParams.status ?? null;
   const supabase = await createClient();
-  const adminSupabase = await createAdminClient();
 
   // Automatski označi benefite s prošlim rokom kao "overdue"
   await supabase
@@ -28,22 +27,22 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
   const [{ data: benefits }, { data: sponsors }, { data: emailLogs }] = await Promise.all([
     supabase
       .from("sponsor_benefits")
-      .select("id, benefit_name, deadline, status, notes, assigned_to, sponsors(id, name, package_type)")
+      .select("id, benefit_name, deadline, status, notes, assigned_to, description, contact_person_id, sponsors(id, name, package_type)")
       .order("benefit_name"),
     supabase
       .from("sponsors")
       .select("id, name, package_type")
       .order("name"),
-    adminSupabase
+    supabase
       .from("email_logs")
-      .select("benefit_id, sent_at")
-      .order("sent_at", { ascending: false }),
+      .select("benefit_id, created_at")
+      .order("created_at", { ascending: false }),
   ]);
 
   const lastRemindedMap: Record<string, string> = {};
   emailLogs?.forEach((log) => {
     if (log.benefit_id && !lastRemindedMap[log.benefit_id]) {
-      lastRemindedMap[log.benefit_id] = log.sent_at;
+      lastRemindedMap[log.benefit_id] = log.created_at;
     }
   });
 

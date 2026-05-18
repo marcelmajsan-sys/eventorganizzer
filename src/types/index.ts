@@ -32,6 +32,8 @@ export interface SponsorBenefit {
   file_url: string | null;
   notes: string | null;
   assigned_to: string | null;
+  description: string | null;
+  contact_person_id: string | null;
   created_at: string;
 }
 

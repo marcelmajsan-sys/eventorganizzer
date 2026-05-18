@@ -1,10 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Send, CheckCircle } from "lucide-react";
 import type { SponsorBenefit, BenefitStatus } from "@/types";
+import BenefitFileUpload from "@/components/admin/BenefitFileUpload";
+
+interface Contact {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
+interface BenefitFile {
+  id: string;
+  filename: string;
+  storage_url: string;
+  file_size: number | null;
+}
 
 interface Template { id: string; name: string; }
 
@@ -20,6 +34,8 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [benefitFiles, setBenefitFiles] = useState<BenefitFile[]>([]);
   const router = useRouter();
   const supabase = createClient();
 
@@ -31,7 +47,26 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
     assigned_to: benefit.assigned_to ?? "",
     reminder_email: benefit.reminder_email ?? "",
     reminder_template_id: "",
+    description: benefit.description ?? "",
+    contact_person_id: benefit.contact_person_id ?? "",
   });
+
+  useEffect(() => {
+    if (!open) return;
+
+    supabase
+      .from("sponsor_contacts")
+      .select("id, name, email")
+      .eq("sponsor_id", benefit.sponsor_id)
+      .eq("type", "contact")
+      .then(({ data }) => setContacts(data ?? []));
+
+    supabase
+      .from("files")
+      .select("id, filename, storage_url, file_size")
+      .eq("benefit_id", benefit.id)
+      .then(({ data }) => setBenefitFiles(data ?? []));
+  }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,6 +82,8 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
         notes: form.notes || null,
         assigned_to: form.assigned_to || null,
         reminder_email: form.reminder_email || null,
+        description: form.description || null,
+        contact_person_id: form.contact_person_id || null,
       })
       .eq("id", benefit.id);
 
@@ -89,8 +126,8 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-enter">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-enter my-4">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="font-display text-xl font-bold text-gray-900">Uredi benefit</h2>
           <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
@@ -106,6 +143,17 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
             <input type="text" value={form.benefit_name}
               onChange={e => setForm({ ...form, benefit_name: e.target.value })}
               className="input-field" required />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Opis</label>
+            <textarea
+              value={form.description}
+              onChange={e => setForm({ ...form, description: e.target.value })}
+              className="input-field resize-none"
+              rows={3}
+              placeholder="Kratki opis benefita vidljiv partneru..."
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -129,17 +177,48 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba (admin)</label>
             <input type="email" value={form.assigned_to}
               onChange={e => setForm({ ...form, assigned_to: e.target.value })}
               className="input-field" placeholder="osoba@tvrtka.hr" />
           </div>
 
+          {contacts.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Kontakt osoba (vidljivo partneru)
+              </label>
+              <select
+                value={form.contact_person_id}
+                onChange={e => setForm({ ...form, contact_person_id: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— bez kontakt osobe —</option>
+                {contacts.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.email ? ` (${c.email})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Napomene</label>
             <textarea value={form.notes}
               onChange={e => setForm({ ...form, notes: e.target.value })}
-              className="input-field resize-none" rows={2} placeholder="Dodatne napomene..." />
+              className="input-field resize-none" rows={2} placeholder="Interne napomene..." />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Dokumenti benefita (vidljivo partneru)
+            </label>
+            <BenefitFileUpload
+              benefitId={benefit.id}
+              sponsorId={benefit.sponsor_id}
+              initialFiles={benefitFiles}
+            />
           </div>
 
           {/* Podsjetnik sekcija */}
