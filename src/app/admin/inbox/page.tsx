@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/server";
-import { Bell, Building2 } from "lucide-react";
+import { Bell, Building2, SquareCheckBig } from "lucide-react";
 import Link from "next/link";
 import { MarkAllReadButton, MarkReadButton, MarkUnreadButton } from "@/components/admin/InboxActions";
 
@@ -21,10 +21,10 @@ export default async function InboxPage() {
 
   const { data: raw } = await supabase
     .from("notifications")
-    .select("id, title, message, read, created_at, sponsor_id, sponsors(id, name)")
+    .select("id, title, message, read, created_at, sponsor_id, task_id, sponsors(id, name)")
     .order("created_at", { ascending: false });
 
-  const notifications = (raw ?? []).map((n) => ({
+  const notifications = (raw ?? []).map((n: any) => ({
     ...n,
     sponsor: Array.isArray(n.sponsors) ? n.sponsors[0] : n.sponsors,
   }));
@@ -68,12 +68,15 @@ export default async function InboxPage() {
                 </div>
                 <p className="text-sm text-gray-600 mt-0.5">{n.message}</p>
                 {n.sponsor && (
-                  <Link
-                    href={`/admin/sponsors/${n.sponsor.id}`}
-                    className="flex items-center gap-1 text-xs text-brand-600 hover:underline mt-1.5"
-                  >
+                  <Link href={`/admin/sponsors/${n.sponsor.id}`} className="flex items-center gap-1 text-xs text-brand-600 hover:underline mt-1.5">
                     <Building2 size={11} />
                     {n.sponsor.name}
+                  </Link>
+                )}
+                {n.task_id && (
+                  <Link href={`/admin/tasks/${n.task_id}`} className="flex items-center gap-1 text-xs text-brand-600 hover:underline mt-1.5">
+                    <SquareCheckBig size={11} />
+                    Otvori zadatak
                   </Link>
                 )}
               </div>
@@ -100,12 +103,15 @@ export default async function InboxPage() {
                 </div>
                 <p className="text-sm text-gray-500 mt-0.5">{n.message}</p>
                 {n.sponsor && (
-                  <Link
-                    href={`/admin/sponsors/${n.sponsor.id}`}
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600 hover:underline mt-1.5"
-                  >
+                  <Link href={`/admin/sponsors/${n.sponsor.id}`} className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600 hover:underline mt-1.5">
                     <Building2 size={11} />
                     {n.sponsor.name}
+                  </Link>
+                )}
+                {n.task_id && (
+                  <Link href={`/admin/tasks/${n.task_id}`} className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600 hover:underline mt-1.5">
+                    <SquareCheckBig size={11} />
+                    Otvori zadatak
                   </Link>
                 )}
               </div>
