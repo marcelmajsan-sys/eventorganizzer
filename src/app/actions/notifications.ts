@@ -10,22 +10,42 @@ export async function notifyAdminContactAdded(
   contactType: "contact" | "ticket",
   projectId: ProjectId = "2026"
 ) {
-  const adminClient = createAdminClientForProject(projectId);
-
-  const { data: sponsor } = await adminClient
-    .from("sponsors")
-    .select("name")
-    .eq("id", sponsorId)
-    .single();
-
-  const sponsorName = sponsor?.name ?? "Nepoznati sponzor";
+  // Try the passed project first, then the other — handles cases where
+  // cro_active_project cookie is missing or set to the wrong project.
+  const projectsToTry: ProjectId[] = projectId === "2026" ? ["2026", "2025"] : ["2025", "2026"];
   const typeLabel = contactType === "contact" ? "kontakt osoba" : "osoba za ulaznice";
 
-  await adminClient.from("notifications").insert({
-    sponsor_id: sponsorId,
-    title: contactType === "contact" ? "Nova kontakt osoba" : "Nova osoba za ulaznice",
-    message: `${sponsorName}: dodana ${typeLabel} — ${contactName}`,
-  });
+  for (const pid of projectsToTry) {
+    try {
+      const adminClient = createAdminClientForProject(pid);
+
+      const { data: sponsor, error: sponsorErr } = await adminClient
+        .from("sponsors")
+        .select("name")
+        .eq("id", sponsorId)
+        .single();
+
+      if (sponsorErr || !sponsor) {
+        console.error(`notifyAdminContactAdded [${pid}]: sponsor not found for ${sponsorId}`, sponsorErr?.message);
+        continue;
+      }
+
+      const { error: insertErr } = await adminClient.from("notifications").insert({
+        sponsor_id: sponsorId,
+        title: contactType === "contact" ? "Nova kontakt osoba" : "Nova osoba za ulaznice",
+        message: `${sponsor.name}: dodana ${typeLabel} — ${contactName}`,
+      });
+
+      if (insertErr) {
+        console.error(`notifyAdminContactAdded [${pid}]: insert failed`, insertErr.message);
+        continue;
+      }
+
+      return; // success
+    } catch (e) {
+      console.error(`notifyAdminContactAdded [${pid}]: unexpected error`, e);
+    }
+  }
 }
 
 export async function markNotificationRead(id: string) {
