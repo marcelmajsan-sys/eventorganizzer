@@ -8,7 +8,7 @@ Admin portal za upravljanje CRO Commerce konferencijom. Omogućuje:
 - Upravljanje benefitima sponzora s rokovima i statusima
 - Email obavijesti za benefite s praćenjem zadnjeg slanja
 - Kontakt osobe i osobe za ulaznice po sponzoru
-- Upload datoteka po sponzoru (Supabase Storage bucket `sponsor-files`)
+- Upload datoteka po sponzoru i po benefitu (Supabase Storage bucket `sponsor-files`)
 - Program konferencije po pozornicama (Future / Action / Wonderland Stage)
 - Praćenje troškova eventa s budžetom i statusima plaćanja
 - Zadaci (Kanban board) s detaljnim stranicama po zadatku
@@ -71,18 +71,19 @@ eventorganizzer/
 │   │   │   ├── PartnerManagementSection.tsx  ← CRUD partner korisnika + promjena lozinke
 │   │   │   ├── CalendarView.tsx              ← Rokovnik (zadaci + edit modal)
 │   │   │   ├── TaskDetailActions.tsx         ← Edit/delete na stranici zadatka
-│   │   │   ├── BenefitsView.tsx              ← Prikaz benefita + scroll-to-top pri otvaranju modala
+│   │   │   ├── BenefitsView.tsx              ← Prikaz benefita + scroll-to-top + delete po redu + dodaj sponzora
 │   │   │   ├── BudgetView.tsx
 │   │   │   ├── ProgramView.tsx
 │   │   │   ├── ContactsSection.tsx           ← Kontakti + mail ikona za slanje portal pozivnice
 │   │   │   ├── FileUploadSection.tsx         ← Upload na Supabase Storage (sponsor-files bucket)
+│   │   │   ├── BenefitFileUpload.tsx         ← Upload datoteka vezanih uz specifični benefit
 │   │   │   ├── KanbanBoard.tsx
 │   │   │   ├── SearchInput.tsx
-│   │   │   ├── AddBenefitModal.tsx
+│   │   │   ├── AddBenefitModal.tsx           ← Dropdown postojećih naziva + opcija Dodaj novi benefit
 │   │   │   ├── AddSponsorModal.tsx
 │   │   │   ├── AddTaskModal.tsx
 │   │   │   ├── EditSponsorForm.tsx           ← Sadrži lead_status select
-│   │   │   ├── EditBenefitModal.tsx
+│   │   │   ├── EditBenefitModal.tsx          ← Opis, kontakt osoba, dokumenti benefita (s fallbackom)
 │   │   │   ├── EditBenefitDialog.tsx         ← Edit + slanje obavijesti (router.refresh() nakon notify)
 │   │   │   ├── RenameBenefitDialog.tsx
 │   │   │   ├── BenefitStatusSelect.tsx
@@ -91,7 +92,7 @@ eventorganizzer/
 │   │   │   └── AdminPrimaryContactEdit.tsx   ← Inline edit primarnog kontakta na stranici sponzora
 │   │   └── portal/
 │   │       ├── PortalSidebar.tsx             ← Nav: Partner → Benefiti → Program + projekt switcher
-│   │       ├── PortalBenefitCard.tsx         ← Read-only benefit kartica
+│   │       ├── PortalBenefitCard.tsx         ← Read-only benefit kartica (opis, kontakt, dokumenti)
 │   │       ├── PortalPartnerTabs.tsx         ← Tabovi: Informacije / Dokumenti
 │   │       ├── PortalContactsSection.tsx     ← Editable: primarni kontakt + kontakt osobe + ulaznice
 │   │       └── PortalProgramView.tsx         ← Read-only program (tabovi po pozornici)
@@ -121,7 +122,9 @@ eventorganizzer/
 │   ├── migration_013_sponsor_portal.sql  ← sponsor_users + RLS + helper funkcije
 │   ├── migration_014_lead_status.sql     ← lead_status kolona na sponsors tablici
 │   ├── migration_015_contacts_partner_rls.sql ← RLS na sponsor_contacts za partnere
-│   └── migration_016_sponsor_contact_phone.sql ← contact_phone kolona na sponsors tablici
+│   ├── migration_016_sponsor_contact_phone.sql ← contact_phone kolona na sponsors tablici
+│   ├── migration_017_partial_payment.sql      ← payment_status CHECK proširen s 'partial'
+│   └── migration_018_benefit_description_contact_docs.sql ← description + contact_person_id na sponsor_benefits; benefit_id na files
 ├── cro-commerce-portal/
 │   └── cro-commerce-portal/      ← Dev working dir (lokalni dev)
 │       └── src/                  ← Kopija root src/ za lokalni rad
@@ -141,10 +144,10 @@ eventorganizzer/
 | Tablica | Opis |
 |---------|------|
 | `sponsors` | Sponzori — naziv, paket, `contact_name`, `contact_email`, `contact_phone`, `lead_status`, status plaćanja |
-| `sponsor_benefits` | Benefiti sponzora s rokovima, statusima, `reminder_email`, `assigned_to` |
+| `sponsor_benefits` | Benefiti sponzora — rokovi, statusi, `reminder_email`, `assigned_to`, `description`, `contact_person_id` |
 | `sponsor_contacts` | Kontakt osobe i osobe za ulaznice po sponzoru (RLS: partneri mogu upravljati vlastitima) |
 | `sponsor_users` | Mapiranje auth korisnika → sponsor_id (za sponzorski portal) |
-| `files` | Upload datoteke vezane za sponzore |
+| `files` | Upload datoteke — vezane za sponzora (`sponsor_id`) i/ili za benefit (`benefit_id`) |
 | `tasks` | Kanban zadaci |
 | `notifications` | Obavijesti |
 | `packages` | Paketi sponzorstva |
@@ -165,7 +168,8 @@ eventorganizzer/
 `'not_started' | 'in_progress' | 'completed' | 'overdue'`
 
 ### Tipovi statusa plaćanja
-`'paid' | 'pending' | 'overdue'`
+`'paid' | 'pending' | 'overdue' | 'partial'`
+- `partial` = Djelomično plaćeno (dodano migration_017)
 
 ### Tipovi lead statusa (sponsors.lead_status)
 `'cold_lead' | 'hot_lead' | 'confirmed_new' | 'confirmed_returning'`
@@ -174,14 +178,20 @@ eventorganizzer/
 ### Izolacija podataka po projektu
 Tablice `program_sessions` i `budget_items` koriste `project_id TEXT` kolonu (`'2025'` ili `'2026'`) za izolaciju podataka između projekata. Ostale tablice (sponzori, benefiti, zadaci) koriste zasebne Supabase instance ako su konfigurirani zasebni URL-ovi.
 
+### Benefit-level datoteke (migration_018)
+- `sponsor_benefits` dobio dvije nove kolone: `description TEXT` i `contact_person_id UUID REFERENCES sponsor_contacts(id) ON DELETE SET NULL`
+- `files` tablica dobila `benefit_id UUID REFERENCES sponsor_benefits(id) ON DELETE CASCADE`
+- Datoteke s `benefit_id IS NULL` su datoteke sponzora; datoteke s `benefit_id IS NOT NULL` su dokumenti specifičnog benefita
+- **Graceful degradation**: sav kod koji koristi ove kolone ima fallback upit bez novih kolona, ako migration_018 još nije pokrenut
+
 ---
 
 ## Supabase Storage
 
 ### Bucket: `sponsor-files`
 - Tip: **Public bucket**
-- Koristi se za upload datoteka po sponzoru
-- Putanja uploada: `{sponsor_id}/{timestamp}_{filename}`
+- Sponzorske datoteke: `{sponsor_id}/{timestamp}_{filename}`
+- Datoteke benefita: `{sponsor_id}/benefits/{benefit_id}/{timestamp}_{filename}`
 
 ### Potrebne RLS politike na `storage.objects`:
 ```sql
@@ -283,6 +293,8 @@ migration_013_sponsor_portal           ← Tablica sponsor_users + RLS politike 
 migration_014_lead_status              ← Kolona lead_status na sponsors tablici
 migration_015_contacts_partner_rls     ← RLS na sponsor_contacts: partneri mogu CRUD vlastite kontakte
 migration_016_sponsor_contact_phone    ← Kolona contact_phone na sponsors tablici
+migration_017_partial_payment          ← payment_status CHECK proširen s 'partial' (Djelomično plaćeno)
+migration_018_benefit_description_contact_docs ← description + contact_person_id na sponsor_benefits; benefit_id na files
 ```
 
 > **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.
@@ -407,16 +419,26 @@ git push origin main
 - Detaljna stranica sponzora (`/admin/sponsors/[id]`) — prikazuje lead_status badge
 - Edit forma s paketom, kontaktom, statusom plaćanja i **lead statusom**
 - **Primarni kontakt — inline edit** (`AdminPrimaryContactEdit`) u sekciji Informacije na stranici sponzora — hover olovka, uređivanje direktno bez otvaranja modala
-- Upload datoteka po sponzoru (Supabase Storage)
+- Upload datoteka po sponzoru (Supabase Storage) — odvojene od datoteka po benefitu
 - **Brisanje sponzora** s potvrdom (`DeleteSponsorButton`) — redirect na `/admin/sponsors`
 
 ### Benefiti
 - Kliktabilne stat kartice — filtriranje po statusu via `?status=X` URL param
-- Dodavanje benefita s benefiti stranice (multi-select sponzori + kategorije)
-- Edit benefit modal (`EditBenefitDialog`) — inline edit, rename, slanje obavijesti
+- **Dodavanje benefita** (`AddBenefitModal`) — dropdown s postojećim nazivima benefita; "Dodaj novi benefit" opcija na dnu prelazi na slobodni unos; može odabrati i sponzora
+- Edit benefit modal (`EditBenefitDialog` i `EditBenefitModal`) — opis, kontakt osoba, upload dokumenata, podsjetnik
 - Tražilica (client-side, pretražuje naziv i sponzora)
-- **Auto-scroll na vrh** pri otvaranju edit modala (`document.querySelector("main")?.scrollTo`)
+- **Auto-scroll na vrh** pri otvaranju svakog modala (`document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" })`) — vrijedi za EditBenefitDialog, RenameBenefitDialog, AddBenefitModal, EditBenefitModal
 - **"Zadnji podsjetnik"** — datum zadnjeg poslanog maila vidljiv u accordion headeru benefita
+- **Brisanje po sponzoru** — Trash2 ikona vidljiva na hover pored pencil ikone u svakom redu sponzora; inline Da/Ne potvrda; briše samo taj benefit.id (ne sve sponzore)
+- **Dodavanje sponzora benefitu** — "+" gumb na dnu razvijenog AccordionGroup; dropdown s neraspoređenim sponzorima; insert novog `sponsor_benefits` reda
+
+### Benefit-level dokumenti (migration_018)
+- Nova komponenta `BenefitFileUpload` — upload/brisanje datoteka vezanih za specifični benefit
+- Upload na putanju `{sponsor_id}/benefits/{benefit_id}/{timestamp}_{filename}`
+- `files` tablica: `benefit_id IS NULL` = datoteke sponzora; `benefit_id IS NOT NULL` = dokumenti benefita
+- Admin: EditBenefitModal i EditBenefitDialog prikazuju BenefitFileUpload; sponsor detaljna stranica odvaja datoteke sponzora od datoteka benefita
+- Portal: `PortalBenefitCard` prikazuje opis, kontakt osobu (ime, email, telefon) i downloadable dokumente
+- **Graceful degradation**: sve stranice imaju fallback koji radi i bez migration_018
 
 ### Email obavijesti za benefite
 - Gumb **"Pošalji obavijest"** u `EditBenefitDialog`
@@ -439,8 +461,8 @@ git push origin main
   - **Primarni kontakt** — editable inline (ime, email, mobitel); ažurira `sponsors` tablicu via server action
   - **Kontakt osobe** — partneri mogu dodavati, uređivati i brisati; koristi `createClient()` direktno (RLS migration_015)
   - **Osobe za ulaznice** — isti CRUD kao kontakt osobe
-- **`/portal/sponsor`** (tab Dokumenti) — read-only lista uploadanih datoteka s veličinom i datumom
-- **`/portal/benefits`** — read-only lista benefita s progress barom, kliktabilne status kartice za filter
+- **`/portal/sponsor`** (tab Dokumenti) — read-only lista uploadanih datoteka sponzora s veličinom i datumom
+- **`/portal/benefits`** — read-only lista benefita s progress barom, kliktabilne status kartice za filter; svaki benefit prikazuje opis, kontakt osobu i dokumente
 - **`/portal/program`** — read-only program konferencije, tabovi po pozornici, bez uređivanja
 - Pristup samo korisnicima u `sponsor_users` tablici
 - Admin korisnici se automatski redirectaju na `/admin/dashboard`
@@ -452,10 +474,11 @@ git push origin main
 - Prikaz deduplikacira po emailu i preskače orphaned `sponsor_users` unose
 
 ### Upload datoteka
-- Komponenta `FileUploadSection` — drag & drop ili odabir datoteka
+- Komponenta `FileUploadSection` — drag & drop ili odabir datoteka za sponzora
+- Komponenta `BenefitFileUpload` — upload za specifični benefit
 - Upload na Supabase Storage bucket `sponsor-files`
 - Prikazuje vidljivi error u UI ako upload ne uspije
-- Datoteke vidljive i na sponzorskom portalu (`/portal/sponsor` tab Dokumenti)
+- Datoteke vidljive i na sponzorskom portalu
 
 ### Program konferencije
 - Admin: `/admin/program` — tabovi po pozornici, CRUD sesija + tražilica
@@ -467,6 +490,7 @@ git push origin main
 - Stranica `/admin/troskovi`
 - 4 summary kartice: Ukupni budžet, Plaćeno (s progress barom), Na čekanju, Preostalo
 - Tablica s filterom po statusu + tražilica; CRUD; izolacija po `project_id`
+- Status plaćanja: `paid | pending | overdue | partial` (Djelomično plaćeno)
 
 ### Zadaci
 - Kanban board — kliktabilni naslovi kartica vode na detaljnu stranicu
@@ -482,7 +506,7 @@ git push origin main
 - Kreiranje u **svim Supabase bazama** (2025 i 2026) automatski
 
 ### UI
-- Svi modalni prozori otvaraju se pri **vrhu viewporta** (`items-start pt-8`)
+- Svi modalni prozori otvaraju se pri **vrhu viewporta** (`items-start pt-8`) + `<main>` se scrolla na vrh pri svakom otvaranju (`behavior: "smooth"`)
 - Modali koriste fixed overlay s Tailwind klasama (ne `<dialog>` element)
 - Naslov aplikacije: `EventOrganizzer - CRO Commerce Conference`
 
@@ -494,7 +518,7 @@ git push origin main
 - `router.refresh()` koristi se za re-fetch server komponenti nakon mutacija
 - `useState + useEffect([initial])` pattern koristi se u klijentskim komponentama za sync s novim props-ima
 - Graceful degradation: sve stranice rade i bez migriranih tablica (try/catch s fallbackom)
-- **Scroll container** u admin layoutu je `<main className="overflow-y-auto">` — koristiti `document.querySelector("main")` za programatski scroll, ne `window`
+- **Scroll container** u admin layoutu je `<main className="overflow-y-auto">` — koristiti `document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" })` za scroll na vrh pri otvaranju modala; ne koristiti `window`
 - **Resend SDK** vraća `{ data, error }` — ne baca exception. Uvijek provjeriti `error` nakon `resend.emails.send()`
 - `email_logs.sent_at` je timestamp kolona (ne `created_at`) — query i order moraju koristiti `sent_at`
 - `RESEND_API_KEY` mora biti postavljen i u Vercel env i u lokalnom `.env.local`
@@ -511,3 +535,6 @@ git push origin main
 - **`contact_phone` kolona** dodana migration_016 — nije bila u inicijalnoj shemi; uzrokovala je grešku pri uređivanju primarnog kontakta
 - **Server action error pattern**: server actions ne smiju bacati exception ako želimo prikazati pravi error message u UI — Next.js sanitizira sve iznimke u produkciji u generičku poruku. Koristiti `return { error: message }` pattern
 - **Inline edit pattern** (`AdminPrimaryContactEdit`, `PrimaryContactSection` u `PortalContactsSection`): `useState displayed` za optimistički prikaz, `useEffect` za sync s props-ima, error state za prikaz greške
+- **Graceful degradation pattern** za nove kolone: uvijek probati upit s novim kolonama; ako Supabase vrati error koji sadrži naziv kolone u poruci, ponoviti upit bez novih kolona. Koristiti `as any` cast na fallback varijablu da se izbjegnu TypeScript greške
+- **Brisanje benefita**: Trash2 ikona u svakom redu sponzora (ne samo na accordion headeru) briše specifičan `sponsor_benefits` zapis po `id` — ne sve zapise s istim `benefit_name`
+- **Spread operater na `Set`** (`[...new Set(...)]`) zahtijeva `downlevelIteration` ili `target: es2015+` — umjesto toga koristiti `forEach` + ručno deduplicirani array
