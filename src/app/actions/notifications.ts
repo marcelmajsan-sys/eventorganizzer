@@ -58,6 +58,11 @@ export async function markNotificationRead(id: string) {
   await adminClient.from("notifications").update({ read: true }).eq("id", id);
 }
 
+export async function markNotificationUnread(id: string) {
+  const adminClient = await createAdminClient();
+  await adminClient.from("notifications").update({ read: false }).eq("id", id);
+}
+
 export async function markAllNotificationsRead() {
   const adminClient = await createAdminClient();
   await adminClient.from("notifications").update({ read: true }).eq("read", false);

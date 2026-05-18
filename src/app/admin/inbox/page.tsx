@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { Bell, Building2 } from "lucide-react";
 import Link from "next/link";
-import { MarkAllReadButton, MarkReadButton } from "@/components/admin/InboxActions";
+import { MarkAllReadButton, MarkReadButton, MarkUnreadButton } from "@/components/admin/InboxActions";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -89,7 +89,7 @@ export default async function InboxPage() {
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Pročitano</p>
           )}
           {read.map((n) => (
-            <div key={n.id} className="card p-4 flex items-start gap-4 opacity-60">
+            <div key={n.id} className="card p-4 flex items-start gap-4 opacity-60 hover:opacity-100 transition-opacity">
               <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                 <Bell size={14} className="text-gray-400" />
               </div>
@@ -109,6 +109,7 @@ export default async function InboxPage() {
                   </Link>
                 )}
               </div>
+              <MarkUnreadButton id={n.id} />
             </div>
           ))}
         </div>

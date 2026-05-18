@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, CheckCheck, Check } from "lucide-react";
-import { markNotificationRead, markAllNotificationsRead } from "@/app/actions/notifications";
+import { Loader2, CheckCheck, Check, RotateCcw } from "lucide-react";
+import { markNotificationRead, markNotificationUnread, markAllNotificationsRead } from "@/app/actions/notifications";
 
 export function MarkAllReadButton({ disabled }: { disabled?: boolean }) {
   const [loading, setLoading] = useState(false);
@@ -47,6 +47,29 @@ export function MarkReadButton({ id }: { id: string }) {
       className="p-1 text-gray-300 hover:text-brand-600 transition-colors flex-shrink-0"
     >
       {loading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+    </button>
+  );
+}
+
+export function MarkUnreadButton({ id }: { id: string }) {
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  async function handle() {
+    setLoading(true);
+    await markNotificationUnread(id);
+    setLoading(false);
+    router.refresh();
+  }
+
+  return (
+    <button
+      onClick={handle}
+      disabled={loading}
+      title="Označi kao nepročitano"
+      className="p-1 text-gray-300 hover:text-brand-600 transition-colors flex-shrink-0"
+    >
+      {loading ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
     </button>
   );
 }
