@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 
 export async function createTask(data: {
   title: string;
@@ -11,6 +14,9 @@ export async function createTask(data: {
   assigned_to: string;
 }) {
   const adminClient = await createAdminClient();
+  const cookieStore = await cookies();
+  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+  const serviceClient = createAdminClientForProject(projectId);
 
   const payload: Record<string, any> = {
     title: data.title,
@@ -30,7 +36,7 @@ export async function createTask(data: {
 
   // Kreiraj inbox notifikaciju ako je zadatak dodijeljen (bilo koji email)
   if (data.assigned_to.trim().includes("@") && task) {
-    const { error: notifError } = await adminClient.from("notifications").insert({
+    const { error: notifError } = await serviceClient.from("notifications").insert({
       task_id: task.id,
       title: "Novi zadatak",
       message: `Dodijeljen vam je zadatak: ${data.title}`,
