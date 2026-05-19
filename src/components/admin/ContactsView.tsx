@@ -127,7 +127,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
           <h1 className="page-title">Kontakti</h1>
           <p className="page-subtitle">{contacts.length} kontakata ukupno</p>
         </div>
-        <AddContactModal />
+        <AddContactModal sponsors={sponsors} />
       </div>
 
       {/* Bulk delete bar */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Save, Trash2 } from "lucide-react";
@@ -27,21 +27,34 @@ interface Contact {
   type: string;
 }
 
+interface Sponsor {
+  id: string;
+  name: string;
+}
+
 export default function ContactDetailActions({ contact }: { contact: Contact }) {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [form, setForm] = useState({
-    name: contact.name ?? "",
-    email: contact.email ?? "",
-    phone: contact.phone ?? "",
-    company: contact.company ?? "",
-    role: contact.role ?? "",
-    notes: contact.notes ?? "",
-    type: contact.type,
+    name:       contact.name       ?? "",
+    email:      contact.email      ?? "",
+    phone:      contact.phone      ?? "",
+    company:    contact.company    ?? "",
+    role:       contact.role       ?? "",
+    notes:      contact.notes      ?? "",
+    type:       contact.type,
+    sponsor_id: contact.sponsor_id ?? "",
   });
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    supabase.from("sponsors").select("id, name").order("name").then(({ data }) => {
+      if (data) setSponsors(data);
+    });
+  }, []);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -49,13 +62,14 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
     setSaveError("");
 
     const payload: Record<string, string | null> = {
-      name:    form.name    || null,
-      email:   form.email   || null,
-      phone:   form.phone   || null,
-      company: form.company || null,
-      role:    form.role    || null,
-      notes:   form.notes   || null,
-      type:    form.type,
+      name:       form.name       || null,
+      email:      form.email      || null,
+      phone:      form.phone      || null,
+      company:    form.company    || null,
+      role:       form.role       || null,
+      notes:      form.notes      || null,
+      type:       form.type,
+      sponsor_id: form.sponsor_id || null,
     };
 
     let { error: err } = await supabase.from("sponsor_contacts").update(payload).eq("id", contact.id);
@@ -128,6 +142,15 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Napomena</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field resize-none" rows={3} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponzor / partner</label>
+            <select value={form.sponsor_id} onChange={(e) => setForm({ ...form, sponsor_id: e.target.value })} className="input-field">
+              <option value="">— Bez sponzora —</option>
+              {sponsors.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Tip</label>

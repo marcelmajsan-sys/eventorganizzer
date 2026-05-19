@@ -13,12 +13,21 @@ const CONTACT_TYPES = [
   { value: "brand_ambassador",  label: "Brand Ambassador" },
 ];
 
+interface Sponsor {
+  id: string;
+  name: string;
+}
+
+interface Props {
+  sponsors?: Sponsor[];
+}
+
 const empty = {
   name: "", email: "", phone: "", company: "", role: "", notes: "",
-  type: "partner",
+  type: "partner", sponsor_id: "",
 };
 
-export default function AddContactModal() {
+export default function AddContactModal({ sponsors = [] }: Props) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
   const [loading, setLoading] = useState(false);
@@ -43,7 +52,7 @@ export default function AddContactModal() {
       role:       form.role     || null,
       notes:      form.notes    || null,
       type:       form.type,
-      sponsor_id: null,
+      sponsor_id: form.sponsor_id || null,
     });
     setLoading(false);
     if (err) { setError(err.message); return; }
@@ -91,6 +100,17 @@ export default function AddContactModal() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Sponsor */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponzor / partner</label>
+            <select value={form.sponsor_id} onChange={f("sponsor_id")} className="input-field">
+              <option value="">— Bez sponzora —</option>
+              {sponsors.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
