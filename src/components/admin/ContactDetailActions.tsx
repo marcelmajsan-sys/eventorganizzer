@@ -47,7 +47,8 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
     e.preventDefault();
     setLoading(true);
     setSaveError("");
-    const { error: err } = await supabase.from("sponsor_contacts").update({
+
+    const payload: Record<string, string | null> = {
       name:    form.name    || null,
       email:   form.email   || null,
       phone:   form.phone   || null,
@@ -55,7 +56,17 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
       role:    form.role    || null,
       notes:   form.notes   || null,
       type:    form.type,
-    }).eq("id", contact.id);
+    };
+
+    let { error: err } = await supabase.from("sponsor_contacts").update(payload).eq("id", contact.id);
+
+    // Graceful degradation: notes column may not exist yet (migration_011)
+    if (err?.message?.includes("notes")) {
+      const { notes: _notes, ...payloadWithoutNotes } = payload;
+      const result = await supabase.from("sponsor_contacts").update(payloadWithoutNotes).eq("id", contact.id);
+      err = result.error;
+    }
+
     setLoading(false);
     if (err) { setSaveError(err.message); return; }
     setEditing(false);
