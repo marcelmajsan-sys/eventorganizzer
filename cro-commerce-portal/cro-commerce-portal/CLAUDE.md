@@ -80,12 +80,15 @@ eventorganizzer/
 │   │   │   ├── KanbanBoard.tsx
 │   │   │   ├── SearchInput.tsx
 │   │   │   ├── AddBenefitModal.tsx           ← Dropdown postojećih naziva + opcija Dodaj novi benefit
+│   │   │   ├── AddContactModal.tsx           ← Dodaj kontakt s tipom, sponzorom, napomenom
+│   │   │   ├── ContactDetailActions.tsx      ← Uredi/briši kontakt — s dropdown za sponzora i tipom
+│   │   │   ├── ContactsView.tsx              ← Lista svih kontakata s filterima
 │   │   │   ├── AddSponsorModal.tsx
 │   │   │   ├── AddTaskModal.tsx
 │   │   │   ├── EditSponsorForm.tsx           ← Sadrži lead_status select
 │   │   │   ├── EditBenefitModal.tsx          ← Opis, kontakt osoba, dokumenti benefita (s fallbackom)
 │   │   │   ├── EditBenefitDialog.tsx         ← Edit + slanje obavijesti (router.refresh() nakon notify)
-│   │   │   ├── RenameBenefitDialog.tsx
+│   │   │   ├── RenameBenefitDialog.tsx       ← Preimenuj + postavi rok za sve sponzore odjednom
 │   │   │   ├── BenefitStatusSelect.tsx
 │   │   │   ├── DeleteBenefitButton.tsx
 │   │   │   ├── DeleteSponsorButton.tsx       ← Brisanje sponzora s potvrdom
@@ -166,6 +169,11 @@ eventorganizzer/
 
 ### Tipovi statusa benefita
 `'not_started' | 'in_progress' | 'completed' | 'overdue'`
+
+### Tipovi kontakata (sponsor_contacts.type)
+`'contact' | 'ticket' | 'partner' | 'visitor' | 'speaker' | 'service_provider' | 'brand_ambassador'`
+- Originalni CHECK constraint (migration_006) imao je samo `contact` i `ticket` — migration_023 proširuje na sve tipove
+- `contact` = kontakt osoba sponzora, `ticket` = osoba za ulaznice; ostali = standalone kontakti
 
 ### Tipovi statusa plaćanja
 `'paid' | 'pending' | 'overdue' | 'partial'`
@@ -300,6 +308,7 @@ migration_019_contact_notification_trigger ← Postgres trigger: notifikacija pr
 migration_020_notifications_task_support   ← notifications.sponsor_id postaje nullable; dodaje task_id kolonu
 migration_021_task_notification_trigger    ← Postgres trigger: notifikacija pri kreiranju zadatka s emailom (SECURITY DEFINER)
 migration_022_fix_contact_notification_type ← Popravak triggera: samo 'ticket' tip → "Nova osoba za ulaznice"; ostali → "Dodan novi kontakt"
+migration_023_extend_contact_type_check    ← CHECK constraint proširen: dozvoljava contact|ticket|partner|visitor|speaker|service_provider|brand_ambassador
 ```
 
 > **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.
@@ -436,6 +445,7 @@ git push origin main
 - **"Zadnji podsjetnik"** — datum zadnjeg poslanog maila vidljiv u accordion headeru benefita
 - **Brisanje po sponzoru** — Trash2 ikona vidljiva na hover pored pencil ikone u svakom redu sponzora; inline Da/Ne potvrda; briše samo taj benefit.id (ne sve sponzore)
 - **Dodavanje sponzora benefitu** — "+" gumb na dnu razvijenog AccordionGroup; dropdown s neraspoređenim sponzorima; insert novog `sponsor_benefits` reda
+- **Grupni edit benefita** (`RenameBenefitDialog`) — klik na olovku pored naziva grupe otvara "Uredi benefit" s poljima za naziv i rok; oboje se primjenjuje na SVE sponzore te grupe odjednom; rok se pre-popunjava s najčešćim datumom u grupi; `useEffect` sync zbog mount/unmount pattern (`currentName=null` kad zatvoreno)
 
 ### Benefit-level dokumenti (migration_018)
 - Nova komponenta `BenefitFileUpload` — upload/brisanje datoteka vezanih za specifični benefit
@@ -453,7 +463,15 @@ git push origin main
 - Tablica `email_logs` koristi kolonu `sent_at` (ne `created_at`)
 - FROM adresa: `konferencija@ecommerce.hr` (verificirana domena na Resend)
 
-### Kontakti sponzora (admin)
+### Kontakti (`/admin/contacts`)
+- Standalone stranica sa svim kontaktima (neovisno o sponzoru)
+- Filter po tipu, sponzoru i tražilica; bulk delete; link na detaljnu stranicu kontakta
+- **Dodavanje kontakta** (`AddContactModal`) — tip, sponzor (dropdown svih sponzora), ime, firma, email, telefon, funkcija, napomena
+- **Uređivanje kontakta** (`ContactDetailActions`) — isti podaci + sponzor dropdown (dohvaća se client-side); error handling s prikazom greške
+- Detaljna stranica `/admin/contacts/[id]` — prikazuje ispravnu oznaku tipa (`TYPE_LABELS` mapa, ne samo "Kontakt/Ulaznica")
+- **`notes` kolona** na `sponsor_contacts` — dodana migration_011; graceful degradation u `ContactDetailActions` (retry bez notes ako kolona ne postoji)
+
+### Kontakti sponzora (admin — stranica sponzora)
 - Dvije sekcije: **Kontakt osobe** i **Osobe za ulaznice**
 - Inline dodavanje, uređivanje i brisanje
 - **Mail ikona** na hover — šalje Supabase pozivnicu za sponzorski portal + upisuje `sponsor_users`
@@ -553,3 +571,7 @@ git push origin main
 - **Spread operater na `Set`** (`[...new Set(...)]`) zahtijeva `downlevelIteration` ili `target: es2015+` — umjesto toga koristiti `forEach` + ručno deduplicirani array
 - **Notifikacije — koristiti Postgres trigere, NE JS klijent**: `createServerClient` iz `@supabase/ssr` s service role keyem ne bypassira RLS pouzdano za INSERT u `notifications`. Jedino sigurno rješenje je Postgres trigger s `SECURITY DEFINER` (kao migration_019 za kontakte i migration_021 za zadatke). Ne pokušavati insertati u `notifications` direktno iz server actiona.
 - **`notifications` tablica**: `sponsor_id` je nullable (od migration_020), `task_id` je nullable UUID FK na `tasks`. Inbox query uključuje `task_id` u SELECT — ako kolona ne postoji u DB-u, cijeli query faila i inbox je prazan. Obavezno pokrenuti migration_020.
+- **`sponsor_contacts.type` CHECK constraint** (migration_006) originalno ima samo `contact` i `ticket`. Migration_023 proširuje na sve UI tipove. Bez te migracije, spremanje kontakta s tipom partner/visitor/speaker/itd. tiho faila.
+- **`ContactDetailActions` graceful degradation**: ako notes kolona ne postoji (migration_011 nije pokrenut), retry update bez `notes` polja — ne prikazuje grešku korisniku.
+- **`RenameBenefitDialog` useEffect sync**: komponenta ostaje mountirana ali s `currentName=null` kad je dijalog zatvoren. Bez `useEffect`, `useState` bi zadržao prazan string pri ponovnom otvaranju. Uvijek koristiti `useEffect(() => { if (currentName) setName(currentName); }, [currentName])` za takve pattern.
+- **Kontakt tipovi — `TYPE_LABELS` mapa**: koristiti u svim komponentama koje prikazuju tip kontakta (ContactsView, `/admin/contacts/[id]/page.tsx`). Ne koristiti ternary `contact ? "Kontakt" : "Ulaznica"` jer ne pokriva nove tipove.
