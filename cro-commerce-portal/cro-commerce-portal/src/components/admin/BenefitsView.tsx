@@ -196,6 +196,11 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
   const supabase = createClient();
   const doneCount = rows.filter((r) => r.status === "completed").length;
 
+  // Most common non-null deadline across all rows in this group
+  const deadlineCounts: Record<string, number> = {};
+  rows.forEach((r) => { if (r.deadline) deadlineCounts[r.deadline] = (deadlineCounts[r.deadline] ?? 0) + 1; });
+  const commonDeadline = Object.keys(deadlineCounts).sort((a, b) => deadlineCounts[b] - deadlineCounts[a])[0] ?? null;
+
   const lastReminded = rows
     .map((r) => r.last_reminded_at)
     .filter(Boolean)
@@ -235,6 +240,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
     <div className="card overflow-hidden">
       <RenameBenefitDialog
         currentName={renaming ? name : null}
+        currentDeadline={renaming ? commonDeadline : undefined}
         onClose={() => setRenaming(false)}
       />
       <div className="px-5 py-4 bg-gray-50">
@@ -366,6 +372,9 @@ function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[]
   const supabase = createClient();
   const doneCount = rows.filter((r) => r.status === "completed").length;
   const donePct = Math.round((doneCount / rows.length) * 100);
+  const catDeadlineCounts: Record<string, number> = {};
+  rows.forEach((r) => { if (r.deadline) catDeadlineCounts[r.deadline] = (catDeadlineCounts[r.deadline] ?? 0) + 1; });
+  const catCommonDeadline = Object.keys(catDeadlineCounts).sort((a, b) => catDeadlineCounts[b] - catDeadlineCounts[a])[0] ?? null;
   const overdueCount = rows.filter(
     (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed")
   ).length;
@@ -382,6 +391,7 @@ function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[]
     <div className="bg-white/70">
       <RenameBenefitDialog
         currentName={renaming ? name : null}
+        currentDeadline={renaming ? catCommonDeadline : undefined}
         onClose={() => setRenaming(false)}
       />
       <div className="flex items-center gap-2 px-5 py-2.5 bg-white/40">
