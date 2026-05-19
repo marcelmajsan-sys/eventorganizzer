@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { X, Loader2, Save } from "lucide-react";
@@ -14,6 +14,9 @@ interface Props {
 export default function RenameBenefitDialog({ currentName, currentDeadline, onClose }: Props) {
   const [name, setName] = useState(currentName ?? "");
   const [deadline, setDeadline] = useState(currentDeadline ?? "");
+
+  useEffect(() => { if (currentName) setName(currentName); }, [currentName]);
+  useEffect(() => { setDeadline(currentDeadline ?? ""); }, [currentDeadline]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
