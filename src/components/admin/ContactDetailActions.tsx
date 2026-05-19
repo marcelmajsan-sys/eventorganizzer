@@ -30,6 +30,7 @@ interface Contact {
 export default function ContactDetailActions({ contact }: { contact: Contact }) {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [form, setForm] = useState({
     name: contact.name ?? "",
     email: contact.email ?? "",
@@ -45,7 +46,8 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await supabase.from("sponsor_contacts").update({
+    setSaveError("");
+    const { error: err } = await supabase.from("sponsor_contacts").update({
       name:    form.name    || null,
       email:   form.email   || null,
       phone:   form.phone   || null,
@@ -55,6 +57,7 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
       type:    form.type,
     }).eq("id", contact.id);
     setLoading(false);
+    if (err) { setSaveError(err.message); return; }
     setEditing(false);
     router.refresh();
   }
@@ -65,10 +68,12 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
     router.push("/admin/contacts");
   }
 
+  function openEdit() { setSaveError(""); setEditing(true); }
+
   if (!editing) {
     return (
       <div className="flex gap-2">
-        <button onClick={() => setEditing(true)} className="btn-secondary">
+        <button onClick={openEdit} className="btn-secondary">
           <Pencil size={14} />
           Uredi
         </button>
@@ -120,6 +125,9 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
             </select>
           </div>
 
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{saveError}</div>
+          )}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setEditing(false)} className="btn-secondary flex-1 justify-center">Odustani</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center">
