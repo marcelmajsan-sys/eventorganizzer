@@ -299,6 +299,7 @@ migration_018_benefit_description_contact_docs ← description + contact_person_
 migration_019_contact_notification_trigger ← Postgres trigger: notifikacija pri dodavanju kontakta (SECURITY DEFINER)
 migration_020_notifications_task_support   ← notifications.sponsor_id postaje nullable; dodaje task_id kolonu
 migration_021_task_notification_trigger    ← Postgres trigger: notifikacija pri kreiranju zadatka s emailom (SECURITY DEFINER)
+migration_022_fix_contact_notification_type ← Popravak triggera: samo 'ticket' tip → "Nova osoba za ulaznice"; ostali → "Dodan novi kontakt"
 ```
 
 > **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.

@@ -23,6 +23,7 @@ interface Contact {
   phone: string | null;
   role: string | null;
   company: string | null;
+  notes: string | null;
   type: string;
 }
 
@@ -35,6 +36,7 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
     phone: contact.phone ?? "",
     company: contact.company ?? "",
     role: contact.role ?? "",
+    notes: contact.notes ?? "",
     type: contact.type,
   });
   const router = useRouter();
@@ -49,6 +51,7 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
       phone:   form.phone   || null,
       company: form.company || null,
       role:    form.role    || null,
+      notes:   form.notes   || null,
       type:    form.type,
     }).eq("id", contact.id);
     setLoading(false);
@@ -105,6 +108,10 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Funkcija</label>
             <input type="text" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="input-field" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Napomena</label>
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field resize-none" rows={3} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Tip</label>
