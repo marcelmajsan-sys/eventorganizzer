@@ -5,7 +5,7 @@ import {
   Users, CreditCard, AlertTriangle, CheckCircle2,
   TrendingUp, Clock, Package, Wallet, CircleDollarSign, ListChecks
 } from "lucide-react";
-import { packageBadgeColor, paymentStatusColor, leadStatusColor, leadStatusLabel } from "@/lib/utils";
+import { packageColor, packageBadgeColor, paymentStatusColor, leadStatusColor, leadStatusLabel } from "@/lib/utils";
 import type { PackageType, LeadStatus } from "@/types";
 
 export default async function AdminDashboard() {
@@ -71,6 +71,17 @@ export default async function AdminDashboard() {
 
   // Recent sponsors
   const recentSponsors = sponsors?.slice(-5).reverse() ?? [];
+
+  // Recent contacts
+  let recentContacts: any[] = [];
+  try {
+    const { data } = await supabase
+      .from("sponsor_contacts")
+      .select("id, name, email, type, company, created_at, sponsors(name)")
+      .order("created_at", { ascending: false })
+      .limit(5);
+    recentContacts = data ?? [];
+  } catch {}
 
   const statCards = [
     {
@@ -278,7 +289,7 @@ export default async function AdminDashboard() {
                     </a>
                   </td>
                   <td className="py-2.5 px-3">
-                    <span className={`badge ${packageBadgeColor(sponsor.package_type)} text-white border-0 text-xs`}>
+                    <span className={`badge ${packageColor(sponsor.package_type as PackageType)}`}>
                       {sponsor.package_type}
                     </span>
                   </td>
@@ -308,6 +319,72 @@ export default async function AdminDashboard() {
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-gray-400">
                     Nema sponzora u bazi
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Recent contacts */}
+      <div className="mt-6 card p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-semibold text-gray-900">Nedavno dodani kontakti</h3>
+          <a href="/admin/contacts" className="text-sm text-brand-600 hover:text-brand-700 font-medium">
+            Vidi sve →
+          </a>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="text-left py-2 px-3 text-gray-500 font-medium">Ime</th>
+                <th className="text-left py-2 px-3 text-gray-500 font-medium">Firma</th>
+                <th className="text-left py-2 px-3 text-gray-500 font-medium">Email</th>
+                <th className="text-left py-2 px-3 text-gray-500 font-medium">Tip</th>
+                <th className="text-left py-2 px-3 text-gray-500 font-medium">Dodano</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentContacts.map((contact) => {
+                const TYPE_LABELS: Record<string, string> = {
+                  contact: "Kontakt",
+                  ticket: "Ulaznica",
+                  partner: "Partner",
+                  visitor: "Posjetitelj",
+                  speaker: "Govornik",
+                  service_provider: "Usluga",
+                  brand_ambassador: "Ambasador",
+                };
+                const sponsorName = contact.sponsors
+                  ? (Array.isArray(contact.sponsors) ? contact.sponsors[0]?.name : (contact.sponsors as any)?.name)
+                  : null;
+                const addedDate = contact.created_at
+                  ? new Date(contact.created_at).toLocaleDateString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric" })
+                  : "—";
+                return (
+                  <tr key={contact.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="py-2.5 px-3">
+                      <a href={`/admin/contacts/${contact.id}`} className="font-medium text-gray-900 hover:text-brand-600">
+                        {contact.name || "—"}
+                      </a>
+                    </td>
+                    <td className="py-2.5 px-3 text-gray-500">{contact.company || sponsorName || "—"}</td>
+                    <td className="py-2.5 px-3 text-gray-500">{contact.email || "—"}</td>
+                    <td className="py-2.5 px-3">
+                      <span className="badge bg-gray-100 text-gray-600 text-xs">
+                        {TYPE_LABELS[contact.type] ?? contact.type}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-gray-400 text-xs">{addedDate}</td>
+                  </tr>
+                );
+              })}
+              {recentContacts.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-gray-400">
+                    Nema kontakata u bazi
                   </td>
                 </tr>
               )}
