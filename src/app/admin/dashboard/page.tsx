@@ -39,10 +39,10 @@ export default async function AdminDashboard() {
   const budgetPending = budgetItems.filter(i => i.status === "pending").reduce((s: number, i: any) => s + i.amount, 0);
   const budgetTotal   = budgetItems.filter(i => i.status !== "cancelled").reduce((s: number, i: any) => s + i.amount, 0);
 
-  const naplaceno = sponsors?.filter(s => (s as any).iznos != null && s.payment_status === "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
-  const naplacenoCount = sponsors?.filter(s => (s as any).iznos != null && s.payment_status === "paid").length ?? 0;
-  const neplaceno = sponsors?.filter(s => (s as any).iznos != null && s.payment_status !== "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
-  const neplacenoCount = sponsors?.filter(s => (s as any).iznos != null && s.payment_status !== "paid").length ?? 0;
+  const naplaceno = sponsors?.filter(s => s.payment_status === "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
+  const naplacenoCount = sponsors?.filter(s => s.payment_status === "paid").length ?? 0;
+  const neplaceno = sponsors?.filter(s => s.payment_status !== "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
+  const neplacenoCount = sponsors?.filter(s => s.payment_status !== "paid").length ?? 0;
 
   const totalSponsors = sponsors?.length ?? 0;
   const confirmedSponsors = sponsors?.filter(

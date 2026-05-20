@@ -15,9 +15,13 @@ interface SponsorRow {
   payment_status: string;
   contact_name: string | null;
   contact_email: string | null;
+  iznos: number | null;
   sponsor_benefits: { id: string; status: string }[];
   sponsor_contacts: { name: string | null; email: string | null; type: string }[];
 }
+
+const formatEur = (n: number) =>
+  new Intl.NumberFormat("hr-HR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
 interface Props {
   sponsors: SponsorRow[];
@@ -184,6 +188,7 @@ export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: 
                 <th className="text-left py-3 px-4 text-gray-500 font-medium">Paket</th>
                 <th className="text-left py-3 px-4 text-gray-500 font-medium">Status</th>
                 <th className="text-left py-3 px-4 text-gray-500 font-medium">Kontakt</th>
+                <th className="text-right py-3 px-4 text-gray-500 font-medium">Iznos</th>
                 <th className="text-left py-3 px-4 text-gray-500 font-medium">Plaćanje</th>
                 <th className="text-left py-3 px-4 text-gray-500 font-medium">Benefiti</th>
                 <th className="py-3 px-4"></th>
@@ -251,6 +256,11 @@ export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: 
                       <p className="text-gray-700">{contactName}</p>
                       <p className="text-gray-400 text-xs">{contactEmail}</p>
                     </td>
+                    <td className="py-3 px-4 text-right">
+                      <span className={`text-sm font-medium ${(sponsor.iznos ?? 0) > 0 ? "text-gray-900" : "text-gray-300"}`}>
+                        {formatEur(sponsor.iznos ?? 0)}
+                      </span>
+                    </td>
                     <td className="py-3 px-4">
                       <span className={`badge ${paymentStatusColor(sponsor.payment_status as PaymentStatus)}`}>
                         {paymentStatusLabel(sponsor.payment_status as PaymentStatus)}
@@ -278,7 +288,7 @@ export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: 
               })}
               {sponsors.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center">
+                  <td colSpan={9} className="py-16 text-center">
                     <p className="text-gray-400">Nema sponzora koji odgovaraju filteru</p>
                   </td>
                 </tr>
