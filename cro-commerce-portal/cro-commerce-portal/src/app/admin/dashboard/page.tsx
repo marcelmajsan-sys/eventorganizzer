@@ -113,7 +113,7 @@ export default async function AdminDashboard() {
       {/* Summary — top */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {[
-          { label: "Ukupni budžet", value: formatEur(budgetTotal), sub: `${budgetItems.filter(i => i.status !== "cancelled").length} stavki`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: "text-gray-900", href: "/admin/troskovi" },
+          { label: "Profitabilnost", value: formatEur((naplaceno + neplaceno) - (budgetPaid + budgetPending)), sub: `prihodi ${formatEur(naplaceno + neplaceno)} − troškovi ${formatEur(budgetPaid + budgetPending)}`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: (naplaceno + neplaceno) - (budgetPaid + budgetPending) >= 0 ? "text-emerald-600" : "text-red-600", href: "/admin/troskovi" },
           { label: "Plaćeno (troškovi)", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
           { label: "Na čekanju (troškovi)", value: formatEur(budgetPending), sub: `${budgetItems.filter(i=>i.status==="pending").length} stavki`, icon: TrendingUp, iconCls: "text-amber-500", valCls: "text-amber-600", href: "/admin/troskovi?status=pending" },
           { label: "Naplaćeno", value: formatEur(naplaceno), sub: `${naplacenoCount} sponzora`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
