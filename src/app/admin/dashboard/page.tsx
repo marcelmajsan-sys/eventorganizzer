@@ -39,11 +39,10 @@ export default async function AdminDashboard() {
   const budgetPending = budgetItems.filter(i => i.status === "pending").reduce((s: number, i: any) => s + i.amount, 0);
   const budgetTotal   = budgetItems.filter(i => i.status !== "cancelled").reduce((s: number, i: any) => s + i.amount, 0);
 
-  const naplaceno = sponsors?.filter(s => s.payment_status === "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
-  const neplaceno = sponsors?.filter(s =>
-    (s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning") &&
-    s.payment_status !== "paid"
-  ).reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
+  const naplaceno = sponsors?.filter(s => (s as any).iznos != null && s.payment_status === "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
+  const naplacenoCount = sponsors?.filter(s => (s as any).iznos != null && s.payment_status === "paid").length ?? 0;
+  const neplaceno = sponsors?.filter(s => (s as any).iznos != null && s.payment_status !== "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
+  const neplacenoCount = sponsors?.filter(s => (s as any).iznos != null && s.payment_status !== "paid").length ?? 0;
 
   const totalSponsors = sponsors?.length ?? 0;
   const confirmedSponsors = sponsors?.filter(
@@ -117,8 +116,8 @@ export default async function AdminDashboard() {
           { label: "Ukupni budžet", value: formatEur(budgetTotal), sub: `${budgetItems.filter(i => i.status !== "cancelled").length} stavki`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: "text-gray-900", href: "/admin/troskovi" },
           { label: "Plaćeno (troškovi)", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
           { label: "Na čekanju (troškovi)", value: formatEur(budgetPending), sub: `${budgetItems.filter(i=>i.status==="pending").length} stavki`, icon: TrendingUp, iconCls: "text-amber-500", valCls: "text-amber-600", href: "/admin/troskovi?status=pending" },
-          { label: "Naplaćeno", value: formatEur(naplaceno), sub: `${sponsors?.filter(s => s.payment_status === "paid").length ?? 0} sponzora`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
-          { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${sponsors?.filter(s => (s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning") && s.payment_status !== "paid").length ?? 0} potvrđenih`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors" },
+          { label: "Naplaćeno", value: formatEur(naplaceno), sub: `${naplacenoCount} sponzora`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
+          { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} sponzora`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors" },
         ].map((c) => {
           const Icon = c.icon;
           return (
