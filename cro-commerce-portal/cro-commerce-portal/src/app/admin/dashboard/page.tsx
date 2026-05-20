@@ -5,8 +5,8 @@ import {
   Users, CreditCard, AlertTriangle, CheckCircle2,
   TrendingUp, Clock, Package, Wallet, CircleDollarSign, ListChecks
 } from "lucide-react";
-import { packageBadgeColor, paymentStatusColor } from "@/lib/utils";
-import type { PackageType } from "@/types";
+import { packageBadgeColor, paymentStatusColor, leadStatusColor, leadStatusLabel } from "@/lib/utils";
+import type { PackageType, LeadStatus } from "@/types";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
@@ -263,6 +263,8 @@ export default async function AdminDashboard() {
               <tr className="border-b border-gray-100">
                 <th className="text-left py-2 px-3 text-gray-500 font-medium">Tvrtka</th>
                 <th className="text-left py-2 px-3 text-gray-500 font-medium">Paket</th>
+                <th className="text-right py-2 px-3 text-gray-500 font-medium">Iznos</th>
+                <th className="text-left py-2 px-3 text-gray-500 font-medium">Status</th>
                 <th className="text-left py-2 px-3 text-gray-500 font-medium">Kontakt</th>
                 <th className="text-left py-2 px-3 text-gray-500 font-medium">Plaćanje</th>
               </tr>
@@ -280,6 +282,20 @@ export default async function AdminDashboard() {
                       {sponsor.package_type}
                     </span>
                   </td>
+                  <td className="py-2.5 px-3 text-right">
+                    <span className={`text-sm font-medium ${(sponsor as any).iznos ? "text-gray-900" : "text-gray-300"}`}>
+                      {formatEur((sponsor as any).iznos ?? 0)}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3">
+                    {sponsor.lead_status ? (
+                      <span className={`badge border text-xs ${leadStatusColor(sponsor.lead_status as LeadStatus)}`}>
+                        {leadStatusLabel(sponsor.lead_status as LeadStatus)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="py-2.5 px-3 text-gray-500">{sponsor.contact_name}</td>
                   <td className="py-2.5 px-3">
                     <span className={`badge ${paymentStatusColor(sponsor.payment_status)}`}>
@@ -290,7 +306,7 @@ export default async function AdminDashboard() {
               ))}
               {recentSponsors.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-gray-400">
+                  <td colSpan={6} className="py-8 text-center text-gray-400">
                     Nema sponzora u bazi
                   </td>
                 </tr>
