@@ -1,12 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
 import { Filter } from "lucide-react";
-import { packageColor, paymentStatusColor, paymentStatusLabel, leadStatusColor, leadStatusLabel } from "@/lib/utils";
-import type { PackageType, PaymentStatus, LeadStatus } from "@/types";
+import { leadStatusColor, leadStatusLabel } from "@/lib/utils";
+import type { LeadStatus, PaymentStatus } from "@/types";
 import AddSponsorModal from "@/components/admin/AddSponsorModal";
 import SearchInput from "@/components/admin/SearchInput";
 import PackageTypeManager from "@/components/admin/PackageTypeManager";
-import { ChevronRight } from "lucide-react";
+import SponsorsTableWithSelect from "@/components/admin/SponsorsTableWithSelect";
 
 interface Props {
   searchParams: { package?: string; payment?: string; lead?: string; q?: string };
@@ -172,91 +171,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
         </div>
       </div>
 
-      {/* Sponsors table */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="text-left py-3 px-4 text-gray-500 font-medium">Tvrtka</th>
-                <th className="text-left py-3 px-4 text-gray-500 font-medium">Paket</th>
-                <th className="text-left py-3 px-4 text-gray-500 font-medium">Status</th>
-                <th className="text-left py-3 px-4 text-gray-500 font-medium">Kontakt</th>
-                <th className="text-left py-3 px-4 text-gray-500 font-medium">Plaćanje</th>
-                <th className="text-left py-3 px-4 text-gray-500 font-medium">Benefiti</th>
-                <th className="py-3 px-4"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {sponsors.map((sponsor) => {
-                const benefits = sponsor.sponsor_benefits ?? [];
-                const completed = benefits.filter((b: { status: string }) => b.status === "completed").length;
-                const total = benefits.length;
-                const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-                const contacts = (sponsor.sponsor_contacts as { name: string | null; email: string | null; type: string }[]) ?? [];
-                const primaryContact = contacts.find((c) => c.type === "contact") ?? contacts[0] ?? null;
-                const contactName = primaryContact?.name ?? sponsor.contact_name;
-                const contactEmail = primaryContact?.email ?? sponsor.contact_email;
-
-                return (
-                  <tr key={sponsor.id} className="hover:bg-gray-50/60 transition-colors group">
-                    <td className="py-3 px-4">
-                      <a href={`/admin/sponsors/${sponsor.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">{sponsor.name}</a>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`badge ${packageColor(sponsor.package_type as PackageType)}`}>
-                        {sponsor.package_type}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {sponsor.lead_status ? (
-                        <span className={`badge border ${leadStatusColor(sponsor.lead_status as LeadStatus)}`}>
-                          {leadStatusLabel(sponsor.lead_status as LeadStatus)}
-                        </span>
-                      ) : (
-                        <span className="text-gray-300 text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="text-gray-700">{contactName}</p>
-                      <p className="text-gray-400 text-xs">{contactEmail}</p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`badge ${paymentStatusColor(sponsor.payment_status as PaymentStatus)}`}>
-                        {paymentStatusLabel(sponsor.payment_status as PaymentStatus)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 bg-gray-100 rounded-full h-1.5">
-                          <div className="bg-brand-500 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-xs text-gray-500">{completed}/{total}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Link
-                        href={`/admin/sponsors/${sponsor.id}`}
-                        className="inline-flex items-center gap-1 text-gray-400 hover:text-brand-600 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <span className="text-xs">Detalji</span>
-                        <ChevronRight size={14} />
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-              {sponsors.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="py-16 text-center">
-                    <p className="text-gray-400">Nema sponzora koji odgovaraju filteru</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <SponsorsTableWithSelect sponsors={sponsors as any} packageTypeNames={packageTypeNames} />
     </div>
   );
 }
