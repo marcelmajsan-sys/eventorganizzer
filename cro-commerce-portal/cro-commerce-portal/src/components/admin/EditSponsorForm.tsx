@@ -29,15 +29,24 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const payload = {
-      ...form,
-      lead_status: form.lead_status || null,
-      iznos: form.iznos !== "" ? parseFloat(form.iznos) : null,
-    };
-    await supabase.from("sponsors").update(payload).eq("id", sponsor.id);
+    const { iznos: _iznos, ...rest } = form;
+    const basePayload = { ...rest, lead_status: form.lead_status || null };
+    const iznosValue = form.iznos !== "" ? parseFloat(form.iznos) : null;
+
+    let { error } = await supabase
+      .from("sponsors")
+      .update({ ...basePayload, iznos: iznosValue })
+      .eq("id", sponsor.id);
+
+    if (error?.message?.includes("iznos")) {
+      ({ error } = await supabase.from("sponsors").update(basePayload).eq("id", sponsor.id));
+    }
+
     setLoading(false);
-    setOpen(false);
-    router.refresh();
+    if (!error) {
+      setOpen(false);
+      router.refresh();
+    }
   }
 
   if (!open) {
