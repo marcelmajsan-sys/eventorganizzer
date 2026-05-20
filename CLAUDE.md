@@ -44,7 +44,8 @@ eventorganizzer/
 │   │   │   ├── projectSettings.ts    ← Server action: datum konferencije
 │   │   │   ├── userManagement.ts     ← Server action: CRUD admin korisnika u svim bazama
 │   │   │   ├── partnerManagement.ts  ← Server action: CRUD partner korisnika + updatePrimaryContact
-│   │   │   └── findPartnerProject.ts ← Server action: pronađi u kojoj bazi postoji email
+│   │   │   ├── findPartnerProject.ts ← Server action: pronađi u kojoj bazi postoji email
+│   │   │   └── sponsorBulkUpdate.ts  ← Server action: bulk update package_type/payment_status/lead_status za više sponzora
 │   │   ├── api/
 │   │   │   ├── benefits/[id]/
 │   │   │   │   ├── notify/       ← POST: šalje email obavijest + logira u email_logs
@@ -92,7 +93,8 @@ eventorganizzer/
 │   │   │   ├── BenefitStatusSelect.tsx
 │   │   │   ├── DeleteBenefitButton.tsx
 │   │   │   ├── DeleteSponsorButton.tsx       ← Brisanje sponzora s potvrdom
-│   │   │   └── AdminPrimaryContactEdit.tsx   ← Inline edit primarnog kontakta na stranici sponzora
+│   │   │   ├── AdminPrimaryContactEdit.tsx   ← Inline edit primarnog kontakta na stranici sponzora
+│   │   │   └── SponsorsTableWithSelect.tsx   ← Tablica sponzora s multi-select + bulk action barom
 │   │   └── portal/
 │   │       ├── PortalSidebar.tsx             ← Nav: Partner → Benefiti → Program + projekt switcher
 │   │       ├── PortalBenefitCard.tsx         ← Read-only benefit kartica (opis, kontakt, dokumenti)
@@ -435,6 +437,7 @@ git push origin main
 - **Primarni kontakt — inline edit** (`AdminPrimaryContactEdit`) u sekciji Informacije na stranici sponzora — hover olovka, uređivanje direktno bez otvaranja modala
 - Upload datoteka po sponzoru (Supabase Storage) — odvojene od datoteka po benefitu
 - **Brisanje sponzora** s potvrdom (`DeleteSponsorButton`) — redirect na `/admin/sponsors`
+- **Multi-select bulk edit** (`SponsorsTableWithSelect`) — checkbox stupac; klik na redak ili checkbox odabire sponzora; checkbox u zaglavlju odabire/poništava sve; bulk action bar (sticky, plava pozadina) pojavljuje se kad je odabran ≥1 sponzor s dropdownima za Paket/Plaćanje/Status i gumbom "Primijeni"; server action `bulkUpdateSponsors` radi `.update().in("id", ids)` — `revalidatePath` osvježava stranicu
 
 ### Benefiti
 - Kliktabilne stat kartice — filtriranje po statusu via `?status=X` URL param
@@ -575,3 +578,4 @@ git push origin main
 - **`ContactDetailActions` graceful degradation**: ako notes kolona ne postoji (migration_011 nije pokrenut), retry update bez `notes` polja — ne prikazuje grešku korisniku.
 - **`RenameBenefitDialog` useEffect sync**: komponenta ostaje mountirana ali s `currentName=null` kad je dijalog zatvoren. Bez `useEffect`, `useState` bi zadržao prazan string pri ponovnom otvaranju. Uvijek koristiti `useEffect(() => { if (currentName) setName(currentName); }, [currentName])` za takve pattern.
 - **Kontakt tipovi — `TYPE_LABELS` mapa**: koristiti u svim komponentama koje prikazuju tip kontakta (ContactsView, `/admin/contacts/[id]/page.tsx`). Ne koristiti ternary `contact ? "Kontakt" : "Ulaznica"` jer ne pokriva nove tipove.
+- **Bulk select pattern** (`SponsorsTableWithSelect`): `useState<Set<string>>` za praćenje odabranih ID-eva; klik na redak togglea selekciju (osim klik na `<a>` tag); `useTransition` za non-blocking server action poziv; bulk action bar je `sticky top-0 z-10` da ostane vidljiv pri scrollanju. Polje s vrijednošću `""` znači "bez promjene" — ne šalje se u update. Lead status `"__clear__"` je sentinel vrijednost za brisanje (šalje `null` u bazu).
