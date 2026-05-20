@@ -262,7 +262,7 @@ export default async function AdminDashboard() {
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="text-left py-2 px-3 text-gray-500 font-medium">Tvrtka</th>
-                <th className="text-left py-2 px-3 text-gray-500 font-medium">Paket</th>
+                <th className="text-left py-2 px-3 text-gray-500 font-medium">Kategorija</th>
                 <th className="text-right py-2 px-3 text-gray-500 font-medium">Iznos</th>
                 <th className="text-left py-2 px-3 text-gray-500 font-medium">Status</th>
                 <th className="text-left py-2 px-3 text-gray-500 font-medium">Kontakt</th>
