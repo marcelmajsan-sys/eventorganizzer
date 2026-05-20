@@ -84,9 +84,9 @@ eventorganizzer/
 │   │   │   ├── AddContactModal.tsx           ← Dodaj kontakt s tipom, sponzorom, napomenom
 │   │   │   ├── ContactDetailActions.tsx      ← Uredi/briši kontakt — s dropdown za sponzora i tipom
 │   │   │   ├── ContactsView.tsx              ← Lista svih kontakata s filterima
-│   │   │   ├── AddSponsorModal.tsx
+│   │   │   ├── AddSponsorModal.tsx           ← Sadrži iznos polje (opcionalno, NUMERIC)
 │   │   │   ├── AddTaskModal.tsx
-│   │   │   ├── EditSponsorForm.tsx           ← Sadrži lead_status select
+│   │   │   ├── EditSponsorForm.tsx           ← Sadrži lead_status select + iznos polje; graceful degradation za iznos kolonu
 │   │   │   ├── EditBenefitModal.tsx          ← Opis, kontakt osoba, dokumenti benefita (s fallbackom)
 │   │   │   ├── EditBenefitDialog.tsx         ← Edit + slanje obavijesti (router.refresh() nakon notify)
 │   │   │   ├── RenameBenefitDialog.tsx       ← Preimenuj + postavi rok za sve sponzore odjednom
@@ -94,7 +94,7 @@ eventorganizzer/
 │   │   │   ├── DeleteBenefitButton.tsx
 │   │   │   ├── DeleteSponsorButton.tsx       ← Brisanje sponzora s potvrdom
 │   │   │   ├── AdminPrimaryContactEdit.tsx   ← Inline edit primarnog kontakta na stranici sponzora
-│   │   │   └── SponsorsTableWithSelect.tsx   ← Tablica sponzora s multi-select + bulk action barom
+│   │   │   └── SponsorsTableWithSelect.tsx   ← Tablica sponzora s multi-select + bulk action barom + Iznos stupac
 │   │   └── portal/
 │   │       ├── PortalSidebar.tsx             ← Nav: Partner → Benefiti → Program + projekt switcher
 │   │       ├── PortalBenefitCard.tsx         ← Read-only benefit kartica (opis, kontakt, dokumenti)
@@ -148,7 +148,7 @@ eventorganizzer/
 
 | Tablica | Opis |
 |---------|------|
-| `sponsors` | Sponzori — naziv, paket, `contact_name`, `contact_email`, `contact_phone`, `lead_status`, status plaćanja |
+| `sponsors` | Sponzori — naziv, paket, `contact_name`, `contact_email`, `contact_phone`, `lead_status`, `iznos`, status plaćanja |
 | `sponsor_benefits` | Benefiti sponzora — rokovi, statusi, `reminder_email`, `assigned_to`, `description`, `contact_person_id` |
 | `sponsor_contacts` | Kontakt osobe i osobe za ulaznice po sponzoru (RLS: partneri mogu upravljati vlastitima) |
 | `sponsor_users` | Mapiranje auth korisnika → sponsor_id (za sponzorski portal) |
@@ -311,6 +311,7 @@ migration_020_notifications_task_support   ← notifications.sponsor_id postaje 
 migration_021_task_notification_trigger    ← Postgres trigger: notifikacija pri kreiranju zadatka s emailom (SECURITY DEFINER)
 migration_022_fix_contact_notification_type ← Popravak triggera: samo 'ticket' tip → "Nova osoba za ulaznice"; ostali → "Dodan novi kontakt"
 migration_023_extend_contact_type_check    ← CHECK constraint proširen: dozvoljava contact|ticket|partner|visitor|speaker|service_provider|brand_ambassador
+migration_024_sponsor_amount               ← iznos NUMERIC(10,2) kolona na sponsors tablici
 ```
 
 > **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.
@@ -438,6 +439,8 @@ git push origin main
 - Upload datoteka po sponzoru (Supabase Storage) — odvojene od datoteka po benefitu
 - **Brisanje sponzora** s potvrdom (`DeleteSponsorButton`) — redirect na `/admin/sponsors`
 - **Multi-select bulk edit** (`SponsorsTableWithSelect`) — checkbox stupac; klik na redak ili checkbox odabire sponzora; checkbox u zaglavlju odabire/poništava sve; bulk action bar (sticky, plava pozadina) pojavljuje se kad je odabran ≥1 sponzor s dropdownima za Paket/Plaćanje/Status i gumbom "Primijeni"; server action `bulkUpdateSponsors` radi `.update().in("id", ids)` — `revalidatePath` osvježava stranicu
+- **Iznos stupac** u tablici sponzora — prikazuje `iznos` formatiran kao EUR (0 € za null vrijednosti, sivom bojom)
+- **Iznos polje** u AddSponsorModal i EditSponsorForm — opcionalni numerički unos; EditSponsorForm ima graceful degradation (retry bez iznos ako kolona ne postoji u DB)
 
 ### Benefiti
 - Kliktabilne stat kartice — filtriranje po statusu via `?status=X` URL param
@@ -579,3 +582,6 @@ git push origin main
 - **`RenameBenefitDialog` useEffect sync**: komponenta ostaje mountirana ali s `currentName=null` kad je dijalog zatvoren. Bez `useEffect`, `useState` bi zadržao prazan string pri ponovnom otvaranju. Uvijek koristiti `useEffect(() => { if (currentName) setName(currentName); }, [currentName])` za takve pattern.
 - **Kontakt tipovi — `TYPE_LABELS` mapa**: koristiti u svim komponentama koje prikazuju tip kontakta (ContactsView, `/admin/contacts/[id]/page.tsx`). Ne koristiti ternary `contact ? "Kontakt" : "Ulaznica"` jer ne pokriva nove tipove.
 - **Bulk select pattern** (`SponsorsTableWithSelect`): `useState<Set<string>>` za praćenje odabranih ID-eva; klik na redak togglea selekciju (osim klik na `<a>` tag); `useTransition` za non-blocking server action poziv; bulk action bar je `sticky top-0 z-10` da ostane vidljiv pri scrollanju. Polje s vrijednošću `""` znači "bez promjene" — ne šalje se u update. Lead status `"__clear__"` je sentinel vrijednost za brisanje (šalje `null` u bazu).
+- **`iznos` kolona na `sponsors`** (migration_024): `NUMERIC(10,2) DEFAULT NULL`; EditSponsorForm ima graceful degradation — ako update s `iznos` vrati grešku koja sadrži "iznos" u poruci, retry bez te kolone. Ovo je kritično: bez migration_024 cijeli update tiho faila i ostale promjene (lead_status i dr.) se ne spreme.
+- **Dashboard Naplaćeno/Neplaćeno**: `Naplaćeno` = zbroj `iznos ?? 0` za sve sponzore s `payment_status = 'paid'`; `Neplaćeno` = zbroj `iznos ?? 0` za sve sponzore s `payment_status != 'paid'`. Sponzori bez unesenog iznosa broje se ali dodaju 0 €.
+- **Dashboard "Sponzori po paketu" i "Status plaćanja"** prikazuju samo potvrđene sponzore (`confirmed_new` ili `confirmed_returning`) — subtitle "samo potvrđeni (N)" objašnjava filter; postoci se računaju prema tom ukupnom broju.
