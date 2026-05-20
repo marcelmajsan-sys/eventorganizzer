@@ -46,9 +46,14 @@ export default async function AdminDashboard() {
   ).reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
 
   const totalSponsors = sponsors?.length ?? 0;
-  const paidCount = sponsors?.filter((s) => s.payment_status === "paid").length ?? 0;
-  const pendingCount = sponsors?.filter((s) => s.payment_status === "pending").length ?? 0;
-  const overduePayments = sponsors?.filter((s) => s.payment_status === "overdue").length ?? 0;
+  const confirmedSponsors = sponsors?.filter(
+    (s) => s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning"
+  ) ?? [];
+  const confirmedTotal = confirmedSponsors.length;
+
+  const paidCount = confirmedSponsors.filter((s) => s.payment_status === "paid").length;
+  const pendingCount = confirmedSponsors.filter((s) => s.payment_status === "pending").length;
+  const overduePayments = confirmedSponsors.filter((s) => s.payment_status === "overdue").length;
   const openTasks = tasks?.filter((t) => t.status !== "done").length ?? 0;
   const now = new Date().toISOString();
   const overdueBenefits = benefits?.filter(
@@ -59,7 +64,7 @@ export default async function AdminDashboard() {
   const completionRate = totalBenefits > 0 ? Math.round((completedBenefits / totalBenefits) * 100) : 0;
 
   const byPackage: Record<string, number> = {};
-  sponsors?.forEach((s) => {
+  confirmedSponsors.forEach((s) => {
     byPackage[s.package_type] = (byPackage[s.package_type] ?? 0) + 1;
   });
 
@@ -161,16 +166,17 @@ export default async function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Package breakdown */}
-        <a href="/admin/sponsors" className="card p-6 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
-          <div className="flex items-center gap-2 mb-5">
+        {/* Package breakdown — confirmed only */}
+        <a href="/admin/sponsors?lead=confirmed_new" className="card p-6 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
+          <div className="flex items-center gap-2 mb-1">
             <Package size={18} className="text-gray-400" />
             <h3 className="font-semibold text-gray-900">Sponzori po paketu</h3>
           </div>
+          <p className="text-xs text-gray-400 mb-4">samo potvrđeni ({confirmedTotal})</p>
           <div className="space-y-3">
             {packageOrder.map((pkg) => {
               const count = byPackage[pkg] ?? 0;
-              const pct = totalSponsors > 0 ? (count / totalSponsors) * 100 : 0;
+              const pct = confirmedTotal > 0 ? (count / confirmedTotal) * 100 : 0;
               return (
                 <div key={pkg}>
                   <div className="flex items-center justify-between mb-1">
@@ -189,12 +195,13 @@ export default async function AdminDashboard() {
           </div>
         </a>
 
-        {/* Payment status */}
+        {/* Payment status — confirmed only */}
         <div className="card p-6">
-          <div className="flex items-center gap-2 mb-5">
+          <div className="flex items-center gap-2 mb-1">
             <CreditCard size={18} className="text-gray-400" />
             <h3 className="font-semibold text-gray-900">Status plaćanja</h3>
           </div>
+          <p className="text-xs text-gray-400 mb-4">samo potvrđeni ({confirmedTotal})</p>
           <div className="space-y-3">
             {[
               { label: "Plaćeno", count: paidCount, status: "paid", color: "bg-emerald-500" },
@@ -208,7 +215,7 @@ export default async function AdminDashboard() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-gray-900">{item.count}</span>
-                  <span className="text-xs text-gray-400">({totalSponsors > 0 ? Math.round((item.count / totalSponsors) * 100) : 0}%)</span>
+                  <span className="text-xs text-gray-400">({confirmedTotal > 0 ? Math.round((item.count / confirmedTotal) * 100) : 0}%)</span>
                 </div>
               </a>
             ))}
