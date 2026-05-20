@@ -25,6 +25,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
     payment_status: "pending",
     lead_status: "" as string,
     notes: "",
+    iznos: "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -36,7 +37,11 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
       // Insert sponsor
       const { data: sponsor, error: sponsorError } = await supabase
         .from("sponsors")
-        .insert({ ...form, lead_status: form.lead_status || null })
+        .insert({
+          ...form,
+          lead_status: form.lead_status || null,
+          iznos: form.iznos !== "" ? parseFloat(form.iznos) : null,
+        })
         .select()
         .single();
 
@@ -60,7 +65,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
       await supabase.from("sponsor_benefits").insert(benefitsToInsert);
 
       setOpen(false);
-      setForm({ name: "", package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "" });
+      setForm({ name: "", package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "", iznos: "" });
       router.refresh();
     } catch (err: any) {
       setError(err.message ?? "Greška pri dodavanju sponzora");
@@ -158,6 +163,18 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
                 className="input-field"
                 placeholder="email@tvrtka.hr"
                 required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Iznos (€)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.iznos}
+                onChange={(e) => setForm({ ...form, iznos: e.target.value })}
+                className="input-field"
+                placeholder="npr. 5000"
               />
             </div>
             <div className="col-span-2">

@@ -23,12 +23,17 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
     payment_status: sponsor.payment_status,
     lead_status: sponsor.lead_status ?? ("" as LeadStatus | ""),
     notes: sponsor.notes ?? "",
+    iznos: sponsor.iznos != null ? String(sponsor.iznos) : "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const payload = { ...form, lead_status: form.lead_status || null };
+    const payload = {
+      ...form,
+      lead_status: form.lead_status || null,
+      iznos: form.iznos !== "" ? parseFloat(form.iznos) : null,
+    };
     await supabase.from("sponsors").update(payload).eq("id", sponsor.id);
     setLoading(false);
     setOpen(false);
@@ -92,6 +97,18 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <input type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} className="input-field" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Iznos (€)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.iznos}
+                onChange={(e) => setForm({ ...form, iznos: e.target.value })}
+                className="input-field"
+                placeholder="npr. 5000"
+              />
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Napomene</label>

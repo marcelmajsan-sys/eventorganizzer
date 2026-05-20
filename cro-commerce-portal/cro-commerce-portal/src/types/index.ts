@@ -1,5 +1,5 @@
 export type PackageType = "Glavni" | "Zlatni" | "Srebrni" | "Brončani" | "Medijski" | "Community";
-export type PaymentStatus = "paid" | "pending" | "overdue";
+export type PaymentStatus = "paid" | "pending" | "partial" | "overdue";
 export type BenefitStatus = "not_started" | "in_progress" | "completed" | "overdue";
 export type TaskStatus = "todo" | "in_progress" | "done";
 export type LeadStatus = "cold_lead" | "hot_lead" | "confirmed_new" | "confirmed_returning";
@@ -13,6 +13,7 @@ export interface Sponsor {
   payment_status: PaymentStatus;
   lead_status: LeadStatus | null;
   notes: string | null;
+  iznos: number | null;
   created_at: string;
 }
 
@@ -32,6 +33,8 @@ export interface SponsorBenefit {
   file_url: string | null;
   notes: string | null;
   assigned_to: string | null;
+  description: string | null;
+  contact_person_id: string | null;
   created_at: string;
 }
 

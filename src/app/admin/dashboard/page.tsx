@@ -37,8 +37,13 @@ export default async function AdminDashboard() {
 
   const budgetPaid    = budgetItems.filter(i => i.status === "paid").reduce((s: number, i: any) => s + i.amount, 0);
   const budgetPending = budgetItems.filter(i => i.status === "pending").reduce((s: number, i: any) => s + i.amount, 0);
-  const budgetUnknown = budgetItems.filter(i => i.status === "unknown").reduce((s: number, i: any) => s + i.amount, 0);
   const budgetTotal   = budgetItems.filter(i => i.status !== "cancelled").reduce((s: number, i: any) => s + i.amount, 0);
+
+  const naplaceno = sponsors?.filter(s => s.payment_status === "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
+  const neplaceno = sponsors?.filter(s =>
+    (s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning") &&
+    s.payment_status !== "paid"
+  ).reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
 
   const totalSponsors = sponsors?.length ?? 0;
   const paidCount = sponsors?.filter((s) => s.payment_status === "paid").length ?? 0;
@@ -101,35 +106,33 @@ export default async function AdminDashboard() {
         <h1 className="page-title">Nadzorna ploča</h1>
       </div>
 
-      {/* Budget summary — top */}
-      {budgetItems.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {[
-            { label: "Ukupni budžet", value: formatEur(budgetTotal), sub: `${budgetItems.filter(i => i.status !== "cancelled").length} stavki`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: "text-gray-900", href: "/admin/troskovi" },
-            { label: "Plaćeno", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
-            { label: "Na čekanju", value: formatEur(budgetPending), sub: `${budgetItems.filter(i=>i.status==="pending").length} stavki`, icon: TrendingUp, iconCls: "text-amber-500", valCls: "text-amber-600", href: "/admin/troskovi?status=pending" },
-            { label: "Nepotvrđeni trošak", value: formatEur(budgetUnknown), sub: `${budgetItems.filter(i=>i.status==="unknown").length} stavki`, icon: ListChecks, iconCls: "text-purple-400", valCls: "text-purple-700", labelCls: "text-purple-500", href: "/admin/troskovi?status=unknown" },
-            { label: "Preostalo za platiti", value: formatEur(budgetTotal - budgetPaid), sub: `${budgetTotal > 0 ? 100-Math.round((budgetPaid/budgetTotal)*100) : 100}% budžeta`, icon: ListChecks, iconCls: "text-gray-400", valCls: "text-gray-900", href: "/admin/troskovi" },
-          ].map((c) => {
-            const Icon = c.icon;
-            return (
-              <a key={c.label} href={c.href} className="card p-4 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
-                <div className="flex items-center justify-between mb-2">
-                  <p className={`text-xs font-medium ${(c as any).labelCls ?? "text-gray-500"}`}>{c.label}</p>
-                  <Icon size={16} className={c.iconCls} />
+      {/* Summary — top */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        {[
+          { label: "Ukupni budžet", value: formatEur(budgetTotal), sub: `${budgetItems.filter(i => i.status !== "cancelled").length} stavki`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: "text-gray-900", href: "/admin/troskovi" },
+          { label: "Plaćeno (troškovi)", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
+          { label: "Na čekanju (troškovi)", value: formatEur(budgetPending), sub: `${budgetItems.filter(i=>i.status==="pending").length} stavki`, icon: TrendingUp, iconCls: "text-amber-500", valCls: "text-amber-600", href: "/admin/troskovi?status=pending" },
+          { label: "Naplaćeno", value: formatEur(naplaceno), sub: `${sponsors?.filter(s => s.payment_status === "paid").length ?? 0} sponzora`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
+          { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${sponsors?.filter(s => (s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning") && s.payment_status !== "paid").length ?? 0} potvrđenih`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors" },
+        ].map((c) => {
+          const Icon = c.icon;
+          return (
+            <a key={c.label} href={c.href} className="card p-4 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-gray-500">{c.label}</p>
+                <Icon size={16} className={c.iconCls} />
+              </div>
+              <p className={`text-xl font-bold ${c.valCls}`}>{c.value}</p>
+              {(c as any).progress !== undefined && (
+                <div className="mt-2 bg-gray-100 rounded-full h-1.5">
+                  <div className={`${(c as any).progressCls} h-1.5 rounded-full transition-all`} style={{ width: `${(c as any).progress}%` }} />
                 </div>
-                <p className={`text-xl font-bold ${c.valCls}`}>{c.value}</p>
-                {(c as any).progress !== undefined && (
-                  <div className="mt-2 bg-gray-100 rounded-full h-1.5">
-                    <div className={`${(c as any).progressCls} h-1.5 rounded-full transition-all`} style={{ width: `${(c as any).progress}%` }} />
-                  </div>
-                )}
-                <p className="text-xs text-gray-400 mt-1">{c.sub}</p>
-              </a>
-            );
-          })}
-        </div>
-      )}
+              )}
+              <p className="text-xs text-gray-400 mt-1">{c.sub}</p>
+            </a>
+          );
+        })}
+      </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
