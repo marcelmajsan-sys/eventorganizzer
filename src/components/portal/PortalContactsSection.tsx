@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket, User } from "lu
 import { updatePrimaryContact } from "@/app/actions/partnerManagement";
 
 type ContactType = "contact" | "ticket";
+type TicketType = "vip" | "standard";
 
 interface Contact {
   id: string;
@@ -15,9 +16,26 @@ interface Contact {
   phone: string | null;
   role: string | null;
   type: ContactType;
+  ticket_type: TicketType | null;
 }
 
-const emptyForm = { name: "", email: "", phone: "", role: "" };
+const emptyContactForm = { name: "", email: "", phone: "", role: "", ticket_type: "standard" as TicketType };
+
+function TicketTypeBadge({ ticketType }: { ticketType: TicketType | null }) {
+  if (!ticketType) return null;
+  if (ticketType === "vip") {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+        VIP
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+      STANDARD
+    </span>
+  );
+}
 
 function ContactRow({
   contact,
@@ -26,12 +44,14 @@ function ContactRow({
   contact: Contact;
   onDelete: (id: string) => void;
 }) {
+  const isTicket = contact.type === "ticket";
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     name: contact.name,
     email: contact.email ?? "",
     phone: contact.phone ?? "",
     role: contact.role ?? "",
+    ticket_type: (contact.ticket_type ?? "standard") as TicketType,
   });
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -40,15 +60,29 @@ function ContactRow({
 
   async function handleSave() {
     setSaving(true);
-    await supabase
+    const updateData: Record<string, unknown> = {
+      name: form.name,
+      email: form.email || null,
+      phone: form.phone || null,
+      role: form.role || null,
+    };
+    if (isTicket) {
+      updateData.ticket_type = form.ticket_type;
+    }
+    const { error } = await supabase
       .from("sponsor_contacts")
-      .update({
-        name: form.name,
-        email: form.email || null,
-        phone: form.phone || null,
-        role: form.role || null,
-      })
+      .update(updateData)
       .eq("id", contact.id);
+
+    // Graceful degradation: retry without ticket_type if column doesn't exist yet
+    if (error && isTicket && error.message.includes("ticket_type")) {
+      const { name, email, phone, role } = form;
+      await supabase
+        .from("sponsor_contacts")
+        .update({ name, email: email || null, phone: phone || null, role: role || null })
+        .eq("id", contact.id);
+    }
+
     setSaving(false);
     setEditing(false);
     router.refresh();
@@ -100,6 +134,35 @@ function ContactRow({
               placeholder="+385 91 ..."
             />
           </div>
+          {isTicket && (
+            <div className="col-span-2">
+              <label className="text-xs text-gray-500 mb-1 block">Tip ulaznice</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, ticket_type: "standard" })}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    form.ticket_type === "standard"
+                      ? "bg-gray-200 border-gray-300 text-gray-800"
+                      : "bg-white border-gray-200 text-gray-400 hover:bg-gray-50"
+                  }`}
+                >
+                  STANDARD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, ticket_type: "vip" })}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    form.ticket_type === "vip"
+                      ? "bg-amber-100 border-amber-300 text-amber-800"
+                      : "bg-white border-gray-200 text-gray-400 hover:bg-amber-50"
+                  }`}
+                >
+                  VIP
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex gap-2 justify-end">
           <button
@@ -131,7 +194,15 @@ function ContactRow({
           )}
         </div>
         {contact.email && (
-          <p className="text-xs text-gray-500 truncate">{contact.email}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <p className="text-xs text-gray-500 truncate">{contact.email}</p>
+            {isTicket && <TicketTypeBadge ticketType={contact.ticket_type} />}
+          </div>
+        )}
+        {!contact.email && isTicket && (
+          <div className="mt-0.5">
+            <TicketTypeBadge ticketType={contact.ticket_type} />
+          </div>
         )}
         {contact.phone && (
           <p className="text-xs text-gray-500">{contact.phone}</p>
@@ -181,8 +252,9 @@ function AddContactForm({
   type: ContactType;
   onAdded: (c: Contact) => void;
 }) {
+  const isTicket = type === "ticket";
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(emptyContactForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -192,24 +264,49 @@ function AddContactForm({
     e.preventDefault();
     setSaving(true);
     setError("");
-    const { data, error: err } = await supabase
+
+    const insertData: Record<string, unknown> = {
+      sponsor_id: sponsorId,
+      name: form.name,
+      email: form.email || null,
+      phone: form.phone || null,
+      role: form.role || null,
+      type,
+    };
+    if (isTicket) {
+      insertData.ticket_type = form.ticket_type;
+    }
+
+    let { data, error: err } = await supabase
       .from("sponsor_contacts")
-      .insert({
-        sponsor_id: sponsorId,
-        name: form.name,
-        email: form.email || null,
-        phone: form.phone || null,
-        role: form.role || null,
-        type,
-      })
+      .insert(insertData)
       .select()
       .single();
+
+    // Graceful degradation: retry without ticket_type if column doesn't exist yet
+    if (err && isTicket && err.message.includes("ticket_type")) {
+      const fallback = await supabase
+        .from("sponsor_contacts")
+        .insert({
+          sponsor_id: sponsorId,
+          name: form.name,
+          email: form.email || null,
+          phone: form.phone || null,
+          role: form.role || null,
+          type,
+        })
+        .select()
+        .single();
+      data = fallback.data;
+      err = fallback.error;
+    }
+
     setSaving(false);
     if (err) { setError(err.message); return; }
     if (data) {
       onAdded(data as Contact);
     }
-    setForm(emptyForm);
+    setForm(emptyContactForm);
     setOpen(false);
     router.refresh();
   }
@@ -221,7 +318,7 @@ function AddContactForm({
         className="flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-medium mt-1 px-3"
       >
         <Plus size={13} />
-        {type === "contact" ? "Dodaj kontakt osobu" : "Dodaj osobu za ulaznice"}
+        {isTicket ? "Dodaj osobu za ulaznice" : "Dodaj kontakt osobu"}
       </button>
     );
   }
@@ -266,11 +363,40 @@ function AddContactForm({
             placeholder="+385 91 ..."
           />
         </div>
+        {isTicket && (
+          <div className="col-span-2">
+            <label className="text-xs text-gray-500 mb-1 block">Tip ulaznice</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, ticket_type: "standard" })}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                  form.ticket_type === "standard"
+                    ? "bg-gray-200 border-gray-300 text-gray-800"
+                    : "bg-white border-gray-200 text-gray-400 hover:bg-gray-50"
+                }`}
+              >
+                STANDARD
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, ticket_type: "vip" })}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                  form.ticket_type === "vip"
+                    ? "bg-amber-100 border-amber-300 text-amber-800"
+                    : "bg-white border-gray-200 text-gray-400 hover:bg-amber-50"
+                }`}
+              >
+                VIP
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <div className="flex gap-2 justify-end">
         <button
           type="button"
-          onClick={() => { setOpen(false); setForm(emptyForm); }}
+          onClick={() => { setOpen(false); setForm(emptyContactForm); }}
           className="btn-secondary text-xs py-1 px-2"
         >
           <X size={12} /> Odustani
