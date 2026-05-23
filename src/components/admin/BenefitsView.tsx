@@ -28,20 +28,24 @@ type BenefitRow = {
   sponsors: { id: string; name: string; package_type: string } | null;
 };
 
-const PACKAGE_ORDER: PackageType[] = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
+const PACKAGE_ORDER: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
 const PACKAGE_COLORS: Record<string, string> = {
-  Glavni: "border-purple-300 bg-purple-50",
-  Zlatni: "border-yellow-300 bg-yellow-50",
-  Srebrni: "border-slate-300 bg-slate-50",
-  "Brončani": "border-orange-300 bg-orange-50",
+  Glavni:    "border-purple-300 bg-purple-50",
+  Zlatni:    "border-yellow-300 bg-yellow-50",
+  Srebrni:   "border-slate-300 bg-slate-50",
+  Brončani:  "border-orange-300 bg-orange-50",
+  Medijski:  "border-sky-300 bg-sky-50",
+  Community: "border-emerald-300 bg-emerald-50",
 };
 
 const PACKAGE_HEADER_COLORS: Record<string, string> = {
-  Glavni: "text-purple-800 bg-purple-100 border-purple-200",
-  Zlatni: "text-yellow-800 bg-yellow-100 border-yellow-200",
-  Srebrni: "text-slate-700 bg-slate-100 border-slate-200",
-  "Brončani": "text-orange-800 bg-orange-100 border-orange-200",
+  Glavni:    "text-purple-800 bg-purple-100 border-purple-200",
+  Zlatni:    "text-yellow-800 bg-yellow-100 border-yellow-200",
+  Srebrni:   "text-slate-700 bg-slate-100 border-slate-200",
+  Brončani:  "text-orange-800 bg-orange-100 border-orange-200",
+  Medijski:  "text-sky-800 bg-sky-100 border-sky-200",
+  Community: "text-emerald-800 bg-emerald-100 border-emerald-200",
 };
 
 const statusIcon: Record<string, React.ReactNode> = {
@@ -370,7 +374,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
 }
 
 function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
-  const [open, setOpen] = useState(rows.length === 1);
+  const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -751,39 +755,53 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
 
       {view === "category" && (
         <div className="space-y-6">
-          {PACKAGE_ORDER.filter((pkg) => groupedByPackage[pkg]?.length).map((pkg) => {
-            const rows = groupedByPackage[pkg]!;
-            const byBenefit: Record<string, BenefitRow[]> = {};
-            rows.forEach((b) => {
-              if (!byBenefit[b.benefit_name]) byBenefit[b.benefit_name] = [];
-              byBenefit[b.benefit_name]!.push(b);
-            });
-            const names = Object.keys(byBenefit).sort();
-            const doneCount = rows.filter((r) => r.status === "completed").length;
+          {(() => {
+            // Sve kategorije koje imaju benefite: prvo definirani redoslijed, zatim ostali
+            const orderedPkgs = PACKAGE_ORDER.filter((pkg) => groupedByPackage[pkg]?.length);
+            const extraPkgs = Object.keys(groupedByPackage).filter(
+              (k) => !PACKAGE_ORDER.includes(k) && groupedByPackage[k]?.length
+            ).sort();
+            const allPkgs = [...orderedPkgs, ...extraPkgs];
 
-            return (
-              <div key={pkg} className={`rounded-xl border-2 overflow-hidden ${PACKAGE_COLORS[pkg]}`}>
-                <div className={`flex items-center justify-between px-5 py-3 border-b ${PACKAGE_HEADER_COLORS[pkg]}`}>
-                  <h2 className="font-bold text-base">{pkg} partneri</h2>
-                  <span className="text-xs font-medium opacity-70">{doneCount}/{rows.length} završeno</span>
+            if (allPkgs.length === 0) {
+              return (
+                <div className="card p-12 text-center text-gray-400 text-sm">
+                  Nema benefita za prikaz
                 </div>
-                <div className="divide-y divide-white/60">
-                  {names.map((benefitName) => (
-                    <CategoryBenefitGroup
-                      key={benefitName}
-                      name={benefitName}
-                      rows={byBenefit[benefitName]!}
-                    />
-                  ))}
+              );
+            }
+
+            return allPkgs.map((pkg) => {
+              const rows = groupedByPackage[pkg]!;
+              const byBenefit: Record<string, BenefitRow[]> = {};
+              rows.forEach((b) => {
+                if (!byBenefit[b.benefit_name]) byBenefit[b.benefit_name] = [];
+                byBenefit[b.benefit_name]!.push(b);
+              });
+              const names = Object.keys(byBenefit).sort();
+              const doneCount = rows.filter((r) => r.status === "completed").length;
+              const borderCls = PACKAGE_COLORS[pkg] ?? "border-gray-300 bg-gray-50";
+              const headerCls = PACKAGE_HEADER_COLORS[pkg] ?? "text-gray-700 bg-gray-100 border-gray-200";
+
+              return (
+                <div key={pkg} className={`rounded-xl border-2 overflow-hidden ${borderCls}`}>
+                  <div className={`flex items-center justify-between px-5 py-3 border-b ${headerCls}`}>
+                    <h2 className="font-bold text-base">{pkg} partneri</h2>
+                    <span className="text-xs font-medium opacity-70">{doneCount}/{rows.length} završeno</span>
+                  </div>
+                  <div className="divide-y divide-white/60">
+                    {names.map((benefitName) => (
+                      <CategoryBenefitGroup
+                        key={benefitName}
+                        name={benefitName}
+                        rows={byBenefit[benefitName]!}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-          {PACKAGE_ORDER.every((pkg) => !groupedByPackage[pkg]?.length) && (
-            <div className="card p-12 text-center text-gray-400 text-sm">
-              Nema benefita za prikaz
-            </div>
-          )}
+              );
+            });
+          })()}
         </div>
       )}
 
