@@ -2,7 +2,7 @@ import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { CheckCircle2, Clock, AlertTriangle, XCircle, Gift } from "lucide-react";
 import Link from "next/link";
-import { benefitStatusLabel, benefitStatusColor } from "@/lib/utils";
+import { benefitStatusLabel } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
 import PortalBenefitCard from "@/components/portal/PortalBenefitCard";
 
@@ -33,19 +33,72 @@ export default async function PortalBenefitsPage({
 
   if (!sponsorUser) redirect("/login");
 
-  const { data: benefits } = await adminClient
+  // Try with new columns (migration_018); fall back without them if not yet migrated
+  let { data: benefits, error: benefitErr } = await adminClient
     .from("sponsor_benefits")
-    .select("id, benefit_name, deadline, status, notes, assigned_to")
+    .select("id, benefit_name, deadline, status, notes, assigned_to, description, contact_person_id")
     .eq("sponsor_id", sponsorUser.sponsor_id)
     .order("deadline");
 
+  if (benefitErr) {
+    const { data: fallback } = await adminClient
+      .from("sponsor_benefits")
+      .select("id, benefit_name, deadline, status, notes, assigned_to")
+      .eq("sponsor_id", sponsorUser.sponsor_id)
+      .order("deadline");
+    benefits = fallback as any;
+  }
+
   const rows = benefits ?? [];
-  const completed = rows.filter((b) => b.status === "completed").length;
-  const total = rows.length;
+  const benefitIds = rows.map((b) => b.id);
+
+  let filesMap: Record<string, { id: string; filename: string; storage_url: string; file_size: number | null }[]> = {};
+  let contactMap: Record<string, { id: string; name: string; email: string | null; phone: string | null }> = {};
+
+  try {
+    if (benefitIds.length > 0) {
+      const { data: benefitFiles } = await adminClient
+        .from("files")
+        .select("id, filename, storage_url, file_size, benefit_id")
+        .in("benefit_id", benefitIds);
+      (benefitFiles ?? []).forEach((f) => {
+        if (f.benefit_id) {
+          if (!filesMap[f.benefit_id]) filesMap[f.benefit_id] = [];
+          filesMap[f.benefit_id]!.push({ id: f.id, filename: f.filename, storage_url: f.storage_url, file_size: f.file_size });
+        }
+      });
+    }
+  } catch {}
+
+  try {
+    const contactIds = rows
+      .filter((b) => (b as any).contact_person_id)
+      .map((b) => (b as any).contact_person_id as string);
+    if (contactIds.length > 0) {
+      const { data: contactPersons } = await adminClient
+        .from("sponsor_contacts")
+        .select("id, name, email, phone")
+        .in("id", contactIds);
+      (contactPersons ?? []).forEach((c) => { contactMap[c.id] = c; });
+    }
+  } catch {}
+
+  const enrichedRows = rows.map((b) => {
+    const contactPersonId = (b as any).contact_person_id ?? null;
+    return {
+      ...b,
+      description: (b as any).description ?? null,
+      contact_person: contactPersonId ? (contactMap[contactPersonId] ?? null) : null,
+      files: filesMap[b.id] ?? [],
+    };
+  });
+
+  const completed = enrichedRows.filter((b) => b.status === "completed").length;
+  const total = enrichedRows.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   const activeStatus = searchParams.status as BenefitStatus | undefined;
-  const filtered = activeStatus ? rows.filter((b) => b.status === activeStatus) : rows;
+  const filtered = activeStatus ? enrichedRows.filter((b) => b.status === activeStatus) : enrichedRows;
 
   return (
     <div className="animate-enter">
@@ -56,7 +109,6 @@ export default async function PortalBenefitsPage({
         </div>
       </div>
 
-      {/* Progress summary */}
       <div className="card p-5 mb-6">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-gray-700">Isporuka benefita</span>
@@ -69,10 +121,9 @@ export default async function PortalBenefitsPage({
           />
         </div>
 
-        {/* Status kartice */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
           {STATUSES.map((status) => {
-            const count = rows.filter((b) => b.status === status).length;
+            const count = enrichedRows.filter((b) => b.status === status).length;
             const isActive = activeStatus === status;
             return (
               <Link
@@ -95,10 +146,9 @@ export default async function PortalBenefitsPage({
         </div>
       </div>
 
-      {/* Lista benefita */}
       <div className="space-y-3">
         {filtered.map((benefit) => (
-          <PortalBenefitCard key={benefit.id} benefit={benefit} />
+          <PortalBenefitCard key={benefit.id} benefit={benefit as any} />
         ))}
         {filtered.length === 0 && (
           <div className="card p-12 text-center">

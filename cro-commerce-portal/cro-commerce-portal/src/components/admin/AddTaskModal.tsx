@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
+import { createTask } from "@/app/actions/tasks";
 
 export default function AddTaskModal() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createClient();
 
   const [form, setForm] = useState({
     title: "",
@@ -22,12 +22,15 @@ export default function AddTaskModal() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
-    const payload: Record<string, any> = { ...form };
-    if (!payload.due_date) delete payload.due_date;
-    if (!payload.assigned_to) delete payload.assigned_to;
+    const result = await createTask(form);
+    if (result.error) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
 
-    await supabase.from("tasks").insert(payload);
     setOpen(false);
     setForm({ title: "", description: "", status: "todo", due_date: "", assigned_to: "" });
     setLoading(false);
@@ -102,15 +105,23 @@ export default function AddTaskModal() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Odgovorna osoba
+              <span className="text-gray-400 font-normal ml-1">(email)</span>
+            </label>
             <input
-              type="text"
+              type="email"
               value={form.assigned_to}
               onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
               className="input-field"
-              placeholder="Marcel, Dino..."
+              placeholder="korisnik@ecommerce.hr"
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Admin korisnici dobivaju obavijest u inbox pri dodjeli zadatka.
+            </p>
           </div>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setOpen(false)} className="btn-secondary flex-1 justify-center">

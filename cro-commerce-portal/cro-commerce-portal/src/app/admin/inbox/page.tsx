@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
-import { Bell, Building2 } from "lucide-react";
+import { createAdminClient } from "@/lib/supabase/server";
+import { Bell, Building2, SquareCheckBig } from "lucide-react";
 import Link from "next/link";
-import { MarkAllReadButton, MarkReadButton } from "@/components/admin/InboxActions";
+import { MarkAllReadButton, MarkReadButton, MarkUnreadButton } from "@/components/admin/InboxActions";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -17,14 +17,14 @@ function timeAgo(dateStr: string): string {
 }
 
 export default async function InboxPage() {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const { data: raw } = await supabase
     .from("notifications")
-    .select("id, title, message, read, created_at, sponsor_id, sponsors(id, name)")
+    .select("id, title, message, read, created_at, sponsor_id, task_id, sponsors(id, name)")
     .order("created_at", { ascending: false });
 
-  const notifications = (raw ?? []).map((n) => ({
+  const notifications = (raw ?? []).map((n: any) => ({
     ...n,
     sponsor: Array.isArray(n.sponsors) ? n.sponsors[0] : n.sponsors,
   }));
@@ -68,12 +68,15 @@ export default async function InboxPage() {
                 </div>
                 <p className="text-sm text-gray-600 mt-0.5">{n.message}</p>
                 {n.sponsor && (
-                  <Link
-                    href={`/admin/sponsors/${n.sponsor.id}`}
-                    className="flex items-center gap-1 text-xs text-brand-600 hover:underline mt-1.5"
-                  >
+                  <Link href={`/admin/sponsors/${n.sponsor.id}`} className="flex items-center gap-1 text-xs text-brand-600 hover:underline mt-1.5">
                     <Building2 size={11} />
                     {n.sponsor.name}
+                  </Link>
+                )}
+                {n.task_id && (
+                  <Link href={`/admin/tasks/${n.task_id}`} className="flex items-center gap-1 text-xs text-brand-600 hover:underline mt-1.5">
+                    <SquareCheckBig size={11} />
+                    Otvori zadatak
                   </Link>
                 )}
               </div>
@@ -89,7 +92,7 @@ export default async function InboxPage() {
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Pročitano</p>
           )}
           {read.map((n) => (
-            <div key={n.id} className="card p-4 flex items-start gap-4 opacity-60">
+            <div key={n.id} className="card p-4 flex items-start gap-4 opacity-60 hover:opacity-100 transition-opacity">
               <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                 <Bell size={14} className="text-gray-400" />
               </div>
@@ -100,15 +103,19 @@ export default async function InboxPage() {
                 </div>
                 <p className="text-sm text-gray-500 mt-0.5">{n.message}</p>
                 {n.sponsor && (
-                  <Link
-                    href={`/admin/sponsors/${n.sponsor.id}`}
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600 hover:underline mt-1.5"
-                  >
+                  <Link href={`/admin/sponsors/${n.sponsor.id}`} className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600 hover:underline mt-1.5">
                     <Building2 size={11} />
                     {n.sponsor.name}
                   </Link>
                 )}
+                {n.task_id && (
+                  <Link href={`/admin/tasks/${n.task_id}`} className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600 hover:underline mt-1.5">
+                    <SquareCheckBig size={11} />
+                    Otvori zadatak
+                  </Link>
+                )}
               </div>
+              <MarkUnreadButton id={n.id} />
             </div>
           ))}
         </div>

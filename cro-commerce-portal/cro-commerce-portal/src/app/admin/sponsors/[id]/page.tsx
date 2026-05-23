@@ -21,6 +21,7 @@ import DeleteBenefitButton from "@/components/admin/DeleteBenefitButton";
 import ContactsSection from "@/components/admin/ContactsSection";
 import DeleteSponsorButton from "@/components/admin/DeleteSponsorButton";
 import AdminPrimaryContactEdit from "@/components/admin/AdminPrimaryContactEdit";
+import BenefitFileUpload from "@/components/admin/BenefitFileUpload";
 
 interface Props {
   params: { id: string };
@@ -157,7 +158,7 @@ export default async function SponsorDetailPage({ params }: Props) {
           <ContactsSection sponsorId={sponsor.id} sponsorName={sponsor.name} contacts={contacts ?? []} projectId={projectId} />
 
           {/* Files */}
-          <FileUploadSection sponsorId={sponsor.id} existingFiles={files ?? []} />
+          <FileUploadSection sponsorId={sponsor.id} existingFiles={(files ?? []).filter(f => !f.benefit_id)} />
         </div>
 
         {/* Right: benefits */}
@@ -176,6 +177,8 @@ export default async function SponsorDetailPage({ params }: Props) {
                 const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
                 const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
                 const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
+                const contactPerson = contacts?.find(c => c.id === benefit.contact_person_id);
+                const benefitSpecificFiles = (files ?? []).filter(f => f.benefit_id === benefit.id);
 
                 return (
                   <div
@@ -193,9 +196,9 @@ export default async function SponsorDetailPage({ params }: Props) {
                         <span className="mt-0.5">
                           {statusIcon[benefit.status as BenefitStatus]}
                         </span>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="font-medium text-gray-900 text-sm">{benefit.benefit_name}</p>
-                          <div className="flex items-center gap-3 mt-1">
+                          <div className="flex items-center gap-3 mt-1 flex-wrap">
                             {benefit.deadline && (
                               <span className="text-xs text-gray-500">
                                 Rok: {formatDate(benefit.deadline)}
@@ -211,20 +214,25 @@ export default async function SponsorDetailPage({ params }: Props) {
                                 Za {days} dana
                               </span>
                             )}
+                            {contactPerson && (
+                              <span className="text-xs text-gray-500">
+                                Kontakt: <span className="font-medium">{contactPerson.name}</span>
+                              </span>
+                            )}
                           </div>
-                          {benefit.file_url && (
-                            <a
-                              href={benefit.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-brand-600 hover:text-brand-700 mt-1 inline-block"
-                            >
-                              📎 Preuzmi datoteku
-                            </a>
+                          {benefit.description && (
+                            <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">{benefit.description}</p>
                           )}
+                          <div className="mt-2">
+                            <BenefitFileUpload
+                              benefitId={benefit.id}
+                              sponsorId={sponsor.id}
+                              initialFiles={benefitSpecificFiles}
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <DeleteBenefitButton
                           benefitId={benefit.id}
                           benefitName={benefit.benefit_name}

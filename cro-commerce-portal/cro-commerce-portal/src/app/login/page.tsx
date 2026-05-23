@@ -2,14 +2,14 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createBrowserClient } from "@supabase/ssr";
+import { PROJECTS, PROJECT_COOKIE } from "@/lib/supabase/projects";
 import { Eye, EyeOff, LogIn, Loader2 } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const noAccess = searchParams.get("error") === "no_access";
-  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,18 +21,35 @@ function LoginForm() {
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    let successProject: "2026" | "2025" | null = null;
+    const loginErrors: string[] = [];
 
-    if (error) {
-      setError("Neispravni podaci za prijavu. Provjerite email i lozinku.");
-      setLoading(false);
+    // Try both projects — user may exist in either or both.
+    // Sign into ALL matching projects so sessions are stored for portal switcher.
+    for (const projectId of ["2026", "2025"] as const) {
+      const p = PROJECTS[projectId];
+      // Skip duplicate URLs (same Supabase instance for both projects)
+      if (successProject && PROJECTS[successProject].url === p.url) continue;
+      const client = createBrowserClient(p.url, p.anonKey);
+      const { data, error: authError } = await client.auth.signInWithPassword({ email, password });
+      if (authError) {
+        loginErrors.push(`${projectId}: ${authError.message}`);
+      }
+      if (!authError && data.user) {
+        if (!successProject) successProject = projectId;
+        // Don't break — continue to sign into other project too
+      }
+    }
+
+    if (successProject) {
+      document.cookie = `${PROJECT_COOKIE}=${successProject}; path=/; max-age=31536000`;
+      router.push("/admin/dashboard");
+      router.refresh();
       return;
     }
 
-    if (data.user) {
-      router.push("/admin/dashboard");
-      router.refresh();
-    }
+    setError(`Neispravni podaci za prijavu. (${loginErrors.join(" | ")})`);
+    setLoading(false);
   }
 
   return (
