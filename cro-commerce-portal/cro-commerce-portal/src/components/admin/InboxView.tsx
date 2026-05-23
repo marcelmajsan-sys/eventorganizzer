@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Bell, Building2, SquareCheckBig, UserPlus, Ticket, LayoutList } from "lucide-react";
-import { MarkAllReadButton, MarkReadButton, MarkUnreadButton, DeleteNotificationButton } from "@/components/admin/InboxActions";
+import { MarkAllReadButton, MarkReadButton, MarkUnreadButton, DeleteNotificationButton, DeleteAllNotificationsButton } from "@/components/admin/InboxActions";
 
 type NotifType = "task" | "contact" | "ticket";
 type Tab = NotifType | "all";
@@ -158,7 +158,10 @@ export default function InboxView({ notifications, userEmail }: { notifications:
               : "Sve obavijesti su pročitane"}
           </p>
         </div>
-        <MarkAllReadButton disabled={unread.length === 0} />
+        <div className="flex items-center gap-2">
+          <MarkAllReadButton disabled={unread.length === 0} />
+          {canDelete && <DeleteAllNotificationsButton total={notifications.length} />}
+        </div>
       </div>
 
       {/* Tabovi */}

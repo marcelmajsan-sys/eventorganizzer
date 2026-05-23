@@ -86,6 +86,11 @@ export async function deleteNotification(id: string) {
   await adminClient.from("notifications").delete().eq("id", id);
 }
 
+export async function deleteAllNotifications() {
+  const adminClient = await createAdminClient();
+  await adminClient.from("notifications").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+}
+
 export async function markAllNotificationsRead() {
   const userId = await getCurrentUserId();
   if (!userId) return;

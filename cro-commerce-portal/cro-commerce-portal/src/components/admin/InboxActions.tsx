@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2, CheckCheck, Check, RotateCcw, Trash2 } from "lucide-react";
-import { markNotificationRead, markNotificationUnread, markAllNotificationsRead, deleteNotification } from "@/app/actions/notifications";
+import { markNotificationRead, markNotificationUnread, markAllNotificationsRead, deleteNotification, deleteAllNotifications } from "@/app/actions/notifications";
 
 export function MarkAllReadButton({ disabled }: { disabled?: boolean }) {
   const [loading, setLoading] = useState(false);
@@ -113,6 +113,53 @@ export function DeleteNotificationButton({ id }: { id: string }) {
       className="p-1 text-gray-200 hover:text-red-500 transition-colors flex-shrink-0"
     >
       <Trash2 size={13} />
+    </button>
+  );
+}
+
+export function DeleteAllNotificationsButton({ total }: { total: number }) {
+  const [confirm, setConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  async function handle() {
+    setLoading(true);
+    await deleteAllNotifications();
+    setLoading(false);
+    setConfirm(false);
+    router.refresh();
+  }
+
+  if (confirm) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-500">Obrisati sve {total} obavijesti?</span>
+        <button
+          onClick={handle}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+        >
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+          Obriši sve
+        </button>
+        <button
+          onClick={() => setConfirm(false)}
+          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600 hover:border-gray-300 transition-colors"
+        >
+          Odustani
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setConfirm(true)}
+      disabled={total === 0}
+      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-white border border-gray-200 text-red-500 hover:border-red-300 hover:bg-red-50 transition-colors disabled:opacity-40"
+    >
+      <Trash2 size={14} />
+      Obriši sve
     </button>
   );
 }
