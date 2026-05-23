@@ -182,7 +182,7 @@ export default async function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Package breakdown — confirmed only */}
-        <a href="/admin/sponsors?lead=confirmed_new" className="card p-6 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
+        <a href="/admin/sponsors" className="card p-6 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
           <div className="flex items-center gap-2 mb-1">
             <Package size={18} className="text-gray-400" />
             <h3 className="font-semibold text-gray-900">Partneri po paketu</h3>
