@@ -64,8 +64,12 @@ export default async function AdminDashboard() {
   const completionRate = totalBenefits > 0 ? Math.round((completedBenefits / totalBenefits) * 100) : 0;
 
   const byPackage: Record<string, number> = {};
+  const byPackagePaid: Record<string, number> = {};
   confirmedSponsors.forEach((s) => {
     byPackage[s.package_type] = (byPackage[s.package_type] ?? 0) + 1;
+    if (s.payment_status === "paid") {
+      byPackagePaid[s.package_type] = (byPackagePaid[s.package_type] ?? 0) + 1;
+    }
   });
 
   const packageOrder: PackageType[] = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
@@ -187,7 +191,8 @@ export default async function AdminDashboard() {
           <div className="space-y-3">
             {packageOrder.map((pkg) => {
               const count = byPackage[pkg] ?? 0;
-              const pct = confirmedTotal > 0 ? (count / confirmedTotal) * 100 : 0;
+              const paid = byPackagePaid[pkg] ?? 0;
+              const pct = count > 0 ? Math.round((paid / count) * 100) : 0;
               return (
                 <div key={pkg}>
                   <div className="flex items-center justify-between mb-1">
@@ -195,10 +200,12 @@ export default async function AdminDashboard() {
                       <div className={`w-2.5 h-2.5 rounded-full ${packageBadgeColor(pkg as PackageType)}`} />
                       <span className="text-sm font-medium text-gray-700">{pkg}</span>
                     </div>
-                    <span className="text-sm text-gray-500">{count}</span>
+                    <span className="text-sm text-gray-500">
+                      {paid}/{count} <span className="text-xs text-gray-400">({pct}%)</span>
+                    </span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-1.5">
-                    <div className={`h-1.5 rounded-full ${packageBadgeColor(pkg as PackageType)} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                    <div className="h-1.5 rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
