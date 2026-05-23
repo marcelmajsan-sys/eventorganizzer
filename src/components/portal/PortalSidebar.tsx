@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight, CalendarDays } from "lucide-react";
+import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight, CalendarDays, Youtube } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { packageColor } from "@/lib/utils";
@@ -22,6 +22,7 @@ const navItems = [
   { href: "/portal/sponsor",  label: "Partner",  icon: Building2 },
   { href: "/portal/benefits", label: "Benefiti", icon: Gift },
   { href: "/portal/program",  label: "Program",  icon: CalendarDays },
+  { href: "/portal/video",    label: "CRO Commerce 2025 (Video)", icon: Youtube },
 ];
 
 export default function PortalSidebar({ sponsor, userEmail, activeProjectId, otherProjectId }: Props) {
