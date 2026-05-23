@@ -11,12 +11,12 @@ const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani",
 const STANDARD_ORDER = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
 function sortedPackages(pkgs: string[]): string[] {
+  const undef = pkgs.includes("Nedefinirano") ? ["Nedefinirano"] : ["Nedefinirano"];
   const standard = STANDARD_ORDER.filter((p) => pkgs.includes(p));
   const custom = pkgs
     .filter((p) => !STANDARD_ORDER.includes(p) && p !== "Nedefinirano")
     .sort();
-  const undef = pkgs.includes("Nedefinirano") ? ["Nedefinirano"] : [];
-  return [...standard, ...custom, ...undef];
+  return [...undef, ...standard, ...custom];
 }
 
 export default function AddSponsorModal({ packageTypes }: { packageTypes?: string[] }) {
@@ -27,7 +27,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
   const router = useRouter();
   const supabase = createClient();
 
-  const defaultPkg = (STANDARD_ORDER.find((p) => PACKAGES.includes(p)) ?? PACKAGES[0] ?? "Zlatni") as PackageType;
+  const defaultPkg = "Nedefinirano" as PackageType;
   const [form, setForm] = useState({
     name: "",
     package_type: defaultPkg,
