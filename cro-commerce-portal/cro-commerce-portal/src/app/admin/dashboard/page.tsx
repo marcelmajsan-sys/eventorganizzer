@@ -172,7 +172,7 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           { value: totalSponsors, label: "Ukupno partnera", icon: Users, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/sponsors" },
-          { value: paidCount, label: "Plaćenih", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50", sub: `${pendingCount} na čekanju`, href: "/admin/sponsors?payment=paid" },
+          { value: paidCount, label: "Plaćenih", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50", sub: `${pendingCount} na čekanju`, sub2: `${overduePayments} kasni`, href: "/admin/sponsors?payment=paid" },
           { value: openTasks, label: "Otvorenih zadataka", icon: Clock, color: "text-orange-600", bg: "bg-orange-50", href: "/admin/tasks" },
           { value: overdueBenefits, label: "Benefita kasni", icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50", href: "/admin/benefits" },
         ].map((card, i) => {
@@ -184,6 +184,7 @@ export default async function AdminDashboard() {
                   <p className="stat-value text-gray-900">{card.value}</p>
                   <p className="stat-label mt-0.5">{card.label}</p>
                   {card.sub && <p className="text-xs text-gray-400 mt-1">{card.sub}</p>}
+                  {(card as any).sub2 && <p className="text-xs text-red-400 mt-0.5">{(card as any).sub2}</p>}
                 </div>
                 <div className={`${card.bg} p-2.5 rounded-lg`}>
                   <Icon size={20} className={card.color} />

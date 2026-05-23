@@ -16,7 +16,7 @@ import ProjectSwitcher from "@/components/admin/ProjectSwitcher";
 const navItems = [
   { href: "/admin/dashboard",       label: "Nadzorna ploča", icon: LayoutDashboard },
   { href: "/admin/inbox",           label: "Inbox",           icon: Bell },
-  { href: "/admin/sponsors",        label: "Sponzori",        icon: Users },
+  { href: "/admin/sponsors",        label: "Partneri",        icon: Users },
   { href: "/admin/benefits",        label: "Benefiti",        icon: Gift },
   { href: "/admin/contacts",        label: "Kontakti",        icon: Phone },
   { href: "/admin/program",         label: "Program",         icon: ListVideo },
@@ -67,12 +67,12 @@ export default function AdminSidebar({ userEmail, activeProject, conferenceDate,
         >
           <Menu size={22} />
         </button>
-        <div className="flex items-center gap-2">
+        <a href="/admin/dashboard" className="flex items-center gap-2">
           <div className="w-7 h-7 bg-brand-600 rounded-md flex items-center justify-center flex-shrink-0">
             <Building2 size={14} className="text-white" />
           </div>
           <p className="font-display font-bold text-white text-sm">CRO Commerce</p>
-        </div>
+        </a>
       </div>
 
       {/* Mobile overlay */}
@@ -103,7 +103,7 @@ export default function AdminSidebar({ userEmail, activeProject, conferenceDate,
 
         {/* Logo */}
         <div className="p-6 border-b border-gray-800">
-          <div className="flex items-center gap-3">
+          <a href="/admin/dashboard" className="flex items-center gap-3">
             <div className="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <Building2 size={18} className="text-white" />
             </div>
@@ -111,7 +111,7 @@ export default function AdminSidebar({ userEmail, activeProject, conferenceDate,
               <p className="font-display font-bold text-white text-sm leading-none">CRO Commerce</p>
               <p className="text-gray-500 text-xs mt-0.5">Admin portal</p>
             </div>
-          </div>
+          </a>
         </div>
 
         {/* Navigation */}
