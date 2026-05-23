@@ -39,7 +39,7 @@ const statusIcon: Record<string, React.ReactNode> = {
 
 export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
-  const isOverdue = benefit.deadline && new Date(benefit.deadline) < new Date() && benefit.status !== "completed";
+  const isOverdue = benefit.deadline && new Date(benefit.deadline) < new Date() && benefit.status !== "completed" && benefit.status !== "not_started";
 
   return (
     <div className={`card p-4 ${isOverdue ? "border-red-200" : ""}`}>
