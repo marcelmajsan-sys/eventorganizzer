@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import ContactsView from "@/components/admin/ContactsView";
 
 export default async function ContactsPage() {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const [{ data: contacts }, { data: sponsors }] = await Promise.all([
     supabase.from("sponsor_contacts").select("*").order("created_at"),

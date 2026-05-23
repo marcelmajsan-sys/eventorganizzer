@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Mail, Phone, User, Building2, Tag, FileText } from "lucide-react";
@@ -29,7 +29,7 @@ interface Props {
 }
 
 export default async function ContactDetailPage({ params }: Props) {
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
 
   const { data: contact } = await supabase
     .from("sponsor_contacts")

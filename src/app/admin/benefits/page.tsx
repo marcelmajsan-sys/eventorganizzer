@@ -57,7 +57,7 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
 
   return (
     <div className="animate-enter">
-      <div className="page-header">
+      <div className="page-header flex items-start justify-between">
         <div>
           <h1 className="page-title">Benefiti</h1>
           <p className="page-subtitle">Pregled svih benefita i partneri koji ih imaju</p>
