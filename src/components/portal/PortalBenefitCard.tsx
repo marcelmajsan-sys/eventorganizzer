@@ -98,7 +98,7 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
           {benefit.assigned_to && (
             <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
               <User size={11} className="text-gray-400 flex-shrink-0" />
-              <span className="text-gray-400">Odgovorna osoba:</span>
+              <span className="text-gray-400">Vaša kontakt osoba:</span>
               <a
                 href={`mailto:${benefit.assigned_to}`}
                 className="text-brand-600 hover:underline"
