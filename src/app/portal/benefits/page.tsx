@@ -93,7 +93,9 @@ export default async function PortalBenefitsPage({
     const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
     const adminAuthClient = createAdminClientForProject(projectId);
 
-    const assignedEmails = [...new Set(rows.map((b) => b.assigned_to).filter(Boolean))] as string[];
+    const seen = new Set<string>();
+    const assignedEmails: string[] = [];
+    rows.forEach((b) => { if (b.assigned_to && !seen.has(b.assigned_to)) { seen.add(b.assigned_to); assignedEmails.push(b.assigned_to); } });
     if (assignedEmails.length > 0) {
       const { data: authUsers } = await adminAuthClient.auth.admin.listUsers({ perPage: 500 });
       (authUsers?.users ?? []).forEach((u) => {
