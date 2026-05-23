@@ -58,7 +58,7 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
   const router = useRouter();
   const supabase = createClient();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
-  const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
+  const isOverdue = days !== null && days < 0 && benefit.status !== "completed" && benefit.status !== "not_started";
   const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
 
   async function handleDelete(e: React.MouseEvent) {
@@ -208,7 +208,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
     .at(-1);
 
   const overdueCount = rows.filter(
-    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed")
+    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
   ).length;
 
   const assignedIds = new Set(rows.map((r) => r.sponsors?.id).filter(Boolean));
@@ -376,7 +376,7 @@ function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[]
   rows.forEach((r) => { if (r.deadline) catDeadlineCounts[r.deadline] = (catDeadlineCounts[r.deadline] ?? 0) + 1; });
   const catCommonDeadline = Object.keys(catDeadlineCounts).sort((a, b) => catDeadlineCounts[b] - catDeadlineCounts[a])[0] ?? null;
   const overdueCount = rows.filter(
-    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed")
+    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
   ).length;
 
   async function handleDelete() {
@@ -467,7 +467,7 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
   const router = useRouter();
   const supabase = createClient();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
-  const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
+  const isOverdue = days !== null && days < 0 && benefit.status !== "completed" && benefit.status !== "not_started";
   const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
 
   async function handleDelete(e: React.MouseEvent) {
@@ -583,7 +583,7 @@ function SponsorGroup({ sponsorId, sponsorName, packageType, rows }: {
   const [open, setOpen] = useState(false);
   const doneCount = rows.filter((r) => r.status === "completed").length;
   const overdueCount = rows.filter(
-    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed")
+    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
   ).length;
 
   return (
