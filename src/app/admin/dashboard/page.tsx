@@ -5,7 +5,7 @@ import {
   Users, CreditCard, AlertTriangle, CheckCircle2,
   TrendingUp, Clock, Package, Wallet, CircleDollarSign, ListChecks
 } from "lucide-react";
-import { packageColor, packageBadgeColor, paymentStatusColor, leadStatusColor, leadStatusLabel } from "@/lib/utils";
+import { packageColor, packageBadgeColor, paymentStatusColor, paymentStatusLabel, leadStatusColor, leadStatusLabel } from "@/lib/utils";
 import type { PackageType, LeadStatus } from "@/types";
 
 export default async function AdminDashboard() {
@@ -53,6 +53,7 @@ export default async function AdminDashboard() {
   const paidCount = confirmedSponsors.filter((s) => s.payment_status === "paid").length;
   const pendingCount = confirmedSponsors.filter((s) => s.payment_status === "pending").length;
   const overduePayments = confirmedSponsors.filter((s) => s.payment_status === "overdue").length;
+  const compensationCount = confirmedSponsors.filter((s) => s.payment_status === "compensation").length;
   const openTasks = tasks?.filter((t) => t.status !== "done").length ?? 0;
   const now = new Date().toISOString();
   const overdueBenefits = benefits?.filter(
@@ -217,6 +218,7 @@ export default async function AdminDashboard() {
               { label: "Plaćeno", count: paidCount, status: "paid", color: "bg-emerald-500" },
               { label: "Na čekanju", count: pendingCount, status: "pending", color: "bg-yellow-500" },
               { label: "Kasni", count: overduePayments, status: "overdue", color: "bg-red-500" },
+              { label: "Kompenzacija", count: compensationCount, status: "compensation", color: "bg-violet-500" },
             ].map((item) => (
               <a key={item.status} href={`/admin/sponsors?payment=${item.status}`} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-2.5">
@@ -310,7 +312,7 @@ export default async function AdminDashboard() {
                   <td className="py-2.5 px-3 text-gray-500">{sponsor.contact_name}</td>
                   <td className="py-2.5 px-3">
                     <span className={`badge ${paymentStatusColor(sponsor.payment_status)}`}>
-                      {sponsor.payment_status === "paid" ? "Plaćeno" : sponsor.payment_status === "pending" ? "Na čekanju" : "Kasni"}
+                      {paymentStatusLabel(sponsor.payment_status)}
                     </span>
                   </td>
                 </tr>

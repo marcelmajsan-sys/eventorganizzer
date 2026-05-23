@@ -32,10 +32,11 @@ const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
 ];
 
 const PAYMENT_STATUSES: { value: PaymentStatus; label: string }[] = [
-  { value: "paid",    label: "Plaćeno" },
-  { value: "partial", label: "Djelomično plaćeno" },
-  { value: "pending", label: "Na čekanju" },
-  { value: "overdue", label: "Kasni" },
+  { value: "paid",         label: "Plaćeno" },
+  { value: "partial",      label: "Djelomično plaćeno" },
+  { value: "pending",      label: "Na čekanju" },
+  { value: "overdue",      label: "Kasni" },
+  { value: "compensation", label: "Kompenzacija" },
 ];
 
 export default async function SponsorsPage({ searchParams }: Props) {

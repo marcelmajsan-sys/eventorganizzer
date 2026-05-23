@@ -87,6 +87,7 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
                 <option value="partial">Djelomično plaćeno</option>
                 <option value="paid">Plaćeno</option>
                 <option value="overdue">Kasni</option>
+                <option value="compensation">Kompenzacija</option>
               </select>
             </div>
             <div>

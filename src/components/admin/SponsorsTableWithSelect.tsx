@@ -29,10 +29,11 @@ interface Props {
 }
 
 const PAYMENT_STATUSES = [
-  { value: "paid",    label: "Plaćeno" },
-  { value: "partial", label: "Djelomično plaćeno" },
-  { value: "pending", label: "Na čekanju" },
-  { value: "overdue", label: "Kasni" },
+  { value: "paid",         label: "Plaćeno" },
+  { value: "partial",      label: "Djelomično plaćeno" },
+  { value: "pending",      label: "Na čekanju" },
+  { value: "overdue",      label: "Kasni" },
+  { value: "compensation", label: "Kompenzacija" },
 ];
 
 const LEAD_STATUSES = [
