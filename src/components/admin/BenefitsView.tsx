@@ -703,6 +703,7 @@ interface Props {
 export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: Props) {
   const [view, setView] = useState<"benefit" | "category" | "sponsor">("benefit");
   const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const statusFiltered = filterStatus
     ? benefits.filter((b) => b.status === filterStatus)
@@ -801,52 +802,85 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
         </div>
       )}
 
-      {view === "category" && (
-        <div className="space-y-6">
-          {(() => {
-            // Sve kategorije koje imaju benefite: prvo definirani redoslijed, zatim ostali
-            const orderedPkgs = PACKAGE_ORDER.filter((pkg) => groupedByPackage[pkg]?.length);
-            const extraPkgs = Object.keys(groupedByPackage).filter(
-              (k) => !PACKAGE_ORDER.includes(k) && groupedByPackage[k]?.length
-            ).sort();
-            const allPkgs = [...orderedPkgs, ...extraPkgs];
+      {view === "category" && (() => {
+        const orderedPkgs = PACKAGE_ORDER.filter((pkg) => groupedByPackage[pkg]?.length);
+        const extraPkgs = Object.keys(groupedByPackage)
+          .filter((k) => !PACKAGE_ORDER.includes(k) && groupedByPackage[k]?.length)
+          .sort();
+        const allPkgs = [...orderedPkgs, ...extraPkgs];
 
-            if (allPkgs.length === 0) {
-              return (
-                <div className="card p-12 text-center text-gray-400 text-sm">
-                  Nema benefita za prikaz
-                </div>
-              );
-            }
+        if (allPkgs.length === 0) {
+          return (
+            <div className="card p-12 text-center text-gray-400 text-sm">
+              Nema benefita za prikaz
+            </div>
+          );
+        }
 
-            return allPkgs.map((pkg) => {
-              const rows = groupedByPackage[pkg]!;
-              const byBenefit: Record<string, BenefitRow[]> = {};
-              rows.forEach((b) => {
-                if (!byBenefit[b.benefit_name]) byBenefit[b.benefit_name] = [];
-                byBenefit[b.benefit_name]!.push(b);
-              });
-              const names = Object.keys(byBenefit).sort();
-              const doneCount = rows.filter((r) => r.status === "completed").length;
-              const borderCls = PACKAGE_COLORS[pkg] ?? "border-gray-300 bg-gray-50";
-              const headerCls = PACKAGE_HEADER_COLORS[pkg] ?? "text-gray-700 bg-gray-100 border-gray-200";
+        const current = (activeCategory && groupedByPackage[activeCategory]) ? activeCategory : allPkgs[0]!;
+        const currentRows = groupedByPackage[current]!;
+        const byBenefit: Record<string, BenefitRow[]> = {};
+        currentRows.forEach((b) => {
+          if (!byBenefit[b.benefit_name]) byBenefit[b.benefit_name] = [];
+          byBenefit[b.benefit_name]!.push(b);
+        });
+        const names = Object.keys(byBenefit).sort();
+        const doneCount = currentRows.filter((r) => r.status === "completed").length;
+        const borderCls = PACKAGE_COLORS[current] ?? "border-gray-300 bg-gray-50";
+        const headerCls = PACKAGE_HEADER_COLORS[current] ?? "text-gray-700 bg-gray-100 border-gray-200";
 
-              return (
-                <PackageCategorySection
-                  key={pkg}
-                  pkg={pkg}
-                  rows={rows}
-                  byBenefit={byBenefit}
-                  names={names}
-                  doneCount={doneCount}
-                  borderCls={borderCls}
-                  headerCls={headerCls}
-                />
-              );
-            });
-          })()}
-        </div>
-      )}
+        return (
+          <div>
+            {/* Horizontalni tabovi */}
+            <div className="flex gap-1 flex-wrap mb-4 border-b border-gray-200">
+              {allPkgs.map((pkg) => {
+                const pkgRows = groupedByPackage[pkg]!;
+                const pkgDone = pkgRows.filter((r) => r.status === "completed").length;
+                const pkgOverdue = pkgRows.filter(
+                  (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
+                ).length;
+                const isActive = pkg === current;
+                return (
+                  <button
+                    key={pkg}
+                    onClick={() => setActiveCategory(pkg)}
+                    className={`relative px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                      isActive
+                        ? "border-brand-500 text-brand-600"
+                        : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
+                    }`}
+                  >
+                    <span>{pkg}</span>
+                    {pkgOverdue > 0 && (
+                      <span className="ml-1.5 text-xs text-red-500 font-semibold">{pkgOverdue}!</span>
+                    )}
+                    <span className={`ml-1.5 text-xs ${isActive ? "text-brand-400" : "text-gray-400"}`}>
+                      {pkgDone}/{pkgRows.length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sadržaj aktivne kategorije */}
+            <div className={`rounded-xl border-2 overflow-hidden ${borderCls}`}>
+              <div className={`flex items-center justify-between px-5 py-3 ${headerCls}`}>
+                <h2 className="font-bold text-base">{current} partneri</h2>
+                <span className="text-xs font-medium opacity-70">{doneCount}/{currentRows.length} završeno · {names.length} benefita</span>
+              </div>
+              <div className="divide-y divide-white/60">
+                {names.map((benefitName) => (
+                  <CategoryBenefitGroup
+                    key={benefitName}
+                    name={benefitName}
+                    rows={byBenefit[benefitName]!}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {view === "sponsor" && (
         <div className="space-y-3">
