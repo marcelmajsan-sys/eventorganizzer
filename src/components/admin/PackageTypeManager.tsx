@@ -10,6 +10,18 @@ interface PackageTypeRow {
   name: string;
 }
 
+const STANDARD_ORDER = ["Nedefinirano", "Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
+
+function sortPackageTypes(pkgs: PackageTypeRow[]): PackageTypeRow[] {
+  const standard = STANDARD_ORDER
+    .map((name) => pkgs.find((p) => p.name === name))
+    .filter((p): p is PackageTypeRow => !!p);
+  const custom = pkgs
+    .filter((p) => !STANDARD_ORDER.includes(p.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return [...standard, ...custom];
+}
+
 interface Props {
   packageTypes: PackageTypeRow[];
   activePackages: string[];
@@ -89,7 +101,8 @@ function EditRow({
   );
 }
 
-export default function PackageTypeManager({ packageTypes, activePackages, activePayment }: Props) {
+export default function PackageTypeManager({ packageTypes: rawPackageTypes, activePackages, activePayment }: Props) {
+  const packageTypes = sortPackageTypes(rawPackageTypes);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState("");
