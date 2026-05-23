@@ -23,13 +23,13 @@ export async function createTask(data: {
   const { data: task, error } = await adminClient
     .from("tasks")
     .insert(payload)
-    .select("id")
+    .select("*, sponsors(name, package_type)")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: error.message, data: null };
 
   // Notifikacija se kreira automatski via Postgres trigger (migration_021)
 
   revalidatePath("/admin/tasks");
-  return { error: null };
+  return { error: null, data: task };
 }

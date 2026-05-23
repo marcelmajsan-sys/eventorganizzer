@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, X, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, X, Loader2, ChevronDown } from "lucide-react";
 import { createTask } from "@/app/actions/tasks";
+import { getAdminEmails } from "@/app/actions/getAdminEmails";
+import type { Task } from "@/types";
 
-export default function AddTaskModal() {
+interface Props {
+  onAdded?: (task: Task & { sponsors?: any }) => void;
+}
+
+export default function AddTaskModal({ onAdded }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     title: "",
@@ -18,6 +23,12 @@ export default function AddTaskModal() {
     due_date: "",
     assigned_to: "",
   });
+
+  useEffect(() => {
+    if (open && adminEmails.length === 0) {
+      getAdminEmails().then(setAdminEmails);
+    }
+  }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,10 +42,13 @@ export default function AddTaskModal() {
       return;
     }
 
+    if (result.data && onAdded) {
+      onAdded(result.data as Task & { sponsors?: any });
+    }
+
     setOpen(false);
     setForm({ title: "", description: "", status: "todo", due_date: "", assigned_to: "" });
     setLoading(false);
-    router.refresh();
   }
 
   if (!open) {
@@ -64,7 +78,7 @@ export default function AddTaskModal() {
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               className="input-field"
-              placeholder="Opis zadatka..."
+              placeholder="Naziv zadatka..."
               required
             />
           </div>
@@ -107,15 +121,30 @@ export default function AddTaskModal() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Odgovorna osoba
-              <span className="text-gray-400 font-normal ml-1">(email)</span>
             </label>
-            <input
-              type="email"
-              value={form.assigned_to}
-              onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-              className="input-field"
-              placeholder="korisnik@ecommerce.hr"
-            />
+            {adminEmails.length > 0 ? (
+              <div className="relative">
+                <select
+                  value={form.assigned_to}
+                  onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                  className="input-field appearance-none pr-8"
+                >
+                  <option value="">— Nije dodijeljena —</option>
+                  {adminEmails.map((email) => (
+                    <option key={email} value={email}>{email}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            ) : (
+              <input
+                type="email"
+                value={form.assigned_to}
+                onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+                placeholder="korisnik@ecommerce.hr"
+              />
+            )}
             <p className="text-xs text-gray-400 mt-1">
               Admin korisnici dobivaju obavijest u inbox pri dodjeli zadatka.
             </p>
