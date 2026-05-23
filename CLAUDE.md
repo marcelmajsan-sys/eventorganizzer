@@ -314,6 +314,7 @@ migration_024_sponsor_amount               ← iznos NUMERIC(10,2) kolona na spo
 migration_031_budget_unconfirmed_status    ← budget_items CHECK proširen s 'unconfirmed' (Nepotvrđeno)
 migration_032_default_benefit_contact      ← SET assigned_to = 'laura@ecommerce.hr' za sve benefite bez kontakta
 migration_033_sync_primary_contacts        ← Sync: primarni kontakti iz sponsors.contact_name → sponsor_contacts
+migration_034_partial_amount               ← partial_amount NUMERIC(10,2) kolona na sponsors tablici
 ```
 
 > **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.
@@ -434,15 +435,17 @@ git push origin main
 ### Sponzori
 - Lista sponzora s tražilicom (`?q=` URL param) — naziv tvrtke je klikabilan link na profil
 - **Multi-select filter paketa** (`PackageTypeManager`) — comma-separated `?package=Zlatni,Srebrni` URL param; × ikonica se prikazuje samo na aktivnom filteru i uklanja ga; olovka gumb → edit mode (rename/delete po kategoriji)
+- **Multi-select filter plaćanja** — comma-separated `?payment=paid,partial` URL param; klik na pill togglea status (dodaje/uklanja); "Svi" resetira sve; kompatibilno s postojećim linkovima. Helper `parseList()` i `togglePayment()` u `sponsors/page.tsx`
 - **Paket sort redoslijed** u AddSponsorModal i PackageTypeManager: Nedefinirano → Glavni → Zlatni → Srebrni → Brončani → Medijski → Community → custom (alfabetski). Default u AddSponsorModal = "Nedefinirano"
 - **Lead status filter** — `?lead=cold_lead` itd., s obojenim badge-evima u tablici
 - Detaljna stranica sponzora (`/admin/sponsors/[id]`) — prikazuje lead_status badge
-- Edit forma (`EditSponsorForm`) s paketom, kontaktom, **brojem mobitela** (`contact_phone`), statusom plaćanja i **lead statusom**
+- Edit forma (`EditSponsorForm`) s paketom, kontaktom, **brojem mobitela** (`contact_phone`), statusom plaćanja, **lead statusom** i **djelomično plaćenim iznosom**
 - **Primarni kontakt — inline edit** (`AdminPrimaryContactEdit`) u sekciji Informacije na stranici sponzora — hover olovka, uređivanje direktno bez otvaranja modala
 - Upload datoteka po sponzoru (Supabase Storage) — odvojene od datoteka po benefitu
 - **Brisanje sponzora** s potvrdom (`DeleteSponsorButton`) — redirect na `/admin/sponsors`
 - **Multi-select bulk edit** (`SponsorsTableWithSelect`) — checkbox stupac; bulk action bar s dropdownima za Paket/Plaćanje/Status; server action `bulkUpdateSponsors`
 - **Iznos stupac** u tablici — formatiran kao EUR; graceful degradation u EditSponsorForm
+- **Djelomično plaćeno** (`partial_amount`) — polje vidljivo u EditSponsorForm i AddSponsorModal samo kada je `payment_status = 'partial'`; prikazuje preostali iznos (`iznos − partial_amount`) ispod polja; graceful degradation (retry bez partial_amount ako kolona ne postoji)
 
 ### Benefiti
 - Kliktabilne stat kartice — filtriranje po statusu via `?status=X` URL param
@@ -522,7 +525,9 @@ git push origin main
 ### Nadzorna ploča (Dashboard)
 - **5 summary kartica** (gore): Profitabilnost, Plaćeno (troškovi), **Ukupni troškovi** (zbroj svih stavki), Naplaćeno, Neplaćeno
 - **Profitabilnost** = `(Naplaćeno + Neplaćeno) − Ukupni troškovi`
-- **Partneri po paketu** — prikazuje postotak plaćenih za svaki paket (zelena progress bar); link → `/admin/sponsors` (bez filtera); samo potvrđeni sponzori
+- **Naplaćeno** = `sum(iznos za paid)` + `sum(partial_amount za partial)`; link → `?payment=paid,partial`; subtitle: "X plaćenih + Y djelomičnih" kad ima djelomičnih
+- **Neplaćeno** = `sum(iznos za pending/overdue/ostalo)` + `sum(iznos − partial_amount za partial)`; link → `?payment=overdue,partial,pending&type=clients`
+- **Partneri po paketu** — prikazuje postotak plaćenih za svaki paket (zelena progress bar); link → `/admin/sponsors`; samo potvrđeni sponzori
 - **Status plaćanja** — tortni prikaz; samo potvrđeni sponzori
 - **Isporuka benefita** — kružni progress chart
 - Tablice: nedavno uređeni partneri + nedavno dodani kontakti
@@ -590,7 +595,9 @@ git push origin main
 - **Kontakt tipovi — `TYPE_LABELS` mapa**: koristiti u svim komponentama. Ne koristiti ternary jer ne pokriva nove tipove
 - **Bulk select pattern** (`SponsorsTableWithSelect`): `useState<Set<string>>`; `useTransition` za non-blocking server action; bulk action bar `sticky top-0 z-10`. Lead status `"__clear__"` = sentinel za brisanje (šalje `null`)
 - **`iznos` kolona** (migration_024): EditSponsorForm ima graceful degradation — ako update s `iznos` vrati grešku, retry bez. Kritično: bez migration_024 cijeli update tiho faila
-- **Dashboard kartice**: Profitabilnost = prihodi − `budgetAll` (zbroj SVIH troškova, isto kao "Ukupni troškovi"); "Partneri po paketu" = paid/total po paketu s postotkom, samo potvrđeni
+- **`partial_amount` kolona** (migration_034): `NUMERIC(10,2) DEFAULT NULL`; vidljivo u formama samo kad `payment_status = 'partial'`; graceful degradation — retry bez `partial_amount` ako kolona ne postoji. Naplaćeno na dashboardu = `sum(iznos za paid) + sum(partial_amount za partial)`; Neplaćeno = ostalo + `sum(iznos − partial_amount za partial)`
+- **Multi-select filter plaćanja** (`sponsors/page.tsx`): `parseList()` (dijeli comma-separated string), `togglePayment()` (dodaje/uklanja iz aktivnog seta); identičan pattern kao package filter. URL: `?payment=paid,partial` itd.
+- **Dashboard kartice**: Profitabilnost = prihodi − `budgetAll`; Naplaćeno → `?payment=paid,partial`; Neplaćeno → `?payment=overdue,partial,pending&type=clients`; "Partneri po paketu" = paid/total po paketu s postotkom, samo potvrđeni
 - **EditBenefitDialog/Modal — primarni kontakt**: fetchuje sve kontakte sponzora (bez type filtera) + `sponsors.contact_name` i `contact_email`; matching: ime (case-insensitive trim) → fallback email; primarni sort prvi + ★ u dropdownu; pre-select kad `contact_person_id` je prazan. Ako kontakt nije u `sponsor_contacts`, pokrenuti migration_033
 - **Inbox brisanje** (samo `marcel@ecommerce.hr`): `DeleteNotificationButton` (inline Da/Ne po notifikaciji) + `DeleteAllNotificationsButton` (header, briše sve iz baze); korisnik email se dohvaća u server komponenti (`inbox/page.tsx`) i prosljeđuje kao prop
 - **`deleteAllNotifications` server action**: koristi `.neq("id", "00000000-...")` jer Supabase zahtijeva WHERE uvjet za DELETE (ne može obrisati sve bez filtera)
