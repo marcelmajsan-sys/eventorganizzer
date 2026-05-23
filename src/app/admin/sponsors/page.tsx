@@ -100,11 +100,13 @@ export default async function SponsorsPage({ searchParams }: Props) {
 
       {/* Filters */}
       <div className="card p-4 mb-6 space-y-3">
+        {/* Row 0 — Tražilica */}
         <div className="flex flex-wrap gap-3 items-center">
           <SearchInput placeholder="Pretraži sponzore..." />
+        </div>
 
-          <div className="w-px h-6 bg-gray-200 hidden sm:block" />
-
+        {/* Row 1 — Kategorija */}
+        <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Filter size={14} />
             <span>Kategorija:</span>
