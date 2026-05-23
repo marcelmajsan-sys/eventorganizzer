@@ -54,6 +54,7 @@ export default async function PortalBenefitsPage({
 
   let filesMap: Record<string, { id: string; filename: string; storage_url: string; file_size: number | null }[]> = {};
   let contactMap: Record<string, { id: string; name: string; email: string | null; phone: string | null }> = {};
+  let adminMap: Record<string, { name: string | null; phone: string | null }> = {};
 
   try {
     if (benefitIds.length > 0) {
@@ -83,12 +84,38 @@ export default async function PortalBenefitsPage({
     }
   } catch {}
 
+  // Dohvati ime i telefon admin korisnika za assigned_to emaile
+  try {
+    const { createAdminClientForProject } = await import("@/lib/supabase/adminProjectClient");
+    const { PROJECT_COOKIE, resolveProjectId } = await import("@/lib/supabase/projects");
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+    const adminAuthClient = createAdminClientForProject(projectId);
+
+    const assignedEmails = [...new Set(rows.map((b) => b.assigned_to).filter(Boolean))] as string[];
+    if (assignedEmails.length > 0) {
+      const { data: authUsers } = await adminAuthClient.auth.admin.listUsers({ perPage: 500 });
+      (authUsers?.users ?? []).forEach((u) => {
+        if (u.email && assignedEmails.includes(u.email)) {
+          adminMap[u.email] = {
+            name: u.user_metadata?.name ?? null,
+            phone: u.user_metadata?.phone ?? null,
+          };
+        }
+      });
+    }
+  } catch {}
+
   const enrichedRows = rows.map((b) => {
     const contactPersonId = (b as any).contact_person_id ?? null;
+    const assignedEmail = b.assigned_to ?? null;
     return {
       ...b,
       description: (b as any).description ?? null,
       contact_person: contactPersonId ? (contactMap[contactPersonId] ?? null) : null,
+      assigned_to_name: assignedEmail ? (adminMap[assignedEmail]?.name ?? null) : null,
+      assigned_to_phone: assignedEmail ? (adminMap[assignedEmail]?.phone ?? null) : null,
       files: filesMap[b.id] ?? [],
     };
   });

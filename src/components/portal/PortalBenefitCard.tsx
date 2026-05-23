@@ -25,6 +25,8 @@ interface Benefit {
   status: string;
   notes: string | null;
   assigned_to: string | null;
+  assigned_to_name: string | null;
+  assigned_to_phone: string | null;
   description: string | null;
   contact_person: ContactPerson | null;
   files: BenefitFile[];
@@ -96,15 +98,30 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
           )}
 
           {benefit.assigned_to && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
-              <User size={11} className="text-gray-400 flex-shrink-0" />
-              <span className="text-gray-400">Vaša kontakt osoba:</span>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 items-center">
+              <span className="flex items-center gap-1 text-xs text-gray-400">
+                <User size={11} className="flex-shrink-0" />
+                Vaša kontakt osoba:
+              </span>
+              {benefit.assigned_to_name && (
+                <span className="text-xs text-gray-700 font-medium">{benefit.assigned_to_name}</span>
+              )}
               <a
                 href={`mailto:${benefit.assigned_to}`}
-                className="text-brand-600 hover:underline"
+                className="flex items-center gap-1 text-xs text-brand-600 hover:underline"
               >
+                <Mail size={11} />
                 {benefit.assigned_to}
               </a>
+              {benefit.assigned_to_phone && (
+                <a
+                  href={`tel:${benefit.assigned_to_phone}`}
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  <Phone size={11} />
+                  {benefit.assigned_to_phone}
+                </a>
+              )}
             </div>
           )}
 
