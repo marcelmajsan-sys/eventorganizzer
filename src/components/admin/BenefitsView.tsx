@@ -835,7 +835,8 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
             <div className="flex gap-1 flex-wrap mb-4 border-b border-gray-200">
               {allPkgs.map((pkg) => {
                 const pkgRows = groupedByPackage[pkg]!;
-                const pkgDone = pkgRows.filter((r) => r.status === "completed").length;
+                const sponsorIds = new Set(pkgRows.map((r) => r.sponsors?.id).filter(Boolean));
+                const partnerCount = sponsorIds.size;
                 const pkgOverdue = pkgRows.filter(
                   (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
                 ).length;
@@ -855,7 +856,7 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
                       <span className="ml-1.5 text-xs text-red-500 font-semibold">{pkgOverdue}!</span>
                     )}
                     <span className={`ml-1.5 text-xs ${isActive ? "text-brand-400" : "text-gray-400"}`}>
-                      {pkgDone}/{pkgRows.length}
+                      {partnerCount}
                     </span>
                   </button>
                 );
