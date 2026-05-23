@@ -8,20 +8,31 @@ import PackageTypeManager from "@/components/admin/PackageTypeManager";
 import SponsorsTableWithSelect from "@/components/admin/SponsorsTableWithSelect";
 
 interface Props {
-  searchParams: { package?: string; payment?: string; lead?: string; q?: string };
+  searchParams: { package?: string; payment?: string; lead?: string; type?: string; q?: string };
 }
 
-function parsePackages(raw?: string): string[] {
+function parseList(raw?: string): string[] {
   if (!raw) return [];
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-function buildUrl(params: { package?: string; payment?: string; lead?: string }) {
+// Keep alias for backward compatibility
+const parsePackages = parseList;
+
+function buildUrl(params: { package?: string; payment?: string; lead?: string; type?: string }) {
   const p = new URLSearchParams();
   if (params.package) p.set("package", params.package);
   if (params.payment) p.set("payment", params.payment);
   if (params.lead)    p.set("lead", params.lead);
+  if (params.type)    p.set("type", params.type);
   return `/admin/sponsors${p.size ? "?" + p.toString() : ""}`;
+}
+
+function togglePayment(active: string[], value: string, rest: { package?: string; lead?: string; type?: string }): string {
+  const next = active.includes(value)
+    ? active.filter((p) => p !== value)
+    : [...active, value];
+  return buildUrl({ ...rest, payment: next.join(",") || undefined });
 }
 
 const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
@@ -32,10 +43,11 @@ const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
 ];
 
 const PAYMENT_STATUSES: { value: PaymentStatus; label: string }[] = [
-  { value: "paid",    label: "Plaćeno" },
-  { value: "partial", label: "Djelomično plaćeno" },
-  { value: "pending", label: "Na čekanju" },
-  { value: "overdue", label: "Kasni" },
+  { value: "paid",         label: "Plaćeno" },
+  { value: "partial",      label: "Djelomično plaćeno" },
+  { value: "pending",      label: "Na čekanju" },
+  { value: "overdue",      label: "Kasni" },
+  { value: "compensation", label: "Kompenzacija" },
 ];
 
 export default async function SponsorsPage({ searchParams }: Props) {
@@ -59,16 +71,21 @@ export default async function SponsorsPage({ searchParams }: Props) {
   const packageTypeNames: string[] = packageTypes.map((p: { name: string }) => p.name);
 
   const activePackages = parsePackages(searchParams.package);
+  const activePayments = parseList(searchParams.payment);
   let sponsors = sponsorsRes.data ?? [];
 
   if (activePackages.length > 0) {
     sponsors = sponsors.filter((s) => activePackages.includes(s.package_type));
   }
-  if (searchParams.payment) {
-    sponsors = sponsors.filter((s) => s.payment_status === searchParams.payment);
+  if (activePayments.length > 0) {
+    sponsors = sponsors.filter((s) => activePayments.includes(s.payment_status));
   }
   if (searchParams.lead) {
     sponsors = sponsors.filter((s) => s.lead_status === searchParams.lead);
+  } else if (searchParams.type === "leads") {
+    sponsors = sponsors.filter((s) => s.lead_status === "cold_lead" || s.lead_status === "hot_lead");
+  } else if (searchParams.type === "clients") {
+    sponsors = sponsors.filter((s) => s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning");
   }
   if (searchParams.q) {
     const q = searchParams.q.toLowerCase();
@@ -86,19 +103,21 @@ export default async function SponsorsPage({ searchParams }: Props) {
     <div className="animate-enter">
       <div className="page-header flex items-start justify-between">
         <div>
-          <h1 className="page-title">Sponzori</h1>
-          <p className="page-subtitle">{sponsors.length} sponzora ukupno</p>
+          <h1 className="page-title">Partneri</h1>
+          <p className="page-subtitle">{sponsors.length} partnera ukupno</p>
         </div>
         <AddSponsorModal packageTypes={packageTypeNames} />
       </div>
 
       {/* Filters */}
       <div className="card p-4 mb-6 space-y-3">
+        {/* Row 0 — Tražilica */}
         <div className="flex flex-wrap gap-3 items-center">
-          <SearchInput placeholder="Pretraži sponzore..." />
+          <SearchInput placeholder="Pretraži partnere..." />
+        </div>
 
-          <div className="w-px h-6 bg-gray-200 hidden sm:block" />
-
+        {/* Row 1 — Kategorija */}
+        <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Filter size={14} />
             <span>Kategorija:</span>
@@ -111,45 +130,49 @@ export default async function SponsorsPage({ searchParams }: Props) {
           />
         </div>
 
+        {/* Row 2 — Plaćanje (multi-select) */}
         <div className="flex flex-wrap gap-3 items-center">
-          {/* Payment filter */}
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Filter size={14} />
             <span>Plaćanje:</span>
           </div>
           <div className="flex gap-2 flex-wrap">
             <a
-              href={buildUrl({ package: searchParams.package, lead: searchParams.lead })}
+              href={buildUrl({ package: searchParams.package, lead: searchParams.lead, type: searchParams.type })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                !searchParams.payment ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                activePayments.length === 0 ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               Svi
             </a>
-            {PAYMENT_STATUSES.map((s) => (
-              <a
-                key={s.value}
-                href={buildUrl({ package: searchParams.package, lead: searchParams.lead, payment: s.value })}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  searchParams.payment === s.value ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {s.label}
-              </a>
-            ))}
+            {PAYMENT_STATUSES.map((s) => {
+              const isActive = activePayments.includes(s.value);
+              return (
+                <a
+                  key={s.value}
+                  href={togglePayment(activePayments, s.value, { package: searchParams.package, lead: searchParams.lead, type: searchParams.type })}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {s.label}
+                </a>
+              );
+            })}
           </div>
+        </div>
 
-          <div className="w-px h-6 bg-gray-200 hidden sm:block" />
-
-          {/* Lead status filter */}
+        {/* Row 3 — Status (lead status) */}
+        <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Filter size={14} />
             <span>Status:</span>
           </div>
           <div className="flex gap-2 flex-wrap">
             <a
               href={buildUrl({ package: searchParams.package, payment: searchParams.payment })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                !searchParams.lead ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                !searchParams.lead && !searchParams.type ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               Svi
@@ -167,6 +190,44 @@ export default async function SponsorsPage({ searchParams }: Props) {
                 {s.label}
               </a>
             ))}
+          </div>
+        </div>
+
+        {/* Row 4 — Tip kontakta */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Filter size={14} />
+            <span>Tip kontakta:</span>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <a
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment })}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                !searchParams.type && !searchParams.lead ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Svi
+            </a>
+            <a
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment, type: "leads" })}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                searchParams.type === "leads"
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "text-red-700 bg-red-50 border-red-200 hover:opacity-80"
+              }`}
+            >
+              Leadovi
+            </a>
+            <a
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment, type: "clients" })}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                searchParams.type === "clients"
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "text-emerald-700 bg-emerald-50 border-emerald-200 hover:opacity-80"
+              }`}
+            >
+              Klijenti
+            </a>
           </div>
         </div>
       </div>

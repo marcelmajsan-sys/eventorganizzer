@@ -11,10 +11,13 @@ interface Props {
   searchParams: { package?: string; payment?: string; lead?: string; type?: string; q?: string };
 }
 
-function parsePackages(raw?: string): string[] {
+function parseList(raw?: string): string[] {
   if (!raw) return [];
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
+
+// Keep alias for backward compatibility
+const parsePackages = parseList;
 
 function buildUrl(params: { package?: string; payment?: string; lead?: string; type?: string }) {
   const p = new URLSearchParams();
@@ -23,6 +26,13 @@ function buildUrl(params: { package?: string; payment?: string; lead?: string; t
   if (params.lead)    p.set("lead", params.lead);
   if (params.type)    p.set("type", params.type);
   return `/admin/sponsors${p.size ? "?" + p.toString() : ""}`;
+}
+
+function togglePayment(active: string[], value: string, rest: { package?: string; lead?: string; type?: string }): string {
+  const next = active.includes(value)
+    ? active.filter((p) => p !== value)
+    : [...active, value];
+  return buildUrl({ ...rest, payment: next.join(",") || undefined });
 }
 
 const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
@@ -61,13 +71,14 @@ export default async function SponsorsPage({ searchParams }: Props) {
   const packageTypeNames: string[] = packageTypes.map((p: { name: string }) => p.name);
 
   const activePackages = parsePackages(searchParams.package);
+  const activePayments = parseList(searchParams.payment);
   let sponsors = sponsorsRes.data ?? [];
 
   if (activePackages.length > 0) {
     sponsors = sponsors.filter((s) => activePackages.includes(s.package_type));
   }
-  if (searchParams.payment) {
-    sponsors = sponsors.filter((s) => s.payment_status === searchParams.payment);
+  if (activePayments.length > 0) {
+    sponsors = sponsors.filter((s) => activePayments.includes(s.payment_status));
   }
   if (searchParams.lead) {
     sponsors = sponsors.filter((s) => s.lead_status === searchParams.lead);
@@ -119,7 +130,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
           />
         </div>
 
-        {/* Row 2 — Plaćanje */}
+        {/* Row 2 — Plaćanje (multi-select) */}
         <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Filter size={14} />
@@ -129,22 +140,25 @@ export default async function SponsorsPage({ searchParams }: Props) {
             <a
               href={buildUrl({ package: searchParams.package, lead: searchParams.lead, type: searchParams.type })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                !searchParams.payment ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                activePayments.length === 0 ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               Svi
             </a>
-            {PAYMENT_STATUSES.map((s) => (
-              <a
-                key={s.value}
-                href={buildUrl({ package: searchParams.package, lead: searchParams.lead, type: searchParams.type, payment: s.value })}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  searchParams.payment === s.value ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {s.label}
-              </a>
-            ))}
+            {PAYMENT_STATUSES.map((s) => {
+              const isActive = activePayments.includes(s.value);
+              return (
+                <a
+                  key={s.value}
+                  href={togglePayment(activePayments, s.value, { package: searchParams.package, lead: searchParams.lead, type: searchParams.type })}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {s.label}
+                </a>
+              );
+            })}
           </div>
         </div>
 
