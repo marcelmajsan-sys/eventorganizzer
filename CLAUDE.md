@@ -33,11 +33,14 @@ eventorganizzer/
 │   │   │   ├── sponsors/         ← Lista sponzora (naziv = klikabilan link na profil)
 │   │   │   │   └── [id]/         ← Detaljna stranica sponzora
 │   │   │   ├── benefits/         ← Svi benefiti (filter po statusu via ?status=)
+│   │   │   ├── contacts/         ← Svi kontakti (createAdminClient — zaobilazi RLS)
+│   │   │   │   └── [id]/         ← Detaljna stranica kontakta
 │   │   │   ├── program/          ← Program konferencije
 │   │   │   ├── troskovi/         ← Troškovi eventa
 │   │   │   ├── tasks/            ← Kanban zadaci
 │   │   │   │   └── [id]/         ← Detaljna stranica zadatka
 │   │   │   ├── calendar/         ← Rokovnik (zadaci po rokovima)
+│   │   │   ├── inbox/            ← Inbox obavijesti (tabovi po tipu)
 │   │   │   └── settings/         ← Datum konferencije + upravljanje korisnicima + partneri
 │   │   ├── actions/
 │   │   │   ├── switchProject.ts      ← Admin projekt switch (token exchange) + portal projekt switch
@@ -45,6 +48,7 @@ eventorganizzer/
 │   │   │   ├── userManagement.ts     ← Server action: CRUD admin korisnika u svim bazama
 │   │   │   ├── partnerManagement.ts  ← Server action: CRUD partner korisnika + updatePrimaryContact
 │   │   │   ├── findPartnerProject.ts ← Server action: pronađi u kojoj bazi postoji email
+│   │   │   ├── notifications.ts      ← Server actions: markRead/Unread/All, deleteNotification, deleteAllNotifications
 │   │   │   └── sponsorBulkUpdate.ts  ← Server action: bulk update package_type/payment_status/lead_status za više sponzora
 │   │   ├── api/
 │   │   │   ├── benefits/[id]/
@@ -72,28 +76,31 @@ eventorganizzer/
 │   │   │   ├── PartnerManagementSection.tsx  ← CRUD partner korisnika + promjena lozinke
 │   │   │   ├── CalendarView.tsx              ← Rokovnik (zadaci + edit modal)
 │   │   │   ├── TaskDetailActions.tsx         ← Edit/delete na stranici zadatka
-│   │   │   ├── BenefitsView.tsx              ← Prikaz benefita + scroll-to-top + delete po redu + dodaj sponzora
-│   │   │   ├── BudgetView.tsx
+│   │   │   ├── BenefitsView.tsx              ← Prikaz benefita; Po kategoriji = horizontalni tabovi
+│   │   │   ├── BudgetView.tsx                ← Troškovi; status: pending|paid|cancelled|unconfirmed
 │   │   │   ├── ProgramView.tsx
 │   │   │   ├── ContactsSection.tsx           ← Kontakti + mail ikona za slanje portal pozivnice
+│   │   │   ├── ContactsView.tsx              ← Lista kontakata; email ćelija = link na profil kontakta
 │   │   │   ├── FileUploadSection.tsx         ← Upload na Supabase Storage (sponsor-files bucket)
 │   │   │   ├── BenefitFileUpload.tsx         ← Upload datoteka vezanih uz specifični benefit
+│   │   │   ├── InboxView.tsx                 ← Inbox s tabovima (zadatak/kontakt/ulaznica/sve)
+│   │   │   ├── InboxActions.tsx              ← MarkRead/Unread/All + Delete (samo marcel@ecommerce.hr)
 │   │   │   ├── KanbanBoard.tsx
 │   │   │   ├── SearchInput.tsx
-│   │   │   ├── AddBenefitModal.tsx           ← Dropdown postojećih naziva + opcija Dodaj novi benefit
+│   │   │   ├── AddBenefitModal.tsx           ← Dropdown postojećih naziva; admin email dropdown za assigned_to
 │   │   │   ├── AddContactModal.tsx           ← Dodaj kontakt s tipom, sponzorom, napomenom
 │   │   │   ├── ContactDetailActions.tsx      ← Uredi/briši kontakt — s dropdown za sponzora i tipom
-│   │   │   ├── ContactsView.tsx              ← Lista svih kontakata s filterima
-│   │   │   ├── AddSponsorModal.tsx           ← Sadrži iznos polje (opcionalno, NUMERIC)
+│   │   │   ├── AddSponsorModal.tsx           ← Paket sort: Nedefinirano prvo, zatim standardni redoslijed
 │   │   │   ├── AddTaskModal.tsx
-│   │   │   ├── EditSponsorForm.tsx           ← Sadrži lead_status select + iznos polje; graceful degradation za iznos kolonu
-│   │   │   ├── EditBenefitModal.tsx          ← Opis, kontakt osoba, dokumenti benefita (s fallbackom)
-│   │   │   ├── EditBenefitDialog.tsx         ← Edit + slanje obavijesti (router.refresh() nakon notify)
+│   │   │   ├── EditSponsorForm.tsx           ← lead_status + iznos + contact_phone polje
+│   │   │   ├── EditBenefitModal.tsx          ← Primarni kontakt pre-selektiran (★); svi kontakti sponzora
+│   │   │   ├── EditBenefitDialog.tsx         ← Primarni kontakt pre-selektiran (★); svi kontakti sponzora
 │   │   │   ├── RenameBenefitDialog.tsx       ← Preimenuj + postavi rok za sve sponzore odjednom
 │   │   │   ├── BenefitStatusSelect.tsx
 │   │   │   ├── DeleteBenefitButton.tsx
 │   │   │   ├── DeleteSponsorButton.tsx       ← Brisanje sponzora s potvrdom
 │   │   │   ├── AdminPrimaryContactEdit.tsx   ← Inline edit primarnog kontakta na stranici sponzora
+│   │   │   ├── PackageTypeManager.tsx        ← Pill kategorije; isti sort kao AddSponsorModal
 │   │   │   └── SponsorsTableWithSelect.tsx   ← Tablica sponzora s multi-select + bulk action barom + Iznos stupac
 │   │   └── portal/
 │   │       ├── PortalSidebar.tsx             ← Nav: Partner → Benefiti → Program + projekt switcher
@@ -110,26 +117,11 @@ eventorganizzer/
 │   │   ├── email.ts              ← Resend email helper (deadline reminder, welcome mail)
 │   │   └── utils.ts              ← Utility funkcije (boje, formatiranje, leadStatusLabel/Color)
 │   ├── middleware.ts              ← Auth guard (getSession + 1200ms timeout, ne getUser)
-│   └── types/index.ts            ← Sadrži LeadStatus tip + Sponsor interface s lead_status
+│   └── types/index.ts            ← Sadrži LeadStatus tip + Sponsor interface s lead_status + contact_phone
 ├── supabase/                     ← SQL migracije
 │   ├── migration_001_initial.sql
-│   ├── migration_002_nullable_sponsor_benefit.sql
-│   ├── migration_003_optional_deadline_assigned_to.sql
-│   ├── migration_004_task_benefit_category.sql
-│   ├── migration_005_project_settings.sql
-│   ├── migration_006_sponsor_contacts.sql
-│   ├── migration_007_program_budget.sql
-│   ├── migration_008_project_id.sql
-│   ├── migration_009_email_system.sql
-│   ├── migration_010_package_types.sql
-│   ├── migration_011_contact_notes.sql
-│   ├── migration_012_contact_company.sql
-│   ├── migration_013_sponsor_portal.sql  ← sponsor_users + RLS + helper funkcije
-│   ├── migration_014_lead_status.sql     ← lead_status kolona na sponsors tablici
-│   ├── migration_015_contacts_partner_rls.sql ← RLS na sponsor_contacts za partnere
-│   ├── migration_016_sponsor_contact_phone.sql ← contact_phone kolona na sponsors tablici
-│   ├── migration_017_partial_payment.sql      ← payment_status CHECK proširen s 'partial'
-│   └── migration_018_benefit_description_contact_docs.sql ← description + contact_person_id na sponsor_benefits; benefit_id na files
+│   ├── ...
+│   └── migration_033_sync_primary_contacts.sql
 ├── cro-commerce-portal/
 │   └── cro-commerce-portal/      ← Dev working dir (lokalni dev)
 │       └── src/                  ← Kopija root src/ za lokalni rad
@@ -154,7 +146,8 @@ eventorganizzer/
 | `sponsor_users` | Mapiranje auth korisnika → sponsor_id (za sponzorski portal) |
 | `files` | Upload datoteke — vezane za sponzora (`sponsor_id`) i/ili za benefit (`benefit_id`) |
 | `tasks` | Kanban zadaci |
-| `notifications` | Obavijesti — `sponsor_id` (nullable), `task_id` (nullable), `title`, `message`, `read`, `created_at` |
+| `notifications` | Obavijesti — `sponsor_id` (nullable), `task_id` (nullable), `title`, `message`, `created_at` |
+| `notification_reads` | Per-user read tracking — `notification_id`, `user_id` |
 | `packages` | Paketi sponzorstva |
 | `project_settings` | Postavke po projektu (datum konferencije: ključevi `conference_date_2026`, `conference_date_2025`) |
 | `project_admins` | Email adrese koje imaju pristup admin panelu |
@@ -169,6 +162,8 @@ eventorganizzer/
 ### Tipovi paketa
 `'Glavni' | 'Zlatni' | 'Srebrni' | 'Brončani' | 'Medijski' | 'Community'`
 
+**Sort redoslijed** (AddSponsorModal, PackageTypeManager): Nedefinirano → Glavni → Zlatni → Srebrni → Brončani → Medijski → Community → custom (alfabetski)
+
 ### Tipovi statusa benefita
 `'not_started' | 'in_progress' | 'completed' | 'overdue'`
 
@@ -180,6 +175,10 @@ eventorganizzer/
 ### Tipovi statusa plaćanja
 `'paid' | 'pending' | 'overdue' | 'partial'`
 - `partial` = Djelomično plaćeno (dodano migration_017)
+
+### Tipovi statusa troškova (budget_items.status)
+`'pending' | 'paid' | 'cancelled' | 'unconfirmed'`
+- `unconfirmed` = Nepotvrđeno (dodano migration_031)
 
 ### Tipovi lead statusa (sponsors.lead_status)
 `'cold_lead' | 'hot_lead' | 'confirmed_new' | 'confirmed_returning'`
@@ -312,6 +311,9 @@ migration_021_task_notification_trigger    ← Postgres trigger: notifikacija pr
 migration_022_fix_contact_notification_type ← Popravak triggera: samo 'ticket' tip → "Nova osoba za ulaznice"; ostali → "Dodan novi kontakt"
 migration_023_extend_contact_type_check    ← CHECK constraint proširen: dozvoljava contact|ticket|partner|visitor|speaker|service_provider|brand_ambassador
 migration_024_sponsor_amount               ← iznos NUMERIC(10,2) kolona na sponsors tablici
+migration_031_budget_unconfirmed_status    ← budget_items CHECK proširen s 'unconfirmed' (Nepotvrđeno)
+migration_032_default_benefit_contact      ← SET assigned_to = 'laura@ecommerce.hr' za sve benefite bez kontakta
+migration_033_sync_primary_contacts        ← Sync: primarni kontakti iz sponsors.contact_name → sponsor_contacts
 ```
 
 > **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.
@@ -431,35 +433,38 @@ git push origin main
 
 ### Sponzori
 - Lista sponzora s tražilicom (`?q=` URL param) — naziv tvrtke je klikabilan link na profil
-- **Multi-select filter paketa** (`PackageTypeManager`) — comma-separated `?package=Zlatni,Srebrni` URL param; × ikonica se prikazuje samo na aktivnom filteru i uklanja ga (ne briše kategoriju iz baze); uz "+" gumb postoji i olovka gumb koji ulazi u **edit mode** gdje se svaka kategorija može preimenovati (inline input + ✓) ili obrisati (trash + potvrda Da/Ne)
+- **Multi-select filter paketa** (`PackageTypeManager`) — comma-separated `?package=Zlatni,Srebrni` URL param; × ikonica se prikazuje samo na aktivnom filteru i uklanja ga; olovka gumb → edit mode (rename/delete po kategoriji)
+- **Paket sort redoslijed** u AddSponsorModal i PackageTypeManager: Nedefinirano → Glavni → Zlatni → Srebrni → Brončani → Medijski → Community → custom (alfabetski). Default u AddSponsorModal = "Nedefinirano"
 - **Lead status filter** — `?lead=cold_lead` itd., s obojenim badge-evima u tablici
 - Detaljna stranica sponzora (`/admin/sponsors/[id]`) — prikazuje lead_status badge
-- Edit forma s paketom, kontaktom, statusom plaćanja i **lead statusom**
+- Edit forma (`EditSponsorForm`) s paketom, kontaktom, **brojem mobitela** (`contact_phone`), statusom plaćanja i **lead statusom**
 - **Primarni kontakt — inline edit** (`AdminPrimaryContactEdit`) u sekciji Informacije na stranici sponzora — hover olovka, uređivanje direktno bez otvaranja modala
 - Upload datoteka po sponzoru (Supabase Storage) — odvojene od datoteka po benefitu
 - **Brisanje sponzora** s potvrdom (`DeleteSponsorButton`) — redirect na `/admin/sponsors`
-- **Multi-select bulk edit** (`SponsorsTableWithSelect`) — checkbox stupac; klik na redak ili checkbox odabire sponzora; checkbox u zaglavlju odabire/poništava sve; bulk action bar (sticky, plava pozadina) pojavljuje se kad je odabran ≥1 sponzor s dropdownima za Paket/Plaćanje/Status i gumbom "Primijeni"; server action `bulkUpdateSponsors` radi `.update().in("id", ids)` — `revalidatePath` osvježava stranicu
-- **Iznos stupac** u tablici sponzora — prikazuje `iznos` formatiran kao EUR (0 € za null vrijednosti, sivom bojom)
-- **Iznos polje** u AddSponsorModal i EditSponsorForm — opcionalni numerički unos; EditSponsorForm ima graceful degradation (retry bez iznos ako kolona ne postoji u DB)
+- **Multi-select bulk edit** (`SponsorsTableWithSelect`) — checkbox stupac; bulk action bar s dropdownima za Paket/Plaćanje/Status; server action `bulkUpdateSponsors`
+- **Iznos stupac** u tablici — formatiran kao EUR; graceful degradation u EditSponsorForm
 
 ### Benefiti
 - Kliktabilne stat kartice — filtriranje po statusu via `?status=X` URL param
-- **Dodavanje benefita** (`AddBenefitModal`) — dropdown s postojećim nazivima benefita; "Dodaj novi benefit" opcija na dnu prelazi na slobodni unos; može odabrati i sponzora
-- Edit benefit modal (`EditBenefitDialog` i `EditBenefitModal`) — opis, kontakt osoba, upload dokumenata, podsjetnik
+- **Dodavanje benefita** (`AddBenefitModal`) — dropdown s postojećim nazivima + opcija "Dodaj novi"; dropdown admin emailova za "Kontakt osoba (za partnera)"; default = `laura@ecommerce.hr`
+- **Edit benefit** (`EditBenefitDialog` i `EditBenefitModal`):
+  - "Kontakt osoba (za partnera)" — dropdown admin emailova, default `laura@ecommerce.hr`
+  - "Kontakt osoba (od partnera)" — prikazuje **sve** kontakte sponzora (nije ograničeno na type='contact'); primarni kontakt sortiran na **prvo mjesto** i označen s **★**; automatski **pre-selektiran** ako benefit nema dodijeljen kontakt; matching po imenu (case-insensitive) + fallback po emailu
 - Tražilica (client-side, pretražuje naziv i sponzora)
-- **Auto-scroll na vrh** pri otvaranju svakog modala (`document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" })`) — vrijedi za EditBenefitDialog, RenameBenefitDialog, AddBenefitModal, EditBenefitModal
-- **"Zadnji podsjetnik"** — datum zadnjeg poslanog maila vidljiv u accordion headeru benefita
-- **Brisanje po sponzoru** — Trash2 ikona vidljiva na hover pored pencil ikone u svakom redu sponzora; inline Da/Ne potvrda; briše samo taj benefit.id (ne sve sponzore)
-- **Dodavanje sponzora benefitu** — "+" gumb na dnu razvijenog AccordionGroup; dropdown s neraspoređenim sponzorima; insert novog `sponsor_benefits` reda
-- **Grupni edit benefita** (`RenameBenefitDialog`) — klik na olovku pored naziva grupe otvara "Uredi benefit" s poljima za naziv i rok; oboje se primjenjuje na SVE sponzore te grupe odjednom; rok se pre-popunjava s najčešćim datumom u grupi; `useEffect` sync zbog mount/unmount pattern (`currentName=null` kad zatvoreno)
+- **Po kategoriji** — horizontalni tabovi (Glavni, Zlatni, Srebrni...); svaki tab prikazuje broj partnera; hover tooltip ispisuje sve partnere; sekcije **sklopljene** po defaultu
+- **Auto-scroll na vrh** pri otvaranju svakog modala
+- **"Zadnji podsjetnik"** — datum zadnjeg poslanog maila vidljiv u accordion headeru
+- **Brisanje po sponzoru** — Trash2 ikona na hover; inline Da/Ne potvrda; briše specifičan `benefit.id`
+- **Dodavanje sponzora benefitu** — "+" gumb na dnu razvijenog AccordionGroup
+- **Grupni edit benefita** (`RenameBenefitDialog`) — naziv i rok za sve sponzore te grupe odjednom
 
 ### Benefit-level dokumenti (migration_018)
 - Nova komponenta `BenefitFileUpload` — upload/brisanje datoteka vezanih za specifični benefit
 - Upload na putanju `{sponsor_id}/benefits/{benefit_id}/{timestamp}_{filename}`
 - `files` tablica: `benefit_id IS NULL` = datoteke sponzora; `benefit_id IS NOT NULL` = dokumenti benefita
-- Admin: EditBenefitModal i EditBenefitDialog prikazuju BenefitFileUpload; sponsor detaljna stranica odvaja datoteke sponzora od datoteka benefita
-- Portal: `PortalBenefitCard` prikazuje opis, kontakt osobu (ime, email, telefon) i downloadable dokumente
-- **Graceful degradation**: sve stranice imaju fallback koji radi i bez migration_018
+- Admin: EditBenefitModal i EditBenefitDialog prikazuju BenefitFileUpload
+- Portal: `PortalBenefitCard` prikazuje opis, kontakt osobu i downloadable dokumente
+- **Graceful degradation**: sve stranice rade i bez migration_018
 
 ### Email obavijesti za benefite
 - Gumb **"Pošalji obavijest"** u `EditBenefitDialog`
@@ -470,12 +475,13 @@ git push origin main
 - FROM adresa: `konferencija@ecommerce.hr` (verificirana domena na Resend)
 
 ### Kontakti (`/admin/contacts`)
-- Standalone stranica sa svim kontaktima (neovisno o sponzoru)
-- Filter po tipu, sponzoru i tražilica; bulk delete; link na detaljnu stranicu kontakta
-- **Dodavanje kontakta** (`AddContactModal`) — tip, sponzor (dropdown svih sponzora), ime, firma, email, telefon, funkcija, napomena
-- **Uređivanje kontakta** (`ContactDetailActions`) — isti podaci + sponzor dropdown (dohvaća se client-side); error handling s prikazom greške
-- Detaljna stranica `/admin/contacts/[id]` — prikazuje ispravnu oznaku tipa (`TYPE_LABELS` mapa, ne samo "Kontakt/Ulaznica")
-- **`notes` kolona** na `sponsor_contacts` — dodana migration_011; graceful degradation u `ContactDetailActions` (retry bez notes ako kolona ne postoji)
+- Stranica koristi **`createAdminClient()`** (service role) da zaobiđe RLS — inače admini vide 0 kontakata jer nisu u `sponsor_users`
+- **Auto-sync primarnih kontakata**: pri svakom učitavanju stranice, provjerava se `sponsors.contact_name` i insertaju nedostajući kontakti u `sponsor_contacts` (type='contact') — migration_033 radi isti posao jednom u bazi
+- Filter po tipu, sponzoru i tražilica; bulk delete
+- Email ćelija u tablici = **link na profil kontakta** (ne mailto:)
+- **Dodavanje kontakta** (`AddContactModal`) — tip, sponzor (dropdown), ime, firma, email, telefon, funkcija, napomena
+- **Uređivanje kontakta** (`ContactDetailActions`) — isti podaci + sponzor dropdown; graceful degradation za `notes`
+- Detaljna stranica `/admin/contacts/[id]` — `TYPE_LABELS` mapa za ispravne oznake tipa
 
 ### Kontakti sponzora (admin — stranica sponzora)
 - Dvije sekcije: **Kontakt osobe** i **Osobe za ulaznice**
@@ -486,20 +492,15 @@ git push origin main
 - Login na `/partner` — namjenska stranica s "Prijava za sponzore" dizajnom
 - **Homepage: `/portal/sponsor`** (Partner) — `/portal` redirecta ovdje
 - Nav redoslijed: **Partner → Benefiti → Program** + gumb za promjenu projekta
-- **`/portal/sponsor`** (tab Informacije):
-  - **Primarni kontakt** — editable inline (ime, email, mobitel); ažurira `sponsors` tablicu via server action
-  - **Kontakt osobe** — partneri mogu dodavati, uređivati i brisati; koristi `createClient()` direktno (RLS migration_015)
-  - **Osobe za ulaznice** — isti CRUD kao kontakt osobe
-- **`/portal/sponsor`** (tab Dokumenti) — read-only lista uploadanih datoteka sponzora s veličinom i datumom
-- **`/portal/benefits`** — read-only lista benefita s progress barom, kliktabilne status kartice za filter; svaki benefit prikazuje opis, kontakt osobu i dokumente
-- **`/portal/program`** — read-only program konferencije, tabovi po pozornici, bez uređivanja
-- Pristup samo korisnicima u `sponsor_users` tablici
-- Admin korisnici se automatski redirectaju na `/admin/dashboard`
+- **`/portal/sponsor`** (tab Informacije): primarni kontakt (editable inline), kontakt osobe (CRUD), osobe za ulaznice (CRUD)
+- **`/portal/sponsor`** (tab Dokumenti) — read-only lista datoteka sponzora
+- **`/portal/benefits`** — read-only benefiti s progress barom, filterom, opisom, kontaktom i dokumentima
+- **`/portal/program`** — read-only program, tabovi po pozornici
+- Pristup samo korisnicima u `sponsor_users` tablici; admini → `/admin/dashboard`
 
 ### Upravljanje partnerima (Postavke)
-- `PartnerManagementSection` — lista partner korisnika s delete
+- `PartnerManagementSection` — lista partner korisnika s delete + promjena lozinke
 - Novi partner: ime, email, lozinka, sponzor (kreira u aktivnom projektu)
-- **Promjena lozinke** — ikona ključa na retku korisnika, inline input s potvrdom
 - Prikaz deduplikacira po emailu i preskače orphaned `sponsor_users` unose
 
 ### Upload datoteka
@@ -507,31 +508,37 @@ git push origin main
 - Komponenta `BenefitFileUpload` — upload za specifični benefit
 - Upload na Supabase Storage bucket `sponsor-files`
 - Prikazuje vidljivi error u UI ako upload ne uspije
-- Datoteke vidljive i na sponzorskom portalu
 
 ### Program konferencije
 - Admin: `/admin/program` — tabovi po pozornici, CRUD sesija + tražilica
-- Portal: `/portal/program` — isti prikaz, read-only (nema add/edit/delete)
+- Portal: `/portal/program` — isti prikaz, read-only
 - Timeline prikaz grupiran po vremenskim slotovima; paralelne sesije side-by-side
-- Badge za tip sesije (Predavanje, Panel, Fireside, Keynote, Pauza, Networking)
 
 ### Troškovi eventa
 - Stranica `/admin/troskovi`
-- 4 summary kartice: Ukupni budžet, Plaćeno (s progress barom), Na čekanju, Preostalo
+- Status plaćanja: `paid | pending | overdue | partial | unconfirmed` (Nepotvrđeno dodano migration_031)
 - Tablica s filterom po statusu + tražilica; CRUD; izolacija po `project_id`
-- Status plaćanja: `paid | pending | overdue | partial` (Djelomično plaćeno)
+
+### Nadzorna ploča (Dashboard)
+- **5 summary kartica** (gore): Profitabilnost, Plaćeno (troškovi), **Ukupni troškovi** (zbroj svih stavki), Naplaćeno, Neplaćeno
+- **Profitabilnost** = `(Naplaćeno + Neplaćeno) − Ukupni troškovi`
+- **Partneri po paketu** — prikazuje postotak plaćenih za svaki paket (zelena progress bar); link → `/admin/sponsors` (bez filtera); samo potvrđeni sponzori
+- **Status plaćanja** — tortni prikaz; samo potvrđeni sponzori
+- **Isporuka benefita** — kružni progress chart
+- Tablice: nedavno uređeni partneri + nedavno dodani kontakti
 
 ### Zadaci
 - Kanban board — kliktabilni naslovi kartica vode na detaljnu stranicu
 - Detaljna stranica zadatka (`/admin/tasks/[id]`) — prikaz svih podataka + edit + delete
-- **Inbox notifikacija pri dodjeli**: kad se kreira zadatak s emailom u `assigned_to`, Postgres trigger (`migration_021`) automatski upisuje notifikaciju u inbox — bez JS klijenta, SECURITY DEFINER zaobilazi RLS
+- **Inbox notifikacija pri dodjeli**: Postgres trigger (`migration_021`) automatski upisuje notifikaciju
 
 ### Inbox obavijesti
-- Ruta `/admin/inbox` — prikazuje sve notifikacije (nepročitane + pročitane)
+- Ruta `/admin/inbox` — tabovi: **Novi zadatak / Novi kontakt / Nova osoba za ulaznice / Sve obavijesti**
 - Badge s brojem nepročitanih vidljiv u sidebaru
-- Dva tipa notifikacija: **kontakt** (trigger iz `migration_019`) i **zadatak** (trigger iz `migration_021`)
-- Svaka notifikacija ima link na sponzora ili na zadatak
+- Per-user read tracking via `notification_reads` tablica
 - Akcije: označi kao pročitano / nepročitano (po notifikaciji), označi sve kao pročitano
+- **Brisanje po notifikaciji** (trash ikona) — vidljivo samo za `marcel@ecommerce.hr`
+- **Obriši sve** (gumb u headeru, s Da/Ne potvrdom) — vidljivo samo za `marcel@ecommerce.hr`; briše sve zapise iz baze; nitko ih više ne vidi
 
 ### Rokovnik
 - Ruta `/admin/calendar`
@@ -543,7 +550,7 @@ git push origin main
 - Kreiranje u **svim Supabase bazama** (2025 i 2026) automatski
 
 ### UI
-- Svi modalni prozori otvaraju se pri **vrhu viewporta** (`items-start pt-8`) + `<main>` se scrolla na vrh pri svakom otvaranju (`behavior: "smooth"`)
+- Svi modalni prozori otvaraju se pri **vrhu viewporta** (`items-start pt-8`) + `<main>` se scrolla na vrh pri svakom otvaranju
 - Modali koriste fixed overlay s Tailwind klasama (ne `<dialog>` element)
 - Naslov aplikacije: `EventOrganizzer - CRO Commerce Conference`
 
@@ -562,26 +569,28 @@ git push origin main
 - **Supabase join** vraća array u TypeScript tipu ali objekt u runtime — koristiti `Array.isArray(raw) ? raw[0] : raw` za sigurno castanje
 - **`useSearchParams()`** mora biti unutar `<Suspense>` wrappera u Next.js 14 App Routeru
 - **Storage bucket** `sponsor-files` mora biti kreiran kao Public u Supabase Dashboard + RLS politike za `authenticated` korisnike
-- **`createBrowserClient` singleton**: `@supabase/ssr` kešira klijent po modulu — nikad ne pozivati s dva različita URL-a u istom modulu. Koristiti `findPartnerProject` server action za određivanje projekta
+- **`createBrowserClient` singleton**: `@supabase/ssr` kešira klijent po modulu — nikad ne pozivati s dva različita URL-a u istom modulu
 - **Admin i partner projekt switch** rade identično — server-side token exchange: `admin.generateLink` → `fetch(url, {redirect:"manual"})` → parse Location header → `setSession`
 - **UUID-ovi korisnika su različiti** između projekata (2025 i 2026 su zasebne Supabase instance)
 - **Orphaned `sponsor_users` unosi** (bez matching auth usera) se preskaču u prikazu na settings stranici
 - `NEXT_PUBLIC_APP_URL` mora biti postavljen na `https://eventorganizzer.vercel.app` — koristi se za `redirectTo` u magic link generaciji
-- **`updatePrimaryContact` server action** koristi admin klijent za update `contact_name/email/phone` na `sponsors` tablici — partneri nemaju direktan UPDATE RLS na `sponsors`. Vraća `{ error: string | null }` (ne baca exception) da se pravi Supabase error može prikazati u UI
-- **`sponsor_contacts` RLS** (migration_015): partneri mogu SELECT/INSERT/UPDATE/DELETE samo za vlastiti `sponsor_id` (via `get_my_sponsor_id()` helper funkcija)
-- **`contact_phone` kolona** dodana migration_016 — nije bila u inicijalnoj shemi; uzrokovala je grešku pri uređivanju primarnog kontakta
-- **Server action error pattern**: server actions ne smiju bacati exception ako želimo prikazati pravi error message u UI — Next.js sanitizira sve iznimke u produkciji u generičku poruku. Koristiti `return { error: message }` pattern
-- **Inline edit pattern** (`AdminPrimaryContactEdit`, `PrimaryContactSection` u `PortalContactsSection`): `useState displayed` za optimistički prikaz, `useEffect` za sync s props-ima, error state za prikaz greške
-- **Graceful degradation pattern** za nove kolone: uvijek probati upit s novim kolonama; ako Supabase vrati error koji sadrži naziv kolone u poruci, ponoviti upit bez novih kolona. Koristiti `as any` cast na fallback varijablu da se izbjegnu TypeScript greške
-- **Brisanje benefita**: Trash2 ikona u svakom redu sponzora (ne samo na accordion headeru) briše specifičan `sponsor_benefits` zapis po `id` — ne sve zapise s istim `benefit_name`
-- **Spread operater na `Set`** (`[...new Set(...)]`) zahtijeva `downlevelIteration` ili `target: es2015+` — umjesto toga koristiti `forEach` + ručno deduplicirani array
-- **Notifikacije — koristiti Postgres trigere, NE JS klijent**: `createServerClient` iz `@supabase/ssr` s service role keyem ne bypassira RLS pouzdano za INSERT u `notifications`. Jedino sigurno rješenje je Postgres trigger s `SECURITY DEFINER` (kao migration_019 za kontakte i migration_021 za zadatke). Ne pokušavati insertati u `notifications` direktno iz server actiona.
-- **`notifications` tablica**: `sponsor_id` je nullable (od migration_020), `task_id` je nullable UUID FK na `tasks`. Inbox query uključuje `task_id` u SELECT — ako kolona ne postoji u DB-u, cijeli query faila i inbox je prazan. Obavezno pokrenuti migration_020.
-- **`sponsor_contacts.type` CHECK constraint** (migration_006) originalno ima samo `contact` i `ticket`. Migration_023 proširuje na sve UI tipove. Bez te migracije, spremanje kontakta s tipom partner/visitor/speaker/itd. tiho faila.
-- **`ContactDetailActions` graceful degradation**: ako notes kolona ne postoji (migration_011 nije pokrenut), retry update bez `notes` polja — ne prikazuje grešku korisniku.
-- **`RenameBenefitDialog` useEffect sync**: komponenta ostaje mountirana ali s `currentName=null` kad je dijalog zatvoren. Bez `useEffect`, `useState` bi zadržao prazan string pri ponovnom otvaranju. Uvijek koristiti `useEffect(() => { if (currentName) setName(currentName); }, [currentName])` za takve pattern.
-- **Kontakt tipovi — `TYPE_LABELS` mapa**: koristiti u svim komponentama koje prikazuju tip kontakta (ContactsView, `/admin/contacts/[id]/page.tsx`). Ne koristiti ternary `contact ? "Kontakt" : "Ulaznica"` jer ne pokriva nove tipove.
-- **Bulk select pattern** (`SponsorsTableWithSelect`): `useState<Set<string>>` za praćenje odabranih ID-eva; klik na redak togglea selekciju (osim klik na `<a>` tag); `useTransition` za non-blocking server action poziv; bulk action bar je `sticky top-0 z-10` da ostane vidljiv pri scrollanju. Polje s vrijednošću `""` znači "bez promjene" — ne šalje se u update. Lead status `"__clear__"` je sentinel vrijednost za brisanje (šalje `null` u bazu).
-- **`iznos` kolona na `sponsors`** (migration_024): `NUMERIC(10,2) DEFAULT NULL`; EditSponsorForm ima graceful degradation — ako update s `iznos` vrati grešku koja sadrži "iznos" u poruci, retry bez te kolone. Ovo je kritično: bez migration_024 cijeli update tiho faila i ostale promjene (lead_status i dr.) se ne spreme.
-- **Dashboard Naplaćeno/Neplaćeno**: `Naplaćeno` = zbroj `iznos ?? 0` za sve sponzore s `payment_status = 'paid'`; `Neplaćeno` = zbroj `iznos ?? 0` za sve sponzore s `payment_status != 'paid'`. Sponzori bez unesenog iznosa broje se ali dodaju 0 €.
-- **Dashboard "Sponzori po paketu" i "Status plaćanja"** prikazuju samo potvrđene sponzore (`confirmed_new` ili `confirmed_returning`) — subtitle "samo potvrđeni (N)" objašnjava filter; postoci se računaju prema tom ukupnom broju.
+- **`updatePrimaryContact` server action** koristi admin klijent za update `contact_name/email/phone` na `sponsors` tablici — vraća `{ error: string | null }` (ne baca exception)
+- **`sponsor_contacts` RLS** (migration_015): partneri mogu SELECT/INSERT/UPDATE/DELETE samo za vlastiti `sponsor_id` (via `get_my_sponsor_id()` helper funkcija). **Admini nemaju unos u `sponsor_users`**, pa `createClient()` (browser) vraća 0 kontakata za admina — koristiti `createAdminClient()` na server komponentama koje prikazuju kontakte adminu
+- **`contact_phone` kolona** dodana migration_016 — nije bila u inicijalnoj shemi
+- **Server action error pattern**: server actions ne smiju bacati exception — koristiti `return { error: message }` pattern
+- **Inline edit pattern** (`AdminPrimaryContactEdit`, `PrimaryContactSection`): `useState displayed` za optimistički prikaz, `useEffect` za sync s props-ima
+- **Graceful degradation pattern** za nove kolone: probati s novim kolonama; na error retry bez novih kolona; `as any` cast za TypeScript
+- **Brisanje benefita**: Trash2 ikona briše specifičan `sponsor_benefits` zapis po `id` — ne sve zapise s istim `benefit_name`
+- **Spread operater na `Set`** (`[...new Set(...)]`) zahtijeva `downlevelIteration` — umjesto toga koristiti `forEach` + ručno deduplicirani array
+- **Notifikacije — koristiti Postgres trigere, NE JS klijent**: `createServerClient` s service role keyem ne bypassira RLS pouzdano za INSERT u `notifications`. Jedino sigurno rješenje je Postgres trigger s `SECURITY DEFINER`
+- **`notifications` tablica**: `sponsor_id` nullable (od migration_020), `task_id` nullable UUID FK. Inbox query uključuje `task_id` — obavezno pokrenuti migration_020
+- **`sponsor_contacts.type` CHECK constraint** (migration_006) originalno ima samo `contact` i `ticket` — migration_023 proširuje. Bez te migracije, spremanje kontakta s novim tipom tiho faila
+- **`ContactDetailActions` graceful degradation**: retry update bez `notes` ako kolona ne postoji
+- **`RenameBenefitDialog` useEffect sync**: koristiti `useEffect(() => { if (currentName) setName(currentName); }, [currentName])` — komponenta ostaje mountirana s `currentName=null` kad je zatvoren
+- **Kontakt tipovi — `TYPE_LABELS` mapa**: koristiti u svim komponentama. Ne koristiti ternary jer ne pokriva nove tipove
+- **Bulk select pattern** (`SponsorsTableWithSelect`): `useState<Set<string>>`; `useTransition` za non-blocking server action; bulk action bar `sticky top-0 z-10`. Lead status `"__clear__"` = sentinel za brisanje (šalje `null`)
+- **`iznos` kolona** (migration_024): EditSponsorForm ima graceful degradation — ako update s `iznos` vrati grešku, retry bez. Kritično: bez migration_024 cijeli update tiho faila
+- **Dashboard kartice**: Profitabilnost = prihodi − `budgetAll` (zbroj SVIH troškova, isto kao "Ukupni troškovi"); "Partneri po paketu" = paid/total po paketu s postotkom, samo potvrđeni
+- **EditBenefitDialog/Modal — primarni kontakt**: fetchuje sve kontakte sponzora (bez type filtera) + `sponsors.contact_name` i `contact_email`; matching: ime (case-insensitive trim) → fallback email; primarni sort prvi + ★ u dropdownu; pre-select kad `contact_person_id` je prazan. Ako kontakt nije u `sponsor_contacts`, pokrenuti migration_033
+- **Inbox brisanje** (samo `marcel@ecommerce.hr`): `DeleteNotificationButton` (inline Da/Ne po notifikaciji) + `DeleteAllNotificationsButton` (header, briše sve iz baze); korisnik email se dohvaća u server komponenti (`inbox/page.tsx`) i prosljeđuje kao prop
+- **`deleteAllNotifications` server action**: koristi `.neq("id", "00000000-...")` jer Supabase zahtijeva WHERE uvjet za DELETE (ne može obrisati sve bez filtera)
