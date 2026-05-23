@@ -13,6 +13,7 @@ interface Contact {
   email: string | null;
   phone: string | null;
   type: "contact" | "ticket";
+  ticket_type: "vip" | "standard" | null;
 }
 
 interface FileRecord {
