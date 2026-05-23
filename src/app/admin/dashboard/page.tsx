@@ -147,7 +147,7 @@ export default async function AdminDashboard() {
           { label: "Plaćeno (troškovi)", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
           { label: "Ukupni troškovi", value: formatEur(budgetAll), sub: `${budgetAllCount} stavki`, icon: TrendingUp, iconCls: "text-gray-400", valCls: "text-gray-700", href: "/admin/troskovi" },
           { label: "Naplaćeno", value: formatEur(naplaceno), sub: partialCount > 0 ? `${naplacenoCount} plaćenih + ${partialCount} djelomičnih` : `${naplacenoCount} partnera`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
-          { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} partnera`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors" },
+          { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} partnera`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors?payment=overdue&type=clients" },
         ].map((c) => {
           const Icon = c.icon;
           return (
