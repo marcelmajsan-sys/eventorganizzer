@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
 
 const CONTACT_TYPES = [
+  { value: "contact",           label: "Kontakt" },
+  { value: "ticket",            label: "Ulaznica" },
   { value: "partner",           label: "Partner" },
   { value: "visitor",           label: "Visitor" },
   { value: "speaker",           label: "Speaker" },
@@ -24,7 +26,7 @@ interface Props {
 
 const empty = {
   name: "", email: "", phone: "", company: "", role: "", notes: "",
-  type: "partner", sponsor_id: "",
+  type: "contact", sponsor_id: "",
 };
 
 export default function AddContactModal({ sponsors = [] }: Props) {
