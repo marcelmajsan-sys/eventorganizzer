@@ -1,12 +1,20 @@
-import { Youtube } from "lucide-react";
+import { Youtube, ExternalLink } from "lucide-react";
 
 export default function PortalVideoPage() {
   return (
     <div className="animate-enter">
       <div className="page-header">
         <div>
-          <h1 className="page-title">CRO Commerce 2025</h1>
-          <p className="page-subtitle">Snimka konferencije</p>
+          <h1 className="page-title">CRO COMMERCE 2025 - Feel The Vibes</h1>
+          <a
+            href="https://www.youtube.com/playlist?list=PLh0dpf63k_OPVs640lFKl2T44wK-60ff8"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-brand-600 hover:text-brand-700 font-semibold text-lg mt-1 w-fit"
+          >
+            Watch program recordings
+            <ExternalLink size={16} />
+          </a>
         </div>
       </div>
 
