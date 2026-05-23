@@ -8,7 +8,7 @@ import PackageTypeManager from "@/components/admin/PackageTypeManager";
 import SponsorsTableWithSelect from "@/components/admin/SponsorsTableWithSelect";
 
 interface Props {
-  searchParams: { package?: string; payment?: string; lead?: string; q?: string };
+  searchParams: { package?: string; payment?: string; lead?: string; type?: string; q?: string };
 }
 
 function parsePackages(raw?: string): string[] {
@@ -16,11 +16,12 @@ function parsePackages(raw?: string): string[] {
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-function buildUrl(params: { package?: string; payment?: string; lead?: string }) {
+function buildUrl(params: { package?: string; payment?: string; lead?: string; type?: string }) {
   const p = new URLSearchParams();
   if (params.package) p.set("package", params.package);
   if (params.payment) p.set("payment", params.payment);
   if (params.lead)    p.set("lead", params.lead);
+  if (params.type)    p.set("type", params.type);
   return `/admin/sponsors${p.size ? "?" + p.toString() : ""}`;
 }
 
@@ -70,6 +71,10 @@ export default async function SponsorsPage({ searchParams }: Props) {
   }
   if (searchParams.lead) {
     sponsors = sponsors.filter((s) => s.lead_status === searchParams.lead);
+  } else if (searchParams.type === "leads") {
+    sponsors = sponsors.filter((s) => s.lead_status === "cold_lead" || s.lead_status === "hot_lead");
+  } else if (searchParams.type === "clients") {
+    sponsors = sponsors.filter((s) => s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning");
   }
   if (searchParams.q) {
     const q = searchParams.q.toLowerCase();
@@ -112,15 +117,15 @@ export default async function SponsorsPage({ searchParams }: Props) {
           />
         </div>
 
+        {/* Row 2 — Plaćanje */}
         <div className="flex flex-wrap gap-3 items-center">
-          {/* Payment filter */}
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Filter size={14} />
             <span>Plaćanje:</span>
           </div>
           <div className="flex gap-2 flex-wrap">
             <a
-              href={buildUrl({ package: searchParams.package, lead: searchParams.lead })}
+              href={buildUrl({ package: searchParams.package, lead: searchParams.lead, type: searchParams.type })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 !searchParams.payment ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
@@ -130,7 +135,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
             {PAYMENT_STATUSES.map((s) => (
               <a
                 key={s.value}
-                href={buildUrl({ package: searchParams.package, lead: searchParams.lead, payment: s.value })}
+                href={buildUrl({ package: searchParams.package, lead: searchParams.lead, type: searchParams.type, payment: s.value })}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   searchParams.payment === s.value ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
@@ -139,18 +144,19 @@ export default async function SponsorsPage({ searchParams }: Props) {
               </a>
             ))}
           </div>
+        </div>
 
-          <div className="w-px h-6 bg-gray-200 hidden sm:block" />
-
-          {/* Lead status filter */}
+        {/* Row 3 — Status (lead status) */}
+        <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Filter size={14} />
             <span>Status:</span>
           </div>
           <div className="flex gap-2 flex-wrap">
             <a
               href={buildUrl({ package: searchParams.package, payment: searchParams.payment })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                !searchParams.lead ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                !searchParams.lead && !searchParams.type ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               Svi
@@ -168,6 +174,44 @@ export default async function SponsorsPage({ searchParams }: Props) {
                 {s.label}
               </a>
             ))}
+          </div>
+        </div>
+
+        {/* Row 4 — Tip kontakta */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Filter size={14} />
+            <span>Tip kontakta:</span>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <a
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment })}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                !searchParams.type && !searchParams.lead ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Svi
+            </a>
+            <a
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment, type: "leads" })}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                searchParams.type === "leads"
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "text-red-700 bg-red-50 border-red-200 hover:opacity-80"
+              }`}
+            >
+              Leadovi
+            </a>
+            <a
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment, type: "clients" })}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                searchParams.type === "clients"
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "text-emerald-700 bg-emerald-50 border-emerald-200 hover:opacity-80"
+              }`}
+            >
+              Klijenti
+            </a>
           </div>
         </div>
       </div>
