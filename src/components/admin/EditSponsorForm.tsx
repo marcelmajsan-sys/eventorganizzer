@@ -25,24 +25,30 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
     lead_status: sponsor.lead_status ?? ("" as LeadStatus | ""),
     notes: sponsor.notes ?? "",
     iznos: sponsor.iznos != null ? String(sponsor.iznos) : "",
+    partial_amount: sponsor.partial_amount != null ? String(sponsor.partial_amount) : "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { iznos: _iznos, ...rest } = form;
+    const { iznos: _iznos, partial_amount: _partial, ...rest } = form;
     const basePayload = {
       ...rest,
       lead_status: form.lead_status || null,
       contact_phone: form.contact_phone || null,
     };
     const iznosValue = form.iznos !== "" ? parseFloat(form.iznos) : null;
+    const partialValue = form.payment_status === "partial" && form.partial_amount !== ""
+      ? parseFloat(form.partial_amount) : null;
 
     let { error } = await supabase
       .from("sponsors")
-      .update({ ...basePayload, iznos: iznosValue })
+      .update({ ...basePayload, iznos: iznosValue, partial_amount: partialValue })
       .eq("id", sponsor.id);
 
+    if (error?.message?.includes("partial_amount")) {
+      ({ error } = await supabase.from("sponsors").update({ ...basePayload, iznos: iznosValue }).eq("id", sponsor.id));
+    }
     if (error?.message?.includes("iznos")) {
       ({ error } = await supabase.from("sponsors").update(basePayload).eq("id", sponsor.id));
     }
@@ -129,6 +135,27 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
                 placeholder="npr. 5000"
               />
             </div>
+            {form.payment_status === "partial" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Djelomično plaćeno (€)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.partial_amount}
+                  onChange={(e) => setForm({ ...form, partial_amount: e.target.value })}
+                  className="input-field border-amber-300 focus:ring-amber-500"
+                  placeholder="npr. 2500"
+                />
+                {form.iznos && form.partial_amount && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Preostalo: {(parseFloat(form.iznos || "0") - parseFloat(form.partial_amount || "0")).toLocaleString("hr-HR")} €
+                  </p>
+                )}
+              </div>
+            )}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Napomene</label>
               <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field resize-none" rows={3} />

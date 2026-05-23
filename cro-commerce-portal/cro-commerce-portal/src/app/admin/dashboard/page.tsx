@@ -42,9 +42,20 @@ export default async function AdminDashboard() {
   const budgetAll     = budgetItems.reduce((s: number, i: any) => s + (i.amount ?? 0), 0);
   const budgetAllCount = budgetItems.length;
 
-  const naplaceno = sponsors?.filter(s => s.payment_status === "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
+  // Naplaćeno = plaćeni iznos + djelomično plaćeni iznosi
+  const naplaceno = (sponsors ?? []).reduce((sum, s) => {
+    if (s.payment_status === "paid") return sum + ((s as any).iznos ?? 0);
+    if (s.payment_status === "partial") return sum + ((s as any).partial_amount ?? 0);
+    return sum;
+  }, 0);
   const naplacenoCount = sponsors?.filter(s => s.payment_status === "paid").length ?? 0;
-  const neplaceno = sponsors?.filter(s => s.payment_status !== "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
+  const partialCount = sponsors?.filter(s => s.payment_status === "partial").length ?? 0;
+  // Neplaćeno = neplaćeni iznosi + preostali dio djelomičnih
+  const neplaceno = (sponsors ?? []).reduce((sum, s) => {
+    if (s.payment_status === "paid") return sum;
+    if (s.payment_status === "partial") return sum + Math.max(0, ((s as any).iznos ?? 0) - ((s as any).partial_amount ?? 0));
+    return sum + ((s as any).iznos ?? 0);
+  }, 0);
   const neplacenoCount = sponsors?.filter(s => s.payment_status !== "paid").length ?? 0;
 
   const totalSponsors = sponsors?.length ?? 0;
@@ -135,7 +146,7 @@ export default async function AdminDashboard() {
           { label: "Profitabilnost", value: formatEur((naplaceno + neplaceno) - budgetAll), sub: `prihodi ${formatEur(naplaceno + neplaceno)} − troškovi ${formatEur(budgetAll)}`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: (naplaceno + neplaceno) - budgetAll >= 0 ? "text-emerald-600" : "text-red-600", href: "/admin/troskovi" },
           { label: "Plaćeno (troškovi)", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
           { label: "Ukupni troškovi", value: formatEur(budgetAll), sub: `${budgetAllCount} stavki`, icon: TrendingUp, iconCls: "text-gray-400", valCls: "text-gray-700", href: "/admin/troskovi" },
-          { label: "Naplaćeno", value: formatEur(naplaceno), sub: `${naplacenoCount} partnera`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
+          { label: "Naplaćeno", value: formatEur(naplaceno), sub: partialCount > 0 ? `${naplacenoCount} plaćenih + ${partialCount} djelomičnih` : `${naplacenoCount} partnera`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
           { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} partnera`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors" },
         ].map((c) => {
           const Icon = c.icon;

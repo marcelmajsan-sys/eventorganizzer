@@ -37,6 +37,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
     lead_status: "" as string,
     notes: "",
     iznos: "",
+    partial_amount: "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -52,6 +53,8 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
           ...form,
           lead_status: form.lead_status || null,
           iznos: form.iznos !== "" ? parseFloat(form.iznos) : null,
+          partial_amount: form.payment_status === "partial" && form.partial_amount !== ""
+            ? parseFloat(form.partial_amount) : null,
         })
         .select()
         .single();
@@ -76,7 +79,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
       await supabase.from("sponsor_benefits").insert(benefitsToInsert);
 
       setOpen(false);
-      setForm({ name: "", package_type: defaultPkg, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "", iznos: "" });
+      setForm({ name: "", package_type: defaultPkg, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "", iznos: "", partial_amount: "" });
       router.refresh();
     } catch (err: any) {
       setError(err.message ?? "Greška pri dodavanju partnera");
@@ -189,6 +192,27 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
                 placeholder="npr. 5000"
               />
             </div>
+            {form.payment_status === "partial" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Djelomično plaćeno (€)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.partial_amount}
+                  onChange={(e) => setForm({ ...form, partial_amount: e.target.value })}
+                  className="input-field border-amber-300 focus:ring-amber-500"
+                  placeholder="npr. 2500"
+                />
+                {form.iznos && form.partial_amount && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Preostalo: {(parseFloat(form.iznos || "0") - parseFloat(form.partial_amount || "0")).toLocaleString("hr-HR")} €
+                  </p>
+                )}
+              </div>
+            )}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Napomene</label>
               <textarea

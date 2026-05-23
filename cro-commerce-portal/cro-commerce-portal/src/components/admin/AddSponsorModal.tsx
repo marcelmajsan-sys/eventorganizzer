@@ -8,24 +8,36 @@ import { PACKAGE_BENEFITS } from "@/lib/utils";
 import type { PackageType } from "@/types";
 
 const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
+const STANDARD_ORDER = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
+
+function sortedPackages(pkgs: string[]): string[] {
+  const undef = pkgs.includes("Nedefinirano") ? ["Nedefinirano"] : ["Nedefinirano"];
+  const standard = STANDARD_ORDER.filter((p) => pkgs.includes(p));
+  const custom = pkgs
+    .filter((p) => !STANDARD_ORDER.includes(p) && p !== "Nedefinirano")
+    .sort();
+  return [...undef, ...standard, ...custom];
+}
 
 export default function AddSponsorModal({ packageTypes }: { packageTypes?: string[] }) {
-  const PACKAGES = packageTypes ?? FALLBACK_PACKAGES;
+  const PACKAGES = sortedPackages(packageTypes ?? FALLBACK_PACKAGES);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
+  const defaultPkg = "Nedefinirano" as PackageType;
   const [form, setForm] = useState({
     name: "",
-    package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType,
+    package_type: defaultPkg,
     contact_email: "",
     contact_name: "",
     payment_status: "pending",
     lead_status: "" as string,
     notes: "",
     iznos: "",
+    partial_amount: "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -41,6 +53,8 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
           ...form,
           lead_status: form.lead_status || null,
           iznos: form.iznos !== "" ? parseFloat(form.iznos) : null,
+          partial_amount: form.payment_status === "partial" && form.partial_amount !== ""
+            ? parseFloat(form.partial_amount) : null,
         })
         .select()
         .single();
@@ -65,10 +79,10 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
       await supabase.from("sponsor_benefits").insert(benefitsToInsert);
 
       setOpen(false);
-      setForm({ name: "", package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "", iznos: "" });
+      setForm({ name: "", package_type: defaultPkg, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "", iznos: "", partial_amount: "" });
       router.refresh();
     } catch (err: any) {
-      setError(err.message ?? "Greška pri dodavanju sponzora");
+      setError(err.message ?? "Greška pri dodavanju partnera");
     } finally {
       setLoading(false);
     }
@@ -78,7 +92,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
     return (
       <button onClick={() => setOpen(true)} className="btn-primary">
         <Plus size={16} />
-        Dodaj sponzora
+        Dodaj partnera
       </button>
     );
   }
@@ -87,7 +101,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-enter">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="font-display text-xl font-bold text-gray-900">Novi sponzor</h2>
+          <h2 className="font-display text-xl font-bold text-gray-900">Novi partner</h2>
           <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
             <X size={20} />
           </button>
@@ -127,10 +141,11 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
                 <option value="partial">Djelomično plaćeno</option>
                 <option value="paid">Plaćeno</option>
                 <option value="overdue">Kasni</option>
+                <option value="compensation">Kompenzacija</option>
               </select>
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Status sponzora</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Status partnera</label>
               <select
                 value={form.lead_status}
                 onChange={(e) => setForm({ ...form, lead_status: e.target.value })}
@@ -177,6 +192,27 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
                 placeholder="npr. 5000"
               />
             </div>
+            {form.payment_status === "partial" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Djelomično plaćeno (€)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.partial_amount}
+                  onChange={(e) => setForm({ ...form, partial_amount: e.target.value })}
+                  className="input-field border-amber-300 focus:ring-amber-500"
+                  placeholder="npr. 2500"
+                />
+                {form.iznos && form.partial_amount && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Preostalo: {(parseFloat(form.iznos || "0") - parseFloat(form.partial_amount || "0")).toLocaleString("hr-HR")} €
+                  </p>
+                )}
+              </div>
+            )}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Napomene</label>
               <textarea
@@ -200,7 +236,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
               Odustani
             </button>
             <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center">
-              {loading ? <><Loader2 size={14} className="animate-spin" /> Dodaje se...</> : "Dodaj sponzora"}
+              {loading ? <><Loader2 size={14} className="animate-spin" /> Dodaje se...</> : "Dodaj partnera"}
             </button>
           </div>
         </form>

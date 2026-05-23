@@ -15,6 +15,7 @@ export interface Sponsor {
   contact_phone: string | null;
   notes: string | null;
   iznos: number | null;
+  partial_amount: number | null;
   created_at: string;
 }
 
