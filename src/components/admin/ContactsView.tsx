@@ -26,6 +26,7 @@ const TYPE_LABELS: Record<string, string> = {
   speaker:          "Speaker",
   service_provider: "Service Provider",
   brand_ambassador: "Brand Ambassador",
+  primary:          "Primarni kontakt",
 };
 
 const TYPE_STYLE: Record<string, string> = {
@@ -36,6 +37,7 @@ const TYPE_STYLE: Record<string, string> = {
   speaker:          "bg-purple-50 text-purple-700 border-purple-200",
   service_provider: "bg-gray-100 text-gray-600 border-gray-200",
   brand_ambassador: "bg-pink-50 text-pink-700 border-pink-200",
+  primary:          "bg-orange-50 text-orange-700 border-orange-200",
 };
 
 interface Sponsor {
@@ -79,7 +81,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
     contacts.some((c) => c.sponsor_id === s.id)
   );
 
-  const allFilteredIds = filtered.map((c) => c.id);
+  const allFilteredIds = filtered.filter((c) => c.type !== "primary").map((c) => c.id);
   const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id) => selectedIds.has(id));
   const someSelected = allFilteredIds.some((id) => selectedIds.has(id));
 
@@ -255,15 +257,20 @@ export default function ContactsView({ contacts, sponsors }: Props) {
               {filtered.map((c) => (
                 <tr key={c.id} className={`hover:bg-gray-50 transition-colors group ${selectedIds.has(c.id) ? "bg-brand-50/40" : ""}`}>
                   <td className="px-4 py-3 w-px">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(c.id)}
-                      onChange={() => toggleOne(c.id)}
-                      className="rounded border-gray-300 text-brand-600 cursor-pointer"
-                    />
+                    {c.type !== "primary" && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(c.id)}
+                        onChange={() => toggleOne(c.id)}
+                        className="rounded border-gray-300 text-brand-600 cursor-pointer"
+                      />
+                    )}
                   </td>
                   <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
-                    <Link href={`/admin/contacts/${c.id}`} className="hover:text-brand-600 transition-colors">
+                    <Link
+                      href={c.type === "primary" ? `/admin/sponsors/${c.sponsor_id}` : `/admin/contacts/${c.id}`}
+                      className="hover:text-brand-600 transition-colors"
+                    >
                       {c.name || <span className="text-gray-300">—</span>}
                     </Link>
                   </td>
@@ -309,22 +316,34 @@ export default function ContactsView({ contacts, sponsors }: Props) {
                     </span>
                   </td>
                   <td className="px-4 py-3 w-px whitespace-nowrap">
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleDeleteOne(c.id, c.name)}
-                        className="text-gray-400 hover:text-red-600 transition-colors"
-                        title="Obriši"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                      <Link
-                        href={`/admin/contacts/${c.id}`}
-                        className="inline-flex items-center gap-1 text-gray-400 hover:text-brand-600 transition-colors"
-                      >
-                        <span className="text-xs">Detalji</span>
-                        <ChevronRight size={14} />
-                      </Link>
-                    </div>
+                    {c.type !== "primary" ? (
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleDeleteOne(c.id, c.name)}
+                          className="text-gray-400 hover:text-red-600 transition-colors"
+                          title="Obriši"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <Link
+                          href={`/admin/contacts/${c.id}`}
+                          className="inline-flex items-center gap-1 text-gray-400 hover:text-brand-600 transition-colors"
+                        >
+                          <span className="text-xs">Detalji</span>
+                          <ChevronRight size={14} />
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Link
+                          href={`/admin/sponsors/${c.sponsor_id}`}
+                          className="inline-flex items-center gap-1 text-gray-400 hover:text-brand-600 transition-colors"
+                        >
+                          <span className="text-xs">Partner</span>
+                          <ChevronRight size={14} />
+                        </Link>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
