@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Send, CheckCircle } from "lucide-react";
 import type { SponsorBenefit, BenefitStatus } from "@/types";
 import BenefitFileUpload from "@/components/admin/BenefitFileUpload";
+import { getAdminEmails } from "@/app/actions/getAdminEmails";
 
 interface Contact {
   id: string;
@@ -35,6 +36,7 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [benefitFiles, setBenefitFiles] = useState<BenefitFile[]>([]);
   const router = useRouter();
   const supabase = createClient();
@@ -66,6 +68,8 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
       .select("id, filename, storage_url, file_size")
       .eq("benefit_id", benefit.id)
       .then(({ data }) => setBenefitFiles(data ?? []));
+
+    getAdminEmails().then(setAdminEmails);
   }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -195,16 +199,29 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba (admin)</label>
-            <input type="email" value={form.assigned_to}
-              onChange={e => setForm({ ...form, assigned_to: e.target.value })}
-              className="input-field" placeholder="osoba@tvrtka.hr" />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Kontakt osoba (za partnera)</label>
+            {adminEmails.length > 0 ? (
+              <select
+                value={form.assigned_to}
+                onChange={e => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— bez kontakt osobe —</option>
+                {adminEmails.map((email) => (
+                  <option key={email} value={email}>{email}</option>
+                ))}
+              </select>
+            ) : (
+              <input type="email" value={form.assigned_to}
+                onChange={e => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field" placeholder="osoba@tvrtka.hr" />
+            )}
           </div>
 
           {contacts.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Kontakt osoba (vidljivo partneru)
+                Kontakt osoba (od partnera)
               </label>
               <select
                 value={form.contact_person_id}

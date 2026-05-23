@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { X, Loader2, User, Send, CheckCircle } from "lucide-react";
 import type { BenefitStatus } from "@/types";
 import BenefitFileUpload from "@/components/admin/BenefitFileUpload";
+import { getAdminEmails } from "@/app/actions/getAdminEmails";
 
 export type EditableBenefit = {
   id: string;
@@ -45,6 +46,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [benefitFiles, setBenefitFiles] = useState<BenefitFile[]>([]);
   const router = useRouter();
   const supabase = createClient();
@@ -86,6 +88,8 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
         .select("id, filename, storage_url, file_size")
         .eq("benefit_id", benefit.id)
         .then(({ data }) => setBenefitFiles(data ?? []));
+
+      getAdminEmails().then(setAdminEmails);
     }
   }, [benefit?.id]);
 
@@ -248,20 +252,33 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba (admin)</label>
-            <input
-              type="email"
-              value={form.assigned_to}
-              onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-              className="input-field"
-              placeholder="osoba@tvrtka.hr"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Kontakt osoba (za partnera)</label>
+            {adminEmails.length > 0 ? (
+              <select
+                value={form.assigned_to}
+                onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— bez kontakt osobe —</option>
+                {adminEmails.map((email) => (
+                  <option key={email} value={email}>{email}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="email"
+                value={form.assigned_to}
+                onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+                placeholder="osoba@tvrtka.hr"
+              />
+            )}
           </div>
 
           {contacts.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Kontakt osoba (vidljivo partneru)
+                Kontakt osoba (od partnera)
               </label>
               <select
                 value={form.contact_person_id}
@@ -319,7 +336,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
                 : <><Send size={14} /> Pošalji obavijest</>}
             </button>
             {!form.assigned_to && (
-              <p className="text-xs text-gray-400 mt-1.5 text-center">Unesi email odgovorne osobe za slanje obavijesti</p>
+              <p className="text-xs text-gray-400 mt-1.5 text-center">Odaberi kontakt osobu za slanje obavijesti</p>
             )}
           </div>
 
