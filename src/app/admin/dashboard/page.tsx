@@ -263,7 +263,7 @@ export default async function AdminDashboard() {
       {/* Recent sponsors */}
       <div className="mt-6 card p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-gray-900">Nedavno dodani sponzori</h3>
+          <h3 className="font-semibold text-gray-900">Nedavno uređeni sponzori</h3>
           <a href="/admin/sponsors" className="text-sm text-brand-600 hover:text-brand-700 font-medium">
             Vidi sve →
           </a>
