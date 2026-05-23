@@ -9,7 +9,7 @@ const ALL_PROJECTS: ProjectId[] = ["2026", "2025"];
 
 const FALLBACK_ADMIN_EMAILS = ["marcel@ecommerce.hr", "udruga@ecommerce.hr", "laura@ecommerce.hr"];
 
-export async function createUserInAllProjects(name: string, email: string, password: string) {
+export async function createUserInAllProjects(name: string, email: string, password: string, phone?: string) {
   const errors: string[] = [];
 
   for (const projectId of ALL_PROJECTS) {
@@ -17,7 +17,7 @@ export async function createUserInAllProjects(name: string, email: string, passw
     const { error } = await adminClient.auth.admin.createUser({
       email: email.toLowerCase().trim(),
       password,
-      user_metadata: { name: name.trim() },
+      user_metadata: { name: name.trim(), phone: phone?.trim() ?? "" },
       email_confirm: true,
     });
     if (error && !error.message.toLowerCase().includes("already registered") && !error.message.toLowerCase().includes("already been registered")) {
@@ -35,10 +35,10 @@ export async function createUserInAllProjects(name: string, email: string, passw
   revalidatePath("/admin/settings");
 }
 
-export async function updateUserInAllProjects(userId2026: string | null, userId2025: string | null, name: string, email: string, password?: string) {
+export async function updateUserInAllProjects(userId2026: string | null, userId2025: string | null, name: string, email: string, phone?: string, password?: string) {
   const updates: Record<string, any> = {
     email: email.toLowerCase().trim(),
-    user_metadata: { name: name.trim() },
+    user_metadata: { name: name.trim(), phone: phone?.trim() ?? "" },
   };
   if (password) updates.password = password;
 
@@ -66,7 +66,7 @@ export async function deleteUserFromAllProjects(email: string) {
   revalidatePath("/admin/settings");
 }
 
-export async function listUsersWithMeta(): Promise<{ email: string; name: string | null; id2026: string | null; id2025: string | null }[]> {
+export async function listUsersWithMeta(): Promise<{ email: string; name: string | null; phone: string | null; id2026: string | null; id2025: string | null }[]> {
   let adminEmails: string[] = [];
   try {
     const supabase = await createAdminClient();
@@ -93,6 +93,7 @@ export async function listUsersWithMeta(): Promise<{ email: string; name: string
     const u2026 = users2026.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
     const u2025 = users2025.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
     const name = (u2026?.user_metadata?.name ?? u2025?.user_metadata?.name) as string | null ?? null;
-    return { email, name, id2026: (u2026?.id as string | null) ?? null, id2025: (u2025?.id as string | null) ?? null };
+    const phone = (u2026?.user_metadata?.phone ?? u2025?.user_metadata?.phone) as string | null ?? null;
+    return { email, name, phone: phone || null, id2026: (u2026?.id as string | null) ?? null, id2025: (u2025?.id as string | null) ?? null };
   });
 }
