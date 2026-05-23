@@ -373,6 +373,54 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
   );
 }
 
+function PackageCategorySection({ pkg, rows, byBenefit, names, doneCount, borderCls, headerCls }: {
+  pkg: string;
+  rows: BenefitRow[];
+  byBenefit: Record<string, BenefitRow[]>;
+  names: string[];
+  doneCount: number;
+  borderCls: string;
+  headerCls: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const overdueCount = rows.filter(
+    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
+  ).length;
+
+  return (
+    <div className={`rounded-xl border-2 overflow-hidden ${borderCls}`}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full flex items-center justify-between px-5 py-3 border-b text-left transition-opacity hover:opacity-90 ${headerCls}`}
+      >
+        <div className="flex items-center gap-3">
+          <ChevronDown size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+          <h2 className="font-bold text-base">{pkg} partneri</h2>
+          {overdueCount > 0 && (
+            <span className="flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+              <AlertTriangle size={11} /> {overdueCount} kasni
+            </span>
+          )}
+        </div>
+        <span className="text-xs font-medium opacity-70">
+          {open ? `${names.length} benefita` : `${doneCount}/${rows.length} završeno · ${names.length} benefita`}
+        </span>
+      </button>
+      {open && (
+        <div className="divide-y divide-white/60">
+          {names.map((benefitName) => (
+            <CategoryBenefitGroup
+              key={benefitName}
+              name={benefitName}
+              rows={byBenefit[benefitName]!}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -784,21 +832,16 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
               const headerCls = PACKAGE_HEADER_COLORS[pkg] ?? "text-gray-700 bg-gray-100 border-gray-200";
 
               return (
-                <div key={pkg} className={`rounded-xl border-2 overflow-hidden ${borderCls}`}>
-                  <div className={`flex items-center justify-between px-5 py-3 border-b ${headerCls}`}>
-                    <h2 className="font-bold text-base">{pkg} partneri</h2>
-                    <span className="text-xs font-medium opacity-70">{doneCount}/{rows.length} završeno</span>
-                  </div>
-                  <div className="divide-y divide-white/60">
-                    {names.map((benefitName) => (
-                      <CategoryBenefitGroup
-                        key={benefitName}
-                        name={benefitName}
-                        rows={byBenefit[benefitName]!}
-                      />
-                    ))}
-                  </div>
-                </div>
+                <PackageCategorySection
+                  key={pkg}
+                  pkg={pkg}
+                  rows={rows}
+                  byBenefit={byBenefit}
+                  names={names}
+                  doneCount={doneCount}
+                  borderCls={borderCls}
+                  headerCls={headerCls}
+                />
               );
             });
           })()}
