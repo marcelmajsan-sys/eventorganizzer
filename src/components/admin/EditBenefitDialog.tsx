@@ -68,7 +68,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
         deadline: benefit.deadline?.slice(0, 10) ?? "",
         status: benefit.status as BenefitStatus,
         notes: benefit.notes ?? "",
-        assigned_to: benefit.assigned_to ?? "",
+        assigned_to: benefit.assigned_to || "laura@ecommerce.hr",
         description: benefit.description ?? "",
         contact_person_id: benefit.contact_person_id ?? "",
       });

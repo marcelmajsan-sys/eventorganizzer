@@ -46,7 +46,7 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
     deadline: benefit.deadline?.slice(0, 10) ?? "",
     status: benefit.status,
     notes: benefit.notes ?? "",
-    assigned_to: benefit.assigned_to ?? "",
+    assigned_to: benefit.assigned_to || "laura@ecommerce.hr",
     reminder_email: benefit.reminder_email ?? "",
     reminder_template_id: "",
     description: benefit.description ?? "",

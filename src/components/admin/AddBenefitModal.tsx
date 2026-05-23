@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
 import type { BenefitStatus } from "@/types";
+import { getAdminEmails } from "@/app/actions/getAdminEmails";
 
 interface Sponsor {
   id: any;
@@ -23,6 +24,7 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
   const [error, setError] = useState("");
   const [existingNames, setExistingNames] = useState<string[]>([]);
   const [isNewBenefit, setIsNewBenefit] = useState(false);
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const router = useRouter();
   const supabase = createClient();
 
@@ -31,7 +33,7 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
     deadline: "",
     status: "not_started" as BenefitStatus,
     notes: "",
-    assigned_to: "",
+    assigned_to: "laura@ecommerce.hr",
     selected_sponsor_id: sponsorId ?? "",
   });
 
@@ -47,6 +49,7 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
         names.sort();
         setExistingNames(names);
       });
+    getAdminEmails().then(setAdminEmails);
   }, [open]);
 
   function handleClose() {
@@ -208,14 +211,27 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba</label>
-            <input
-              type="text"
-              value={form.assigned_to}
-              onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-              className="input-field"
-              placeholder="Ime i prezime"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Kontakt osoba (za partnera)</label>
+            {adminEmails.length > 0 ? (
+              <select
+                value={form.assigned_to}
+                onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— bez kontakt osobe —</option>
+                {adminEmails.map((email) => (
+                  <option key={email} value={email}>{email}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="email"
+                value={form.assigned_to}
+                onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+                placeholder="osoba@tvrtka.hr"
+              />
+            )}
           </div>
 
           <div>
