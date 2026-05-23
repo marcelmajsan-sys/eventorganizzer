@@ -8,18 +8,29 @@ import { PACKAGE_BENEFITS } from "@/lib/utils";
 import type { PackageType } from "@/types";
 
 const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
+const STANDARD_ORDER = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
+
+function sortedPackages(pkgs: string[]): string[] {
+  const standard = STANDARD_ORDER.filter((p) => pkgs.includes(p));
+  const custom = pkgs
+    .filter((p) => !STANDARD_ORDER.includes(p) && p !== "Nedefinirano")
+    .sort();
+  const undef = pkgs.includes("Nedefinirano") ? ["Nedefinirano"] : [];
+  return [...standard, ...custom, ...undef];
+}
 
 export default function AddSponsorModal({ packageTypes }: { packageTypes?: string[] }) {
-  const PACKAGES = packageTypes ?? FALLBACK_PACKAGES;
+  const PACKAGES = sortedPackages(packageTypes ?? FALLBACK_PACKAGES);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
+  const defaultPkg = (STANDARD_ORDER.find((p) => PACKAGES.includes(p)) ?? PACKAGES[0] ?? "Zlatni") as PackageType;
   const [form, setForm] = useState({
     name: "",
-    package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType,
+    package_type: defaultPkg,
     contact_email: "",
     contact_name: "",
     payment_status: "pending",
@@ -65,7 +76,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
       await supabase.from("sponsor_benefits").insert(benefitsToInsert);
 
       setOpen(false);
-      setForm({ name: "", package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "", iznos: "" });
+      setForm({ name: "", package_type: defaultPkg, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "", iznos: "" });
       router.refresh();
     } catch (err: any) {
       setError(err.message ?? "Greška pri dodavanju partnera");

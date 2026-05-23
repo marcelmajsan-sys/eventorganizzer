@@ -274,9 +274,9 @@ export default function ContactsView({ contacts, sponsors }: Props) {
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {c.email ? (
-                      <a href={`mailto:${c.email}`} className="hover:text-brand-600 transition-colors">
+                      <Link href={`/admin/contacts/${c.id}`} className="hover:text-brand-600 transition-colors">
                         {c.email}
-                      </a>
+                      </Link>
                     ) : (
                       <span className="text-gray-300">—</span>
                     )}
