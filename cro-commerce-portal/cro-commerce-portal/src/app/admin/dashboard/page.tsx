@@ -5,7 +5,7 @@ import {
   Users, CreditCard, AlertTriangle, CheckCircle2,
   TrendingUp, Clock, Package, Wallet, CircleDollarSign, ListChecks
 } from "lucide-react";
-import { packageColor, packageBadgeColor, paymentStatusColor, leadStatusColor, leadStatusLabel } from "@/lib/utils";
+import { packageColor, packageBadgeColor, paymentStatusColor, paymentStatusLabel, leadStatusColor, leadStatusLabel } from "@/lib/utils";
 import type { PackageType, LeadStatus } from "@/types";
 
 export default async function AdminDashboard() {
@@ -36,8 +36,11 @@ export default async function AdminDashboard() {
     new Intl.NumberFormat("hr-HR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
   const budgetPaid    = budgetItems.filter(i => i.status === "paid").reduce((s: number, i: any) => s + i.amount, 0);
-  const budgetPending = budgetItems.filter(i => i.status === "pending").reduce((s: number, i: any) => s + i.amount, 0);
+  const budgetPending = budgetItems.filter(i => i.status === "pending" || i.status === "paid").reduce((s: number, i: any) => s + i.amount, 0);
+  const budgetPendingCount = budgetItems.filter(i => i.status === "pending" || i.status === "paid").length;
   const budgetTotal   = budgetItems.filter(i => i.status !== "cancelled").reduce((s: number, i: any) => s + i.amount, 0);
+  const budgetAll     = budgetItems.reduce((s: number, i: any) => s + (i.amount ?? 0), 0);
+  const budgetAllCount = budgetItems.length;
 
   const naplaceno = sponsors?.filter(s => s.payment_status === "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
   const naplacenoCount = sponsors?.filter(s => s.payment_status === "paid").length ?? 0;
@@ -53,6 +56,7 @@ export default async function AdminDashboard() {
   const paidCount = confirmedSponsors.filter((s) => s.payment_status === "paid").length;
   const pendingCount = confirmedSponsors.filter((s) => s.payment_status === "pending").length;
   const overduePayments = confirmedSponsors.filter((s) => s.payment_status === "overdue").length;
+  const compensationCount = confirmedSponsors.filter((s) => s.payment_status === "compensation").length;
   const openTasks = tasks?.filter((t) => t.status !== "done").length ?? 0;
   const now = new Date().toISOString();
   const overdueBenefits = benefits?.filter(
@@ -63,8 +67,12 @@ export default async function AdminDashboard() {
   const completionRate = totalBenefits > 0 ? Math.round((completedBenefits / totalBenefits) * 100) : 0;
 
   const byPackage: Record<string, number> = {};
+  const byPackagePaid: Record<string, number> = {};
   confirmedSponsors.forEach((s) => {
     byPackage[s.package_type] = (byPackage[s.package_type] ?? 0) + 1;
+    if (s.payment_status === "paid") {
+      byPackagePaid[s.package_type] = (byPackagePaid[s.package_type] ?? 0) + 1;
+    }
   });
 
   const packageOrder: PackageType[] = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
@@ -86,7 +94,7 @@ export default async function AdminDashboard() {
   const statCards = [
     {
       value: totalSponsors,
-      label: "Ukupno sponzora",
+      label: "Ukupno partnera",
       icon: Users,
       color: "text-blue-600",
       bg: "bg-blue-50",
@@ -126,9 +134,9 @@ export default async function AdminDashboard() {
         {[
           { label: "Profitabilnost", value: formatEur((naplaceno + neplaceno) - (budgetPaid + budgetPending)), sub: `prihodi ${formatEur(naplaceno + neplaceno)} − troškovi ${formatEur(budgetPaid + budgetPending)}`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: (naplaceno + neplaceno) - (budgetPaid + budgetPending) >= 0 ? "text-emerald-600" : "text-red-600", href: "/admin/troskovi" },
           { label: "Plaćeno (troškovi)", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
-          { label: "Na čekanju (troškovi)", value: formatEur(budgetPending), sub: `${budgetItems.filter(i=>i.status==="pending").length} stavki`, icon: TrendingUp, iconCls: "text-amber-500", valCls: "text-amber-600", href: "/admin/troskovi?status=pending" },
-          { label: "Naplaćeno", value: formatEur(naplaceno), sub: `${naplacenoCount} sponzora`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
-          { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} sponzora`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors" },
+          { label: "Ukupni troškovi", value: formatEur(budgetAll), sub: `${budgetAllCount} stavki`, icon: TrendingUp, iconCls: "text-gray-400", valCls: "text-gray-700", href: "/admin/troskovi" },
+          { label: "Naplaćeno", value: formatEur(naplaceno), sub: `${naplacenoCount} partnera`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
+          { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} partnera`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors" },
         ].map((c) => {
           const Icon = c.icon;
           return (
@@ -152,7 +160,7 @@ export default async function AdminDashboard() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { value: totalSponsors, label: "Ukupno sponzora", icon: Users, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/sponsors" },
+          { value: totalSponsors, label: "Ukupno partnera", icon: Users, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/sponsors" },
           { value: paidCount, label: "Plaćenih", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50", sub: `${pendingCount} na čekanju`, href: "/admin/sponsors?payment=paid" },
           { value: openTasks, label: "Otvorenih zadataka", icon: Clock, color: "text-orange-600", bg: "bg-orange-50", href: "/admin/tasks" },
           { value: overdueBenefits, label: "Benefita kasni", icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50", href: "/admin/benefits" },
@@ -177,16 +185,17 @@ export default async function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Package breakdown — confirmed only */}
-        <a href="/admin/sponsors?lead=confirmed_new" className="card p-6 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
+        <a href="/admin/sponsors" className="card p-6 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
           <div className="flex items-center gap-2 mb-1">
             <Package size={18} className="text-gray-400" />
-            <h3 className="font-semibold text-gray-900">Sponzori po paketu</h3>
+            <h3 className="font-semibold text-gray-900">Partneri po paketu</h3>
           </div>
           <p className="text-xs text-gray-400 mb-4">samo potvrđeni ({confirmedTotal})</p>
           <div className="space-y-3">
             {packageOrder.map((pkg) => {
               const count = byPackage[pkg] ?? 0;
-              const pct = confirmedTotal > 0 ? (count / confirmedTotal) * 100 : 0;
+              const paid = byPackagePaid[pkg] ?? 0;
+              const pct = count > 0 ? Math.round((paid / count) * 100) : 0;
               return (
                 <div key={pkg}>
                   <div className="flex items-center justify-between mb-1">
@@ -194,10 +203,12 @@ export default async function AdminDashboard() {
                       <div className={`w-2.5 h-2.5 rounded-full ${packageBadgeColor(pkg as PackageType)}`} />
                       <span className="text-sm font-medium text-gray-700">{pkg}</span>
                     </div>
-                    <span className="text-sm text-gray-500">{count}</span>
+                    <span className="text-sm text-gray-500">
+                      {paid}/{count} <span className="text-xs text-gray-400">({pct}%)</span>
+                    </span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-1.5">
-                    <div className={`h-1.5 rounded-full ${packageBadgeColor(pkg as PackageType)} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                    <div className="h-1.5 rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -217,6 +228,7 @@ export default async function AdminDashboard() {
               { label: "Plaćeno", count: paidCount, status: "paid", color: "bg-emerald-500" },
               { label: "Na čekanju", count: pendingCount, status: "pending", color: "bg-yellow-500" },
               { label: "Kasni", count: overduePayments, status: "overdue", color: "bg-red-500" },
+              { label: "Kompenzacija", count: compensationCount, status: "compensation", color: "bg-violet-500" },
             ].map((item) => (
               <a key={item.status} href={`/admin/sponsors?payment=${item.status}`} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-2.5">
@@ -263,7 +275,7 @@ export default async function AdminDashboard() {
       {/* Recent sponsors */}
       <div className="mt-6 card p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-gray-900">Nedavno dodani sponzori</h3>
+          <h3 className="font-semibold text-gray-900">Nedavno uređeni partneri</h3>
           <a href="/admin/sponsors" className="text-sm text-brand-600 hover:text-brand-700 font-medium">
             Vidi sve →
           </a>
@@ -310,7 +322,7 @@ export default async function AdminDashboard() {
                   <td className="py-2.5 px-3 text-gray-500">{sponsor.contact_name}</td>
                   <td className="py-2.5 px-3">
                     <span className={`badge ${paymentStatusColor(sponsor.payment_status)}`}>
-                      {sponsor.payment_status === "paid" ? "Plaćeno" : sponsor.payment_status === "pending" ? "Na čekanju" : "Kasni"}
+                      {paymentStatusLabel(sponsor.payment_status)}
                     </span>
                   </td>
                 </tr>
@@ -318,7 +330,7 @@ export default async function AdminDashboard() {
               {recentSponsors.length === 0 && (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-gray-400">
-                    Nema sponzora u bazi
+                    Nema partnera u bazi
                   </td>
                 </tr>
               )}

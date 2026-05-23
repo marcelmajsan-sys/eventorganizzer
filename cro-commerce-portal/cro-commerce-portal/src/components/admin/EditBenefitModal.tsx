@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Send, CheckCircle } from "lucide-react";
 import type { SponsorBenefit, BenefitStatus } from "@/types";
 import BenefitFileUpload from "@/components/admin/BenefitFileUpload";
+import { getAdminEmails } from "@/app/actions/getAdminEmails";
 
 interface Contact {
   id: string;
@@ -35,6 +36,8 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
   const [error, setError] = useState("");
   const [sendError, setSendError] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [primaryContactId, setPrimaryContactId] = useState<string | null>(null);
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [benefitFiles, setBenefitFiles] = useState<BenefitFile[]>([]);
   const router = useRouter();
   const supabase = createClient();
@@ -44,7 +47,7 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
     deadline: benefit.deadline?.slice(0, 10) ?? "",
     status: benefit.status,
     notes: benefit.notes ?? "",
-    assigned_to: benefit.assigned_to ?? "",
+    assigned_to: benefit.assigned_to || "laura@ecommerce.hr",
     reminder_email: benefit.reminder_email ?? "",
     reminder_template_id: "",
     description: benefit.description ?? "",
@@ -54,18 +57,32 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
   useEffect(() => {
     if (!open) return;
 
-    supabase
-      .from("sponsor_contacts")
-      .select("id, name, email")
-      .eq("sponsor_id", benefit.sponsor_id)
-      .eq("type", "contact")
-      .then(({ data }) => setContacts(data ?? []));
+    Promise.all([
+      supabase.from("sponsor_contacts").select("id, name, email").eq("sponsor_id", benefit.sponsor_id).eq("type", "contact"),
+      supabase.from("sponsors").select("contact_name").eq("id", benefit.sponsor_id).single(),
+    ]).then(([{ data: contactsData }, { data: sponsorData }]) => {
+      const allContacts = contactsData ?? [];
+      const primaryName = (sponsorData?.contact_name ?? "").toLowerCase().trim();
+      const primaryContact = primaryName ? allContacts.find(c => c.name.toLowerCase().trim() === primaryName) : null;
+      const sorted = primaryContact
+        ? [primaryContact, ...allContacts.filter(c => c.id !== primaryContact.id)]
+        : allContacts;
+      setContacts(sorted);
+      if (primaryContact) {
+        setPrimaryContactId(primaryContact.id);
+        if (!benefit.contact_person_id) {
+          setForm(prev => ({ ...prev, contact_person_id: primaryContact.id }));
+        }
+      }
+    });
 
     supabase
       .from("files")
       .select("id, filename, storage_url, file_size")
       .eq("benefit_id", benefit.id)
       .then(({ data }) => setBenefitFiles(data ?? []));
+
+    getAdminEmails().then(setAdminEmails);
   }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -195,16 +212,29 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba (admin)</label>
-            <input type="email" value={form.assigned_to}
-              onChange={e => setForm({ ...form, assigned_to: e.target.value })}
-              className="input-field" placeholder="osoba@tvrtka.hr" />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Kontakt osoba (za partnera)</label>
+            {adminEmails.length > 0 ? (
+              <select
+                value={form.assigned_to}
+                onChange={e => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— bez kontakt osobe —</option>
+                {adminEmails.map((email) => (
+                  <option key={email} value={email}>{email}</option>
+                ))}
+              </select>
+            ) : (
+              <input type="email" value={form.assigned_to}
+                onChange={e => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field" placeholder="osoba@tvrtka.hr" />
+            )}
           </div>
 
           {contacts.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Kontakt osoba (vidljivo partneru)
+                Kontakt osoba (od partnera)
               </label>
               <select
                 value={form.contact_person_id}
@@ -214,7 +244,7 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
                 <option value="">— bez kontakt osobe —</option>
                 {contacts.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}{c.email ? ` (${c.email})` : ""}
+                    {c.name}{c.email ? ` (${c.email})` : ""}{c.id === primaryContactId ? " ★" : ""}
                   </option>
                 ))}
               </select>

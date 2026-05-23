@@ -46,6 +46,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [primaryContactId, setPrimaryContactId] = useState<string | null>(null);
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [benefitFiles, setBenefitFiles] = useState<BenefitFile[]>([]);
   const router = useRouter();
@@ -75,12 +76,26 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
       setError("");
 
       if (benefit.sponsor_id) {
-        supabase
-          .from("sponsor_contacts")
-          .select("id, name, email")
-          .eq("sponsor_id", benefit.sponsor_id)
-          .eq("type", "contact")
-          .then(({ data }) => setContacts(data ?? []));
+        Promise.all([
+          supabase.from("sponsor_contacts").select("id, name, email").eq("sponsor_id", benefit.sponsor_id).eq("type", "contact"),
+          supabase.from("sponsors").select("contact_name").eq("id", benefit.sponsor_id).single(),
+        ]).then(([{ data: contactsData }, { data: sponsorData }]) => {
+          const allContacts = contactsData ?? [];
+          const primaryName = (sponsorData?.contact_name ?? "").toLowerCase().trim();
+          const primaryContact = primaryName ? allContacts.find(c => c.name.toLowerCase().trim() === primaryName) : null;
+          // Sort primary contact first
+          const sorted = primaryContact
+            ? [primaryContact, ...allContacts.filter(c => c.id !== primaryContact.id)]
+            : allContacts;
+          setContacts(sorted);
+          if (primaryContact) {
+            setPrimaryContactId(primaryContact.id);
+            // Pre-select primary contact if benefit has no contact assigned yet
+            if (!benefit.contact_person_id) {
+              setForm(prev => ({ ...prev, contact_person_id: primaryContact.id }));
+            }
+          }
+        });
       }
 
       supabase
@@ -288,7 +303,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
                 <option value="">— bez kontakt osobe —</option>
                 {contacts.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}{c.email ? ` (${c.email})` : ""}
+                    {c.name}{c.email ? ` (${c.email})` : ""}{c.id === primaryContactId ? " ★" : ""}
                   </option>
                 ))}
               </select>

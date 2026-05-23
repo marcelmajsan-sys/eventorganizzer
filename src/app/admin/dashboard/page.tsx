@@ -39,6 +39,8 @@ export default async function AdminDashboard() {
   const budgetPending = budgetItems.filter(i => i.status === "pending" || i.status === "paid").reduce((s: number, i: any) => s + i.amount, 0);
   const budgetPendingCount = budgetItems.filter(i => i.status === "pending" || i.status === "paid").length;
   const budgetTotal   = budgetItems.filter(i => i.status !== "cancelled").reduce((s: number, i: any) => s + i.amount, 0);
+  const budgetAll     = budgetItems.reduce((s: number, i: any) => s + (i.amount ?? 0), 0);
+  const budgetAllCount = budgetItems.length;
 
   const naplaceno = sponsors?.filter(s => s.payment_status === "paid").reduce((sum, s) => sum + ((s as any).iznos ?? 0), 0) ?? 0;
   const naplacenoCount = sponsors?.filter(s => s.payment_status === "paid").length ?? 0;
@@ -132,7 +134,7 @@ export default async function AdminDashboard() {
         {[
           { label: "Profitabilnost", value: formatEur((naplaceno + neplaceno) - (budgetPaid + budgetPending)), sub: `prihodi ${formatEur(naplaceno + neplaceno)} − troškovi ${formatEur(budgetPaid + budgetPending)}`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: (naplaceno + neplaceno) - (budgetPaid + budgetPending) >= 0 ? "text-emerald-600" : "text-red-600", href: "/admin/troskovi" },
           { label: "Plaćeno (troškovi)", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
-          { label: "Na čekanju (troškovi)", value: formatEur(budgetPending), sub: `${budgetPendingCount} stavki`, icon: TrendingUp, iconCls: "text-amber-500", valCls: "text-amber-600", href: "/admin/troskovi" },
+          { label: "Ukupni troškovi", value: formatEur(budgetAll), sub: `${budgetAllCount} stavki`, icon: TrendingUp, iconCls: "text-gray-400", valCls: "text-gray-700", href: "/admin/troskovi" },
           { label: "Naplaćeno", value: formatEur(naplaceno), sub: `${naplacenoCount} partnera`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
           { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} partnera`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors" },
         ].map((c) => {

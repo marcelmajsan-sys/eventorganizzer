@@ -42,5 +42,5 @@ export default async function InboxPage() {
     notifType: getNotifType(n),
   }));
 
-  return <InboxView notifications={notifications} />;
+  return <InboxView notifications={notifications} userEmail={user?.email ?? null} />;
 }

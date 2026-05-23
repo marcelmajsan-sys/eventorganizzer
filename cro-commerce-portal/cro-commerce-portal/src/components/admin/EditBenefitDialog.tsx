@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { X, Loader2, User, Send, CheckCircle } from "lucide-react";
 import type { BenefitStatus } from "@/types";
 import BenefitFileUpload from "@/components/admin/BenefitFileUpload";
+import { getAdminEmails } from "@/app/actions/getAdminEmails";
 
 export type EditableBenefit = {
   id: string;
@@ -45,6 +46,8 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [primaryContactId, setPrimaryContactId] = useState<string | null>(null);
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [benefitFiles, setBenefitFiles] = useState<BenefitFile[]>([]);
   const router = useRouter();
   const supabase = createClient();
@@ -66,19 +69,33 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
         deadline: benefit.deadline?.slice(0, 10) ?? "",
         status: benefit.status as BenefitStatus,
         notes: benefit.notes ?? "",
-        assigned_to: benefit.assigned_to ?? "",
+        assigned_to: benefit.assigned_to || "laura@ecommerce.hr",
         description: benefit.description ?? "",
         contact_person_id: benefit.contact_person_id ?? "",
       });
       setError("");
 
       if (benefit.sponsor_id) {
-        supabase
-          .from("sponsor_contacts")
-          .select("id, name, email")
-          .eq("sponsor_id", benefit.sponsor_id)
-          .eq("type", "contact")
-          .then(({ data }) => setContacts(data ?? []));
+        Promise.all([
+          supabase.from("sponsor_contacts").select("id, name, email").eq("sponsor_id", benefit.sponsor_id).eq("type", "contact"),
+          supabase.from("sponsors").select("contact_name").eq("id", benefit.sponsor_id).single(),
+        ]).then(([{ data: contactsData }, { data: sponsorData }]) => {
+          const allContacts = contactsData ?? [];
+          const primaryName = (sponsorData?.contact_name ?? "").toLowerCase().trim();
+          const primaryContact = primaryName ? allContacts.find(c => c.name.toLowerCase().trim() === primaryName) : null;
+          // Sort primary contact first
+          const sorted = primaryContact
+            ? [primaryContact, ...allContacts.filter(c => c.id !== primaryContact.id)]
+            : allContacts;
+          setContacts(sorted);
+          if (primaryContact) {
+            setPrimaryContactId(primaryContact.id);
+            // Pre-select primary contact if benefit has no contact assigned yet
+            if (!benefit.contact_person_id) {
+              setForm(prev => ({ ...prev, contact_person_id: primaryContact.id }));
+            }
+          }
+        });
       }
 
       supabase
@@ -86,6 +103,8 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
         .select("id, filename, storage_url, file_size")
         .eq("benefit_id", benefit.id)
         .then(({ data }) => setBenefitFiles(data ?? []));
+
+      getAdminEmails().then(setAdminEmails);
     }
   }, [benefit?.id]);
 
@@ -176,7 +195,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
                 <User size={12} className="text-gray-400" />
                 <span className="text-sm text-gray-500">{benefit.sponsor_name}</span>
                 <span className="text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full font-medium">
-                  samo ovaj sponzor
+                  samo ovaj partner
                 </span>
               </div>
             )}
@@ -248,20 +267,33 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba (admin)</label>
-            <input
-              type="email"
-              value={form.assigned_to}
-              onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-              className="input-field"
-              placeholder="osoba@tvrtka.hr"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Kontakt osoba (za partnera)</label>
+            {adminEmails.length > 0 ? (
+              <select
+                value={form.assigned_to}
+                onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— bez kontakt osobe —</option>
+                {adminEmails.map((email) => (
+                  <option key={email} value={email}>{email}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="email"
+                value={form.assigned_to}
+                onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+                placeholder="osoba@tvrtka.hr"
+              />
+            )}
           </div>
 
           {contacts.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Kontakt osoba (vidljivo partneru)
+                Kontakt osoba (od partnera)
               </label>
               <select
                 value={form.contact_person_id}
@@ -271,7 +303,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
                 <option value="">— bez kontakt osobe —</option>
                 {contacts.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}{c.email ? ` (${c.email})` : ""}
+                    {c.name}{c.email ? ` (${c.email})` : ""}{c.id === primaryContactId ? " ★" : ""}
                   </option>
                 ))}
               </select>
@@ -319,7 +351,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
                 : <><Send size={14} /> Pošalji obavijest</>}
             </button>
             {!form.assigned_to && (
-              <p className="text-xs text-gray-400 mt-1.5 text-center">Unesi email odgovorne osobe za slanje obavijesti</p>
+              <p className="text-xs text-gray-400 mt-1.5 text-center">Odaberi kontakt osobu za slanje obavijesti</p>
             )}
           </div>
 

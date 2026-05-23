@@ -81,6 +81,11 @@ export async function markNotificationUnread(id: string) {
     .eq("user_id", userId);
 }
 
+export async function deleteNotification(id: string) {
+  const adminClient = await createAdminClient();
+  await adminClient.from("notifications").delete().eq("id", id);
+}
+
 export async function markAllNotificationsRead() {
   const userId = await getCurrentUserId();
   if (!userId) return;
