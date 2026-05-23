@@ -150,7 +150,7 @@ function TemplateModal({ initial, onClose, onSaved }: ModalProps) {
                 </p>
                 <textarea value={form.body} onChange={e => setForm({ ...form, body: e.target.value })}
                   className="input-field resize-none" rows={6}
-                  placeholder={"Poštovani,\n\nPodsjećamo vas da benefit {{benefit_name}} za sponzora {{sponsor_name}} ima rok {{deadline}} (za {{days_left}} dana).\n\nSrdačan pozdrav,\nTim CRO Commerce"} />
+                  placeholder={"Poštovani,\n\nPodsjećamo vas da benefit {{benefit_name}} za partnera {{sponsor_name}} ima rok {{deadline}} (za {{days_left}} dana).\n\nSrdačan pozdrav,\nTim CRO Commerce"} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

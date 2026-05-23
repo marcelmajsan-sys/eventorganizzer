@@ -36,7 +36,7 @@ export default function DeleteSponsorButton({ sponsorId, sponsorName }: Props) {
         className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-red-200 hover:border-red-300"
       >
         <Trash2 size={14} />
-        Obriši sponzora
+        Obriši partnera
       </button>
 
       {showConfirm && (
@@ -45,7 +45,7 @@ export default function DeleteSponsorButton({ sponsorId, sponsorName }: Props) {
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-900 flex items-center gap-2">
                 <AlertTriangle size={16} className="text-red-500" />
-                Obriši sponzora
+                Obriši partnera
               </h2>
               <button onClick={() => setShowConfirm(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />

@@ -121,13 +121,13 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
 
           {sponsors && sponsors.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponzor</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Partner</label>
               <select
                 value={form.selected_sponsor_id}
                 onChange={(e) => setForm({ ...form, selected_sponsor_id: e.target.value })}
                 className="input-field"
               >
-                <option value="">— bez sponzora —</option>
+                <option value="">— bez partnera —</option>
                 {sponsors.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}

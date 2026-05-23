@@ -65,7 +65,7 @@ export default async function SponsorDetailPage({ params }: Props) {
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4"
         >
           <ArrowLeft size={14} />
-          Natrag na sponzore
+          Natrag na partnere
         </Link>
 
         <div className="flex items-start justify-between">
@@ -76,7 +76,7 @@ export default async function SponsorDetailPage({ params }: Props) {
                 {sponsor.package_type}
               </span>
             </h1>
-            <p className="page-subtitle">Detalji sponzora i upravljanje benefitima</p>
+            <p className="page-subtitle">Detalji partnera i upravljanje benefitima</p>
           </div>
           <div className="flex items-center gap-2">
             <DeleteSponsorButton sponsorId={sponsor.id} sponsorName={sponsor.name} />
@@ -241,7 +241,7 @@ export default async function SponsorDetailPage({ params }: Props) {
               })}
               {(!benefits || benefits.length === 0) && (
                 <p className="text-gray-400 text-sm text-center py-8">
-                  Nema definiranih benefita za ovog sponzora
+                  Nema definiranih benefita za ovog partnera
                 </p>
               )}
             </div>

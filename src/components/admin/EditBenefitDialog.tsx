@@ -180,7 +180,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
                 <User size={12} className="text-gray-400" />
                 <span className="text-sm text-gray-500">{benefit.sponsor_name}</span>
                 <span className="text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full font-medium">
-                  samo ovaj sponzor
+                  samo ovaj partner
                 </span>
               </div>
             )}

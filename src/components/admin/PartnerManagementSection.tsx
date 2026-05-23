@@ -38,7 +38,7 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.sponsor_id) { setError("Odaberi sponzora."); return; }
+    if (!form.sponsor_id) { setError("Odaberi partnera."); return; }
     setLoading(true);
     setError(null);
     try {
@@ -102,7 +102,7 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
             Partneri
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Korisnici s pristupom sponzorskom portalu. Vide samo podatke svog sponzora.
+            Korisnici s pristupom partnerskom portalu. Vide samo podatke svog partnera.
           </p>
         </div>
         <button
@@ -166,14 +166,14 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
               </div>
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Sponzor *</label>
+              <label className="text-xs text-gray-500 mb-1 block">Partner *</label>
               <select
                 required
                 value={form.sponsor_id}
                 onChange={(e) => setForm({ ...form, sponsor_id: e.target.value })}
                 className="input-field text-sm py-1.5"
               >
-                <option value="">Odaberi sponzora...</option>
+                <option value="">Odaberi partnera...</option>
                 {sponsors.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}

@@ -107,7 +107,7 @@ export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: 
       {selected.size > 0 && (
         <div className="sticky top-0 z-10 mb-4 bg-brand-50 border border-brand-200 rounded-xl p-3 flex flex-wrap items-center gap-3 shadow-sm">
           <span className="text-sm font-medium text-brand-700 shrink-0">
-            {selected.size} {selected.size === 1 ? "sponzor odabran" : "sponzora odabrano"}
+            {selected.size} {selected.size === 1 ? "sponzor odabran" : "partnera odabrano"}
           </span>
 
           <div className="flex flex-wrap gap-2 flex-1">
@@ -290,7 +290,7 @@ export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: 
               {sponsors.length === 0 && (
                 <tr>
                   <td colSpan={9} className="py-16 text-center">
-                    <p className="text-gray-400">Nema sponzora koji odgovaraju filteru</p>
+                    <p className="text-gray-400">Nema partnera koji odgovaraju filteru</p>
                   </td>
                 </tr>
               )}

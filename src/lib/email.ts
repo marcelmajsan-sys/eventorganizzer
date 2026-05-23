@@ -41,7 +41,7 @@ export async function sendDeadlineReminder(
           </div>` : ""}
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/portal" 
             style="display: inline-block; background: #ea580c; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-            Otvorite sponzorski portal →
+            Otvorite partnerski portal →
           </a>
           <p style="font-size: 14px; color: #9ca3af; margin: 32px 0 0;">
             Za pitanja nas kontaktirajte na <a href="mailto:${ADMIN_EMAIL}" style="color: #ea580c;">${ADMIN_EMAIL}</a>
@@ -69,14 +69,14 @@ export async function sendOverdueAdminAlert(
         </div>
         <div style="padding: 32px; background: white; border: 1px solid #e5e7eb; border-top: none;">
           <table style="width: 100%; border-collapse: collapse;">
-            <tr><td style="padding: 8px; color: #6b7280; font-size: 14px;">Sponzor:</td><td style="padding: 8px; font-weight: 600;">${sponsorName}</td></tr>
+            <tr><td style="padding: 8px; color: #6b7280; font-size: 14px;">Partner:</td><td style="padding: 8px; font-weight: 600;">${sponsorName}</td></tr>
             <tr style="background: #f9fafb;"><td style="padding: 8px; color: #6b7280; font-size: 14px;">Benefit:</td><td style="padding: 8px; font-weight: 600;">${benefitName}</td></tr>
             <tr><td style="padding: 8px; color: #6b7280; font-size: 14px;">Rok bio:</td><td style="padding: 8px;">${new Date(deadline).toLocaleDateString("hr-HR")}</td></tr>
             <tr style="background: #fef2f2;"><td style="padding: 8px; color: #6b7280; font-size: 14px;">Kašnjenje:</td><td style="padding: 8px; font-weight: 600; color: #dc2626;">${daysOverdue} dana</td></tr>
           </table>
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/sponsors" 
             style="display: inline-block; margin-top: 24px; background: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-            Upravljaj sponzorima →
+            Upravljaj partnerima →
           </a>
         </div>
       </div>
@@ -93,16 +93,16 @@ export async function sendWelcomeEmail(
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: `Dobrodošli u CRO Commerce 2025 sponzorski portal`,
+    subject: `Dobrodošli u CRO Commerce 2025 partnerski portal`,
     html: `
       <div style="font-family: 'DM Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
         <div style="background: linear-gradient(135deg, #ea580c, #c2410c); padding: 40px;">
           <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">CRO Commerce 2025</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 16px;">Sponzorski portal</p>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 16px;">Partnerski portal</p>
         </div>
         <div style="padding: 40px;">
           <p style="font-size: 16px; color: #374151;">Dragi/a <strong>${contactName}</strong>,</p>
-          <p style="font-size: 16px; color: #374151;">Dobrodošli u sponzorski portal za tvrtku <strong>${sponsorName}</strong>!</p>
+          <p style="font-size: 16px; color: #374151;">Dobrodošli u partnerski portal za tvrtku <strong>${sponsorName}</strong>!</p>
           <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 24px 0;">
             <p style="margin: 0 0 8px; font-size: 14px; color: #6b7280;">Vaši pristupni podaci:</p>
             <p style="margin: 0 0 4px;"><strong>Email:</strong> ${to}</p>

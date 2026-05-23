@@ -244,7 +244,7 @@ export default function CalendarView({ tasks, currentMonth }: Props) {
                   )}
                   {selected.sponsors && (
                     <div>
-                      <p className="text-xs text-gray-400 mb-0.5">Sponzor</p>
+                      <p className="text-xs text-gray-400 mb-0.5">Partner</p>
                       <div className="flex items-center gap-1.5">
                         <Tag size={13} className="text-gray-400" />
                         <Link href={`/admin/sponsors/${selected.sponsors.id}`} className="text-brand-600 hover:underline font-medium text-sm" onClick={closeModal}>

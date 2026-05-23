@@ -8,7 +8,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "EventOrganizzer - CRO Commerce Conference",
-  description: "Upravljanje sponzorima i benefitima za CRO Commerce konferenciju",
+  description: "Upravljanje partnerima i benefitima za CRO Commerce konferenciju",
   icons: { icon: "/favicon.ico" },
 };
 

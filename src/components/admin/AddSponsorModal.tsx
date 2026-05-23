@@ -68,7 +68,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
       setForm({ name: "", package_type: (packageTypes?.[0] ?? "Zlatni") as PackageType, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "", iznos: "" });
       router.refresh();
     } catch (err: any) {
-      setError(err.message ?? "Greška pri dodavanju sponzora");
+      setError(err.message ?? "Greška pri dodavanju partnera");
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
     return (
       <button onClick={() => setOpen(true)} className="btn-primary">
         <Plus size={16} />
-        Dodaj sponzora
+        Dodaj partnera
       </button>
     );
   }
@@ -87,7 +87,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-enter">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="font-display text-xl font-bold text-gray-900">Novi sponzor</h2>
+          <h2 className="font-display text-xl font-bold text-gray-900">Novi partner</h2>
           <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
             <X size={20} />
           </button>
@@ -131,7 +131,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
               </select>
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Status sponzora</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Status partnera</label>
               <select
                 value={form.lead_status}
                 onChange={(e) => setForm({ ...form, lead_status: e.target.value })}
@@ -201,7 +201,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
               Odustani
             </button>
             <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center">
-              {loading ? <><Loader2 size={14} className="animate-spin" /> Dodaje se...</> : "Dodaj sponzora"}
+              {loading ? <><Loader2 size={14} className="animate-spin" /> Dodaje se...</> : "Dodaj partnera"}
             </button>
           </div>
         </form>

@@ -153,7 +153,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Pretraži po imenu, emailu, funkciji ili sponzoru..."
+          placeholder="Pretraži po imenu, emailu, funkciji ili partneru..."
           className="input-field pl-9 pr-8"
         />
         {query && (
@@ -246,7 +246,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Telefon</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Funkcija</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Sponzor</th>
+                <th>Partner</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Tip</th>
                 <th className="px-4 py-3"></th>
               </tr>

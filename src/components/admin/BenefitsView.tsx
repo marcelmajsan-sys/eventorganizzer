@@ -174,7 +174,7 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
                 className="p-0.5 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                title="Obriši za ovog sponzora"
+                title="Obriši za ovog partnera"
               >
                 <Trash2 size={12} />
               </button>
@@ -298,7 +298,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
               <AlertTriangle size={12} /> {overdueCount} kasni
             </span>
           )}
-          <span className="text-xs text-gray-500">{rows.length} sponzora</span>
+          <span className="text-xs text-gray-500">{rows.length} partnera</span>
           <span className="text-xs text-gray-400">{doneCount}/{rows.length} završeno</span>
           {lastReminded && (
             <span className="text-xs text-gray-400">
@@ -323,7 +323,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
                     onChange={(e) => setSelectedSponsorId(e.target.value)}
                     className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                   >
-                    <option value="">— odaberi sponzora —</option>
+                    <option value="">— odaberi partnera —</option>
                     {availableSponsors.map((s) => (
                       <option key={s.id} value={s.id}>{s.name} ({s.package_type})</option>
                     ))}
@@ -348,7 +348,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
                   className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors py-0.5"
                 >
                   <Plus size={12} />
-                  Dodaj sponzora
+                  Dodaj partnera
                 </button>
               )}
             </div>
@@ -361,7 +361,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
         className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 text-xs text-gray-500 hover:text-brand-600 hover:bg-gray-50 transition-colors border-t border-gray-100"
       >
         {open
-          ? <><ChevronDown size={13} className="rotate-180" /> Sakrij sponzore</>
+          ? <><ChevronDown size={13} className="rotate-180" /> Sakrij partnere</>
           : <><ChevronDown size={13} /> Prikaži sve ({rows.length})</>
         }
       </button>
@@ -458,7 +458,7 @@ function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[]
         className="w-full flex items-center justify-center gap-1.5 px-5 py-2 text-xs text-gray-500 hover:text-brand-600 hover:bg-white/60 transition-colors border-t border-white/60"
       >
         {open
-          ? <><ChevronDown size={13} className="rotate-180" /> Sakrij sponzore</>
+          ? <><ChevronDown size={13} className="rotate-180" /> Sakrij partnere</>
           : <><ChevronDown size={13} /> Prikaži sve ({rows.length})</>
         }
       </button>
@@ -693,7 +693,7 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
   const tabs = [
     { key: "benefit", label: "Po benefitu", icon: <LayoutList size={15} /> },
     { key: "category", label: "Po kategoriji", icon: <Tag size={15} /> },
-    { key: "sponsor", label: "Po sponzoru", icon: <Users size={15} /> },
+    { key: "sponsor", label: "Po partneru", icon: <Users size={15} /> },
   ] as const;
 
   return (
@@ -764,7 +764,7 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
             return (
               <div key={pkg} className={`rounded-xl border-2 overflow-hidden ${PACKAGE_COLORS[pkg]}`}>
                 <div className={`flex items-center justify-between px-5 py-3 border-b ${PACKAGE_HEADER_COLORS[pkg]}`}>
-                  <h2 className="font-bold text-base">{pkg} sponzori</h2>
+                  <h2 className="font-bold text-base">{pkg} partneri</h2>
                   <span className="text-xs font-medium opacity-70">{doneCount}/{rows.length} završeno</span>
                 </div>
                 <div className="divide-y divide-white/60">
@@ -800,7 +800,7 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
           ))}
           {sponsorGroups.length === 0 && (
             <div className="card p-12 text-center text-gray-400 text-sm">
-              Nema sponzora s benefitima
+              Nema partnera s benefitima
             </div>
           )}
         </div>

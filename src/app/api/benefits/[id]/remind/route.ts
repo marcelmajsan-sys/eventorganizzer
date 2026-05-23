@@ -23,7 +23,7 @@ export async function POST(
       ? createAdminClientForProject(project_id)
       : await createAdminClient();
 
-    // Dohvati benefit + sponzora
+    // Dohvati benefit + partnera
     const { data: benefit } = await supabase
       .from("sponsor_benefits")
       .select("*, sponsors(name)")

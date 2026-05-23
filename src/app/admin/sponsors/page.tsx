@@ -92,8 +92,8 @@ export default async function SponsorsPage({ searchParams }: Props) {
     <div className="animate-enter">
       <div className="page-header flex items-start justify-between">
         <div>
-          <h1 className="page-title">Sponzori</h1>
-          <p className="page-subtitle">{sponsors.length} sponzora ukupno</p>
+          <h1 className="page-title">Partneri</h1>
+          <p className="page-subtitle">{sponsors.length} partnera ukupno</p>
         </div>
         <AddSponsorModal packageTypes={packageTypeNames} />
       </div>
@@ -102,7 +102,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
       <div className="card p-4 mb-6 space-y-3">
         {/* Row 0 — Tražilica */}
         <div className="flex flex-wrap gap-3 items-center">
-          <SearchInput placeholder="Pretraži sponzore..." />
+          <SearchInput placeholder="Pretraži partnere..." />
         </div>
 
         {/* Row 1 — Kategorija */}

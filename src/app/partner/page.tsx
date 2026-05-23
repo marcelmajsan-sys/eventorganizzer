@@ -59,11 +59,11 @@ function PartnerLoginForm() {
             <Building2 size={28} className="text-white" />
           </div>
           <h1 className="font-display text-3xl font-bold text-gray-900">CRO Commerce</h1>
-          <p className="text-gray-500 mt-1">Sponzorski portal</p>
+          <p className="text-gray-500 mt-1">Partnerski portal</p>
         </div>
 
         <div className="card p-8">
-          <h2 className="font-semibold text-lg text-gray-900 mb-6">Prijava za sponzore</h2>
+          <h2 className="font-semibold text-lg text-gray-900 mb-6">Prijava za partnere</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

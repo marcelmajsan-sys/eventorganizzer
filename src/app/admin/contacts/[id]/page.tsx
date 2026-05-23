@@ -143,7 +143,7 @@ export default async function ContactDetailPage({ params }: Props) {
               <Building2 size={16} className="text-orange-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">Sponzor / partner</p>
+              <p className="text-xs text-gray-400 mb-0.5">Partner</p>
               <Link
                 href={`/admin/sponsors/${sponsor.id}`}
                 className="font-medium text-brand-600 hover:text-brand-700 hover:underline transition-colors"

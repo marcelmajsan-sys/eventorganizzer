@@ -134,7 +134,7 @@ export default async function PortalBenefitsPage({
       <div className="page-header">
         <div>
           <h1 className="page-title">Moji benefiti</h1>
-          <p className="page-subtitle">Pregled vaših sponzorskih benefita</p>
+          <p className="page-subtitle">Pregled vaših partnerskih benefita</p>
         </div>
       </div>
 

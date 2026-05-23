@@ -30,7 +30,7 @@ export default function PortalHeader({
           </div>
           <div>
             <p className="font-display font-bold text-gray-900 text-sm leading-none">CRO Commerce</p>
-            <p className="text-gray-400 text-xs">Sponzorski portal 2025</p>
+            <p className="text-gray-400 text-xs">Partnerski portal 2025</p>
           </div>
         </div>
 

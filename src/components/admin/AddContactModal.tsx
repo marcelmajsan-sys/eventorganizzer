@@ -106,9 +106,9 @@ export default function AddContactModal({ sponsors = [] }: Props) {
 
           {/* Sponsor */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponzor / partner</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Partner</label>
             <select value={form.sponsor_id} onChange={f("sponsor_id")} className="input-field">
-              <option value="">— Bez sponzora —</option>
+              <option value="">— Bez partnera —</option>
               {sponsors.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}

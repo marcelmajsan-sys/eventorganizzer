@@ -65,7 +65,7 @@ export default function RenameBenefitDialog({ currentName, currentDeadline, onCl
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div>
             <h2 className="font-display text-lg font-bold text-gray-900">Uredi benefit</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Mijenja se za sve sponzore</p>
+            <p className="text-xs text-gray-400 mt-0.5">Mijenja se za sve partnere</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={20} />
@@ -92,7 +92,7 @@ export default function RenameBenefitDialog({ currentName, currentDeadline, onCl
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rok (za sve sponzore)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rok (za sve partnere)</label>
             <input
               type="date"
               value={deadline}

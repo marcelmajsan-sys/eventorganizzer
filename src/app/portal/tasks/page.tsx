@@ -36,7 +36,7 @@ export default async function PortalTasksPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Zadaci</h1>
-          <p className="page-subtitle">Zadaci vezani za vaše sponzorstvo</p>
+          <p className="page-subtitle">Zadaci vezani za vaše partnerstvo</p>
         </div>
       </div>
 

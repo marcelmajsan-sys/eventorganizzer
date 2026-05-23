@@ -60,7 +60,7 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
       <div className="page-header">
         <div>
           <h1 className="page-title">Benefiti</h1>
-          <p className="page-subtitle">Pregled svih benefita i sponzori koji ih imaju</p>
+          <p className="page-subtitle">Pregled svih benefita i partneri koji ih imaju</p>
         </div>
         <AddBenefitModal sponsors={sponsorList} />
       </div>

@@ -87,7 +87,7 @@ export default async function AdminDashboard() {
   const statCards = [
     {
       value: totalSponsors,
-      label: "Ukupno sponzora",
+      label: "Ukupno partnera",
       icon: Users,
       color: "text-blue-600",
       bg: "bg-blue-50",
@@ -128,8 +128,8 @@ export default async function AdminDashboard() {
           { label: "Profitabilnost", value: formatEur((naplaceno + neplaceno) - (budgetPaid + budgetPending)), sub: `prihodi ${formatEur(naplaceno + neplaceno)} − troškovi ${formatEur(budgetPaid + budgetPending)}`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: (naplaceno + neplaceno) - (budgetPaid + budgetPending) >= 0 ? "text-emerald-600" : "text-red-600", href: "/admin/troskovi" },
           { label: "Plaćeno (troškovi)", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
           { label: "Na čekanju (troškovi)", value: formatEur(budgetPending), sub: `${budgetItems.filter(i=>i.status==="pending").length} stavki`, icon: TrendingUp, iconCls: "text-amber-500", valCls: "text-amber-600", href: "/admin/troskovi?status=pending" },
-          { label: "Naplaćeno", value: formatEur(naplaceno), sub: `${naplacenoCount} sponzora`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
-          { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} sponzora`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors" },
+          { label: "Naplaćeno", value: formatEur(naplaceno), sub: `${naplacenoCount} partnera`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid" },
+          { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} partnera`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors" },
         ].map((c) => {
           const Icon = c.icon;
           return (
@@ -153,7 +153,7 @@ export default async function AdminDashboard() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { value: totalSponsors, label: "Ukupno sponzora", icon: Users, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/sponsors" },
+          { value: totalSponsors, label: "Ukupno partnera", icon: Users, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/sponsors" },
           { value: paidCount, label: "Plaćenih", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50", sub: `${pendingCount} na čekanju`, href: "/admin/sponsors?payment=paid" },
           { value: openTasks, label: "Otvorenih zadataka", icon: Clock, color: "text-orange-600", bg: "bg-orange-50", href: "/admin/tasks" },
           { value: overdueBenefits, label: "Benefita kasni", icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50", href: "/admin/benefits" },
@@ -181,7 +181,7 @@ export default async function AdminDashboard() {
         <a href="/admin/sponsors?lead=confirmed_new" className="card p-6 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
           <div className="flex items-center gap-2 mb-1">
             <Package size={18} className="text-gray-400" />
-            <h3 className="font-semibold text-gray-900">Sponzori po paketu</h3>
+            <h3 className="font-semibold text-gray-900">Partneri po paketu</h3>
           </div>
           <p className="text-xs text-gray-400 mb-4">samo potvrđeni ({confirmedTotal})</p>
           <div className="space-y-3">
@@ -265,7 +265,7 @@ export default async function AdminDashboard() {
       {/* Recent sponsors */}
       <div className="mt-6 card p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-gray-900">Nedavno uređeni sponzori</h3>
+          <h3 className="font-semibold text-gray-900">Nedavno uređeni partneri</h3>
           <a href="/admin/sponsors" className="text-sm text-brand-600 hover:text-brand-700 font-medium">
             Vidi sve →
           </a>
@@ -320,7 +320,7 @@ export default async function AdminDashboard() {
               {recentSponsors.length === 0 && (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-gray-400">
-                    Nema sponzora u bazi
+                    Nema partnera u bazi
                   </td>
                 </tr>
               )}

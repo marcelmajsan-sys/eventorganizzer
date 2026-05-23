@@ -144,9 +144,9 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field resize-none" rows={3} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponzor / partner</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Partner</label>
             <select value={form.sponsor_id} onChange={(e) => setForm({ ...form, sponsor_id: e.target.value })} className="input-field">
-              <option value="">— Bez sponzora —</option>
+              <option value="">— Bez partnera —</option>
               {sponsors.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
