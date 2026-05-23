@@ -1,7 +1,7 @@
 "use server";
 
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { ProjectId } from "@/lib/supabase/projects";
 
 export async function notifyAdminContactAdded(
@@ -10,8 +10,6 @@ export async function notifyAdminContactAdded(
   contactType: "contact" | "ticket",
   projectId: ProjectId = "2026"
 ) {
-  // Try the passed project first, then the other — handles cases where
-  // cro_active_project cookie is missing or set to the wrong project.
   const projectsToTry: ProjectId[] = projectId === "2026" ? ["2026", "2025"] : ["2025", "2026"];
   const typeLabel = contactType === "contact" ? "kontakt osoba" : "osoba za ulaznice";
 
@@ -53,17 +51,56 @@ export async function notifyAdminContactAdded(
   console.error(`notifyAdminContactAdded: all projects failed for sponsorId=${sponsorId}`);
 }
 
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function markNotificationRead(id: string) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
   const adminClient = await createAdminClient();
-  await adminClient.from("notifications").update({ read: true }).eq("id", id);
+  await adminClient
+    .from("notification_reads")
+    .upsert({ notification_id: id, user_id: userId }, { onConflict: "notification_id,user_id" });
 }
 
 export async function markNotificationUnread(id: string) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
   const adminClient = await createAdminClient();
-  await adminClient.from("notifications").update({ read: false }).eq("id", id);
+  await adminClient
+    .from("notification_reads")
+    .delete()
+    .eq("notification_id", id)
+    .eq("user_id", userId);
 }
 
 export async function markAllNotificationsRead() {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
   const adminClient = await createAdminClient();
-  await adminClient.from("notifications").update({ read: true }).eq("read", false);
+
+  // Dohvati sve notification ID-eve kojih još nema u reads za ovog usera
+  const { data: allNotifs } = await adminClient.from("notifications").select("id");
+  if (!allNotifs || allNotifs.length === 0) return;
+
+  const { data: existing } = await adminClient
+    .from("notification_reads")
+    .select("notification_id")
+    .eq("user_id", userId);
+
+  const existingSet = new Set((existing ?? []).map((r: any) => r.notification_id));
+  const toInsert = allNotifs
+    .filter((n: any) => !existingSet.has(n.id))
+    .map((n: any) => ({ notification_id: n.id, user_id: userId }));
+
+  if (toInsert.length > 0) {
+    await adminClient.from("notification_reads").insert(toInsert);
+  }
 }

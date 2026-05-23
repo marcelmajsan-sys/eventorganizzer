@@ -30,10 +30,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   try {
     const adminClient = await createAdminClient();
-    const [adminsRes, settingsRes, notifRes] = await Promise.all([
+    const [adminsRes, settingsRes, allNotifsRes, readsRes] = await Promise.all([
       adminClient.from("project_admins").select("email"),
       adminClient.from("project_settings").select("key, value"),
-      adminClient.from("notifications").select("id", { count: "exact", head: true }).eq("read", false),
+      adminClient.from("notifications").select("id"),
+      adminClient.from("notification_reads").select("notification_id").eq("user_id", user.id),
     ]);
     if (adminsRes.data && adminsRes.data.length > 0) {
       adminEmails = adminsRes.data.map((r) => r.email);
@@ -44,7 +45,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       "2026": settingsRes.data?.find((s) => s.key === "conference_date_2026")?.value ?? PROJECTS["2026"].conferenceDate,
       "2025": settingsRes.data?.find((s) => s.key === "conference_date_2025")?.value ?? PROJECTS["2025"].conferenceDate,
     };
-    unreadCount = notifRes.count ?? 0;
+    const readIds = new Set((readsRes.data ?? []).map((r: any) => r.notification_id));
+    unreadCount = (allNotifsRes.data ?? []).filter((n: any) => !readIds.has(n.id)).length;
   } catch {
     // Tables not yet created — use hardcoded fallbacks
   }
