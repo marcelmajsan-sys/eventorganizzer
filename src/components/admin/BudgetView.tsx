@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Pencil, Trash2, X, Check, Loader2, TrendingUp, Wallet, CircleDollarSign, ListChecks, Search } from "lucide-react";
 
-type BudgetStatus = "pending" | "paid" | "cancelled";
+type BudgetStatus = "pending" | "paid" | "cancelled" | "unconfirmed";
 
 interface BudgetItem {
   id: string;
@@ -18,16 +18,19 @@ interface BudgetItem {
 }
 
 const STATUS_OPTIONS: { value: BudgetStatus; label: string }[] = [
-  { value: "pending",   label: "Na čekanju" },
-  { value: "paid",      label: "Plaćeno" },
-  { value: "cancelled", label: "Otkazano" },
+  { value: "unconfirmed", label: "Nepotvrđeno" },
+  { value: "pending",     label: "Na čekanju" },
+  { value: "paid",        label: "Plaćeno" },
+  { value: "cancelled",   label: "Otkazano" },
 ];
 
 function statusStyle(status: BudgetStatus) {
   switch (status) {
-    case "paid":      return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    case "pending":   return "bg-amber-50 text-amber-700 border-amber-200";
-    case "cancelled": return "bg-gray-100 text-gray-400 border-gray-200";
+    case "paid":         return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    case "pending":      return "bg-amber-50 text-amber-700 border-amber-200";
+    case "cancelled":    return "bg-gray-100 text-gray-400 border-gray-200";
+    case "unconfirmed":  return "bg-blue-50 text-blue-600 border-blue-200";
+    default:             return "bg-gray-100 text-gray-500 border-gray-200";
   }
 }
 
@@ -139,10 +142,11 @@ export default function BudgetView({ items: initial, projectId }: Props) {
   const canSave = form.category.trim() && !saving;
 
   const FILTER_TABS: { id: FilterTab; label: string }[] = [
-    { id: "all",       label: "Sve" },
-    { id: "pending",   label: "Na čekanju" },
-    { id: "paid",      label: "Plaćeno" },
-    { id: "cancelled", label: "Otkazano" },
+    { id: "all",          label: "Sve" },
+    { id: "unconfirmed",  label: "Nepotvrđeno" },
+    { id: "pending",      label: "Na čekanju" },
+    { id: "paid",         label: "Plaćeno" },
+    { id: "cancelled",    label: "Otkazano" },
   ];
 
   return (
