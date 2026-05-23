@@ -164,7 +164,13 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
             </>
           ) : (
             <>
-              <Pencil size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              <button
+                onClick={(e) => { e.stopPropagation(); document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" }); setEditing(true); }}
+                className="p-0.5 text-gray-300 hover:text-gray-600 transition-colors opacity-0 group-hover:opacity-100"
+                title="Uredi benefit"
+              >
+                <Pencil size={13} />
+              </button>
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
                 className="p-0.5 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
@@ -558,7 +564,13 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
             </>
           ) : (
             <>
-              <Pencil size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              <button
+                onClick={(e) => { e.stopPropagation(); document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" }); setEditing(true); }}
+                className="p-0.5 text-gray-300 hover:text-gray-600 transition-colors opacity-0 group-hover:opacity-100"
+                title="Uredi benefit"
+              >
+                <Pencil size={13} />
+              </button>
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
                 className="p-0.5 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
