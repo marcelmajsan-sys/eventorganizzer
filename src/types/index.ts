@@ -12,6 +12,7 @@ export interface Sponsor {
   contact_name: string;
   payment_status: PaymentStatus;
   lead_status: LeadStatus | null;
+  contact_phone: string | null;
   notes: string | null;
   iznos: number | null;
   created_at: string;

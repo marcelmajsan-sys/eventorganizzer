@@ -20,6 +20,7 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
     package_type: sponsor.package_type,
     contact_email: sponsor.contact_email,
     contact_name: sponsor.contact_name,
+    contact_phone: sponsor.contact_phone ?? "",
     payment_status: sponsor.payment_status,
     lead_status: sponsor.lead_status ?? ("" as LeadStatus | ""),
     notes: sponsor.notes ?? "",
@@ -30,7 +31,11 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
     e.preventDefault();
     setLoading(true);
     const { iznos: _iznos, ...rest } = form;
-    const basePayload = { ...rest, lead_status: form.lead_status || null };
+    const basePayload = {
+      ...rest,
+      lead_status: form.lead_status || null,
+      contact_phone: form.contact_phone || null,
+    };
     const iznosValue = form.iznos !== "" ? parseFloat(form.iznos) : null;
 
     let { error } = await supabase
@@ -107,6 +112,10 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <input type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} className="input-field" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Broj mobitela</label>
+              <input type="tel" value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} className="input-field" placeholder="+385 91 000 0000" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Iznos (€)</label>
