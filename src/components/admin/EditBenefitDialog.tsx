@@ -77,12 +77,17 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
 
       if (benefit.sponsor_id) {
         Promise.all([
-          supabase.from("sponsor_contacts").select("id, name, email").eq("sponsor_id", benefit.sponsor_id).eq("type", "contact"),
-          supabase.from("sponsors").select("contact_name").eq("id", benefit.sponsor_id).single(),
+          supabase.from("sponsor_contacts").select("id, name, email").eq("sponsor_id", benefit.sponsor_id),
+          supabase.from("sponsors").select("contact_name, contact_email").eq("id", benefit.sponsor_id).single(),
         ]).then(([{ data: contactsData }, { data: sponsorData }]) => {
           const allContacts = contactsData ?? [];
           const primaryName = (sponsorData?.contact_name ?? "").toLowerCase().trim();
-          const primaryContact = primaryName ? allContacts.find(c => c.name.toLowerCase().trim() === primaryName) : null;
+          const primaryEmail = (sponsorData?.contact_email ?? "").toLowerCase().trim();
+          // Match by name first, fallback to email
+          const primaryContact = allContacts.find(c =>
+            (primaryName && c.name.toLowerCase().trim() === primaryName) ||
+            (primaryEmail && c.email && c.email.toLowerCase().trim() === primaryEmail)
+          ) ?? null;
           // Sort primary contact first
           const sorted = primaryContact
             ? [primaryContact, ...allContacts.filter(c => c.id !== primaryContact.id)]
