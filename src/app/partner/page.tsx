@@ -37,7 +37,7 @@ function PartnerLoginForm() {
 
     if (!authError && data.user) {
       document.cookie = `${PROJECT_COOKIE}=${projectId}; path=/; max-age=31536000`;
-      router.push("/portal/benefits");
+      router.push("/portal/sponsor");
       router.refresh();
       return;
     }
