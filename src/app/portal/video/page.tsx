@@ -1,4 +1,4 @@
-import { Youtube, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 export default function PortalVideoPage() {
   return (
@@ -19,10 +19,6 @@ export default function PortalVideoPage() {
       </div>
 
       <div className="card p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Youtube size={20} className="text-red-600" />
-          <h2 className="font-semibold text-gray-900">CRO Commerce 2025 — video snimka</h2>
-        </div>
         <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
           <iframe
             src="https://www.youtube.com/embed/N_3Uyjn_jqc"
