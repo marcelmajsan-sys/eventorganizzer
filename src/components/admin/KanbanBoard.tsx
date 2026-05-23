@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   DndContext, DragOverlay, closestCorners,
   KeyboardSensor, PointerSensor, useSensor, useSensors,
@@ -87,6 +87,11 @@ export default function KanbanBoard({ initialTasks }: { initialTasks: (Task & { 
   const [tasks, setTasks] = useState(initialTasks);
   const [activeTask, setActiveTask] = useState<(Task & { sponsors?: any }) | null>(null);
   const supabase = createClient();
+
+  // Sync kada server komponenta dobije nove podatke (npr. nakon router.refresh())
+  useEffect(() => {
+    setTasks(initialTasks);
+  }, [initialTasks]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
