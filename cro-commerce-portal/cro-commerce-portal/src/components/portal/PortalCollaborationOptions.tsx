@@ -13,7 +13,8 @@ const PACKAGES: PackageDef[] = [
   { name: "Brončani", slots: "max 30",       price: "2.500 €",  highlight: false },
   { name: "Srebrni",  slots: "max 8",        price: "6.000 €",  highlight: false },
   { name: "Zlatni",   slots: "max 4",        price: "10.000 €", highlight: false },
-  { name: "Glavni",   slots: "REZERVIRANO",  price: "16.500 €", highlight: true  },
+  { name: "Glavni",   slots: "REZERVIRANO",  price: "16.500 €", highlight: false },
+  // highlight: true je uklonjen — označavanje se radi isključivo via currentPackage prop (zeleni highlight)
 ];
 
 interface CategoryDef {
