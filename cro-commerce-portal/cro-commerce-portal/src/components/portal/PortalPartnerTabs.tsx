@@ -6,7 +6,6 @@ import { packageColor, paymentStatusLabel, paymentStatusColor, formatDate, forma
 import type { PackageType, PaymentStatus } from "@/types";
 import PortalContactsSection from "@/components/portal/PortalContactsSection";
 import PortalCollaborationOptions from "@/components/portal/PortalCollaborationOptions";
-import PortalContractView from "@/components/portal/PortalContractView";
 
 interface Contact {
   id: string;
@@ -33,7 +32,6 @@ interface Sponsor {
   contact_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
-  iznos: number | null;
 }
 
 interface Props {
@@ -41,34 +39,22 @@ interface Props {
   sponsor: Sponsor;
   contacts: Contact[];
   files: FileRecord[];
-  userEmail: string;
-  contractAcceptedAt: string | null;
-  contractAcceptedBy: string | null;
 }
 
 const TABS = [
-  { id: "info",     label: "Informacije" },
+  { id: "info",      label: "Informacije" },
   { id: "dokumenti", label: "Dokumenti" },
-  { id: "ugovor",   label: "Uvjeti suradnje" },
-  { id: "opcije",   label: "Opcije suradnje" },
+  { id: "opcije",    label: "Opcije suradnje" },
 ] as const;
 
 type Tab = typeof TABS[number]["id"];
 
-export default function PortalPartnerTabs({
-  sponsorId,
-  sponsor,
-  contacts,
-  files,
-  userEmail,
-  contractAcceptedAt,
-  contractAcceptedBy,
-}: Props) {
+export default function PortalPartnerTabs({ sponsorId, sponsor, contacts, files }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("info");
 
   return (
     <div>
-      {/* ── Sponsor info card ── */}
+      {/* Osnovno */}
       <div className="card p-6 mb-5">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -97,27 +83,13 @@ export default function PortalPartnerTabs({
                   </button>
                 </div>
               )}
-              {/* Contract acceptance badge */}
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ugovor</p>
-                <button
-                  onClick={() => setActiveTab("ugovor")}
-                  className={`badge text-sm cursor-pointer hover:opacity-75 transition-opacity ${
-                    contractAcceptedAt
-                      ? "bg-green-100 text-green-700 border border-green-200"
-                      : "bg-amber-100 text-amber-700 border border-amber-200"
-                  }`}
-                >
-                  {contractAcceptedAt ? "✓ Prihvaćen" : "Čeka prihvaćanje"}
-                </button>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="flex flex-wrap gap-1 bg-gray-100 rounded-lg p-1 mb-5 w-fit">
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-5 w-fit">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -134,14 +106,11 @@ export default function PortalPartnerTabs({
                 {files.length}
               </span>
             )}
-            {tab.id === "ugovor" && !contractAcceptedAt && (
-              <span className="ml-1.5 inline-block w-1.5 h-1.5 bg-amber-400 rounded-full align-middle" />
-            )}
           </button>
         ))}
       </div>
 
-      {/* ── Tab: Informacije ── */}
+      {/* Tab: Informacije */}
       {activeTab === "info" && (
         <PortalContactsSection
           sponsorId={sponsorId}
@@ -154,7 +123,7 @@ export default function PortalPartnerTabs({
         />
       )}
 
-      {/* ── Tab: Dokumenti ── */}
+      {/* Tab: Dokumenti */}
       {activeTab === "dokumenti" && (
         <div>
           {files.length === 0 ? (
@@ -196,21 +165,7 @@ export default function PortalPartnerTabs({
         </div>
       )}
 
-      {/* ── Tab: Uvjeti suradnje (Ugovor) ── */}
-      {activeTab === "ugovor" && (
-        <PortalContractView
-          sponsorId={sponsorId}
-          sponsorName={sponsor.name}
-          packageType={sponsor.package_type}
-          iznos={sponsor.iznos}
-          contactName={sponsor.contact_name}
-          acceptedAt={contractAcceptedAt}
-          acceptedBy={contractAcceptedBy}
-          userEmail={userEmail}
-        />
-      )}
-
-      {/* ── Tab: Opcije suradnje ── */}
+      {/* Tab: Opcije suradnje */}
       {activeTab === "opcije" && <PortalCollaborationOptions />}
     </div>
   );
