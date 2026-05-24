@@ -76,7 +76,7 @@ function getBenefits(packageType: string): string[] {
       ];
     case "Glavni":
       return [
-        "Naziv „Powered by" na Konferenciji – ekskluzivno pozicioniranje brenda Partnera kao glavnog pokrovitelja CRO COMMERCE 2026.",
+        "Naziv „Powered by“ na Konferenciji – ekskluzivno pozicioniranje brenda Partnera kao glavnog pokrovitelja CRO COMMERCE 2026.",
         "Isticanje logotipa ili naziva Partnera na svim promotivnim materijalima Konferencije. Promotivni materijali uključit će: photowall, akreditacije (minimalna naklada 400 kom), web stranica konferencije u sekciji Glavni sponzor.",
         "Keynote izlaganje na glavnoj pozornici Konferencije.",
         "Video promocija na glavnoj pozornici konferencije.",
