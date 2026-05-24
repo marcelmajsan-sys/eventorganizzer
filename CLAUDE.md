@@ -130,7 +130,7 @@ eventorganizzer/
 ├── supabase/                     ← SQL migracije
 │   ├── migration_001_initial.sql
 │   ├── ...
-│   └── migration_033_sync_primary_contacts.sql
+│   └── migration_035_partner_login_notification_fn.sql
 ├── cro-commerce-portal/
 │   └── cro-commerce-portal/      ← Dev working dir (lokalni dev)
 │       └── src/                  ← Kopija root src/ za lokalni rad
@@ -324,6 +324,7 @@ migration_031_budget_unconfirmed_status    ← budget_items CHECK proširen s 'u
 migration_032_default_benefit_contact      ← SET assigned_to = 'laura@ecommerce.hr' za sve benefite bez kontakta
 migration_033_sync_primary_contacts        ← Sync: primarni kontakti iz sponsors.contact_name → sponsor_contacts
 migration_034_partial_amount               ← partial_amount NUMERIC(10,2) kolona na sponsors tablici
+migration_035_partner_login_notification_fn ← SECURITY DEFINER funkcija record_partner_login_notification() za INSERT u notifications zaobilazeći RLS; pokrenuti u OBJE baze
 ```
 
 > **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.
@@ -442,6 +443,7 @@ git push origin main
 ## Implementirane funkcionalnosti
 
 ### Sponzori
+- **Prijave u portal** — kartica na stranici sponzora prikazuje povijest prijava partnera (email + datum+sat, max 20); dohvat iz `notifications` where `title='Prijava partnera'` and `sponsor_id=id`; email se parsira regex-om `/\(([^)]+@[^)]+)\)/` iz poruke
 - Lista sponzora s tražilicom (`?q=` URL param) — naziv tvrtke je klikabilan link na profil
 - **Multi-select filter paketa** (`PackageTypeManager`) — comma-separated `?package=Zlatni,Srebrni` URL param; × ikonica se prikazuje samo na aktivnom filteru i uklanja ga; olovka gumb → edit mode (rename/delete po kategoriji)
 - **Multi-select filter plaćanja** — comma-separated `?payment=paid,partial` URL param; klik na pill togglea status (dodaje/uklanja); "Svi" resetira sve; kompatibilno s postojećim linkovima. Helper `parseList()` i `togglePayment()` u `sponsors/page.tsx`
@@ -558,6 +560,7 @@ git push origin main
 - **Brisanje po notifikaciji** (trash ikona) — vidljivo samo za `marcel@ecommerce.hr`
 - **Obriši sve** (gumb u headeru, s Da/Ne potvrdom) — vidljivo samo za `marcel@ecommerce.hr`; briše sve zapise iz baze; nitko ih više ne vidi
 - **Prijava partnera** (tab narančaste boje, `LogIn` ikona): `recordPartnerLogin(userId, email, projectId)` server action se poziva iz `/partner` nakon uspješnog logina; prikazuje naziv tvrtke i email; link na profil sponzora
+- **Svi inbox upiti koriste `createAdminClientForProject(projectId)`** — `createAdminClient()` iz `@supabase/ssr` ne zaobilazi RLS pouzdano za `notifications` tablicu
 
 ### Rokovnik
 - Ruta `/admin/calendar`
@@ -602,7 +605,9 @@ git push origin main
 - **Brisanje benefita**: Trash2 ikona briše specifičan `sponsor_benefits` zapis po `id` — ne sve zapise s istim `benefit_name`
 - **Spread operater na `Set`** (`[...new Set(...)]`) zahtijeva `downlevelIteration` — umjesto toga koristiti `forEach` + ručno deduplicirani array
 - **Notifikacije — koristiti Postgres trigere, NE JS klijent**: `createServerClient` s service role keyem ne bypassira RLS pouzdano za INSERT u `notifications`. Jedino sigurno rješenje je Postgres trigger s `SECURITY DEFINER`. Iznimka: `recordPartnerLogin` koristi `createAdminClientForProject` (direktni `createClient` iz `@supabase/supabase-js`, ne `createServerClient`) koji pouzdano bypassira RLS
-- **`recordPartnerLogin` pattern**: prima `userId` (iz `signInWithPassword` response — ne treba `listUsers`!); awaita se u `partner/page.tsx` PRIJE `router.push` (fire-and-forget može biti prekinut navigacijom); email se parsira iz poruke regex-om `/\(([^)]+@[^)]+)\)/` na dashboardu
+- **`recordPartnerLogin` pattern**: prima `userId` (iz `signInWithPassword` response — ne treba `listUsers`!); awaita se u `partner/page.tsx` PRIJE `router.push` (fire-and-forget može biti prekinut navigacijom); email se parsira iz poruke regex-om `/\(([^)]+@[^)]+)\)/` na dashboardu i sponsor profilu
+- **KRITIČNO — `createAdminClient()` vs `createAdminClientForProject()`**: `createAdminClient()` iz `@/lib/supabase/server` koristi `createServerClient` iz `@supabase/ssr` koji je **podložan RLS** i ne garantira pristup project-specifičnim tablicama. Za sve upite na `notifications`, `notification_reads`, `project_admins` i slične RLS-zaštićene tablice **uvijek koristiti `createAdminClientForProject(projectId)`** iz `adminProjectClient.ts`. `admin/layout.tsx`, `admin/inbox/page.tsx`, `admin/dashboard/page.tsx`, `admin/sponsors/[id]/page.tsx` i sve notification server akcije koriste `createAdminClientForProject`
+- **`getProjectAdminClient()` helper** u `actions/notifications.ts`: čita `PROJECT_COOKIE`, razrješava `projectId`, vraća `createAdminClientForProject(projectId)` — koristi se u svim notification server akcijama (markRead, markUnread, delete, markAll)
 - **Portal i18n**: `LanguageProvider` u `context/LanguageContext.tsx`; `useLang()` hook vraća `{ lang, toggleLang, t }`. Prijevodi u `lib/i18n/portal.ts`. `translatePackage(lang, type)` za nazive paketa — za nepoznate pakete vraća izvorni naziv. Svi portal klijentski komponenti koriste `useLang()`
 - **`notifications` tablica**: `sponsor_id` nullable (od migration_020), `task_id` nullable UUID FK. Inbox query uključuje `task_id` — obavezno pokrenuti migration_020
 - **`sponsor_contacts.type` CHECK constraint** (migration_006) originalno ima samo `contact` i `ticket` — migration_023 proširuje. Bez te migracije, spremanje kontakta s novim tipom tiho faila
