@@ -1,10 +1,11 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import InboxView from "@/components/admin/InboxView";
 
-type NotifType = "task" | "contact" | "ticket";
+type NotifType = "task" | "contact" | "ticket" | "login";
 
 function getNotifType(n: any): NotifType {
   if (n.task_id) return "task";
+  if (n.title === "Prijava partnera") return "login";
   if (n.title === "Nova osoba za ulaznice") return "ticket";
   return "contact";
 }
