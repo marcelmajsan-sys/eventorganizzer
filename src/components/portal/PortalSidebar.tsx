@@ -11,6 +11,7 @@ import { switchPortalProject } from "@/app/actions/switchProject";
 import type { PackageType } from "@/types";
 import type { ProjectId } from "@/lib/supabase/projects";
 import { useLang } from "@/context/LanguageContext";
+import { translatePackage } from "@/lib/i18n/portal";
 
 interface Props {
   sponsor: { id: string; name: string; package_type: string };
@@ -26,7 +27,7 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
   const [signingOut, setSigningOut] = useState(false);
   const [switching, setSwitching] = useState(false);
   const supabase = createClient();
-  const { t, toggleLang } = useLang();
+  const { t, toggleLang, lang } = useLang();
 
   const activeLabel = PROJECTS[activeProjectId].label;
   const otherLabel = otherProjectId ? PROJECTS[otherProjectId].label : null;
@@ -68,7 +69,7 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
           <div className="min-w-0">
             <p className="font-semibold text-gray-900 text-sm truncate">{sponsor.name}</p>
             <span className={`badge text-xs ${packageColor(sponsor.package_type as PackageType)}`}>
-              {sponsor.package_type}
+              {translatePackage(lang, sponsor.package_type)}
             </span>
           </div>
         </div>

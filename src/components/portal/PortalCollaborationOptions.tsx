@@ -7,17 +7,17 @@ type TKey = keyof typeof TRANSLATIONS["hr"];
 type Cell = true | false | TKey; // cell is either bool or a translation key
 
 interface PackageDef {
-  name: string;
+  name: string;      // izvorni HR naziv — za usporedbu s currentPackage iz baze
+  nameKey: TKey;    // prijevod naziva
   slots: string;
   price: string;
 }
 
 const PACKAGES: PackageDef[] = [
-  { name: "Brončani", slots: "max 30",      price: "2.500 €"  },
-  { name: "Srebrni",  slots: "max 8",       price: "6.000 €"  },
-  { name: "Zlatni",   slots: "max 4",       price: "10.000 €" },
-  { name: "Glavni",   slots: "options.reserved", price: "16.500 €" },
-  // slots for Glavni uses translation key; all others are plain strings
+  { name: "Brončani", nameKey: "pkg.Brončani", slots: "max 30",           price: "2.500 €"  },
+  { name: "Srebrni",  nameKey: "pkg.Srebrni",  slots: "max 8",            price: "6.000 €"  },
+  { name: "Zlatni",   nameKey: "pkg.Zlatni",   slots: "max 4",            price: "10.000 €" },
+  { name: "Glavni",   nameKey: "pkg.Glavni",   slots: "options.reserved", price: "16.500 €" },
 ];
 
 interface CategoryDef {
@@ -144,7 +144,7 @@ export default function PortalCollaborationOptions({ currentPackage }: Props = {
                             </span>
                           )}
                           <p className={`font-bold text-sm leading-tight ${isCurrent ? "text-green-700" : "text-gray-800"}`}>
-                            {pkg.name}
+                            {t(pkg.nameKey)}
                           </p>
                           <p className={`text-[10px] mt-0.5 font-semibold uppercase tracking-wide ${isCurrent ? "text-green-500" : "text-gray-400"}`}>
                             {slotsText}

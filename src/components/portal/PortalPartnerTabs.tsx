@@ -7,6 +7,7 @@ import type { PackageType, PaymentStatus } from "@/types";
 import PortalContactsSection from "@/components/portal/PortalContactsSection";
 import PortalCollaborationOptions from "@/components/portal/PortalCollaborationOptions";
 import { useLang } from "@/context/LanguageContext";
+import { translatePackage } from "@/lib/i18n/portal";
 // import PortalContractView from "@/components/portal/PortalContractView"; // UGOVOR — zakomentirano, vidi dolje
 
 interface Contact {
@@ -67,7 +68,7 @@ export default function PortalPartnerTabs({
   userEmail, contractAcceptedAt, contractAcceptedBy, contractBenefits,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("info");
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const isMainPackage = MAIN_PACKAGES.includes(sponsor.package_type);
 
@@ -95,7 +96,7 @@ export default function PortalPartnerTabs({
                   {t("info.category")}
                 </p>
                 <span className={`badge text-sm ${packageColor(sponsor.package_type as PackageType)}`}>
-                  {sponsor.package_type}
+                  {translatePackage(lang, sponsor.package_type)}
                 </span>
               </div>
 

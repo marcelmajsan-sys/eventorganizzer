@@ -48,6 +48,13 @@ const HR = {
   "options.yourPackage": "Vaš paket",
   "options.ctaText": "Želiš nadograditi svoje benefite? Kontaktiraj nas!",
   "options.reserved": "REZERVIRANO",
+  // Package names
+  "pkg.Brončani": "Brončani",
+  "pkg.Srebrni": "Srebrni",
+  "pkg.Zlatni": "Zlatni",
+  "pkg.Glavni": "Glavni",
+  "pkg.Medijski": "Medijski",
+  "pkg.Community": "Community",
   // Category labels
   "cat.tickets": "Ulaznice i prisutnost",
   "cat.expo": "EXPO štand",
@@ -169,6 +176,13 @@ const EN: typeof HR = {
   "options.yourPackage": "Your Package",
   "options.ctaText": "Want to upgrade your benefits? Contact us!",
   "options.reserved": "RESERVED",
+  // Package names
+  "pkg.Brončani": "Bronze",
+  "pkg.Srebrni": "Silver",
+  "pkg.Zlatni": "Gold",
+  "pkg.Glavni": "Title",
+  "pkg.Medijski": "Media",
+  "pkg.Community": "Community",
   // Category labels
   "cat.tickets": "Tickets & Presence",
   "cat.expo": "EXPO Stand",
@@ -246,4 +260,11 @@ export const TRANSLATIONS: Record<Lang, typeof HR> = { hr: HR, en: EN };
 
 export function translate(lang: Lang, key: keyof typeof HR): string {
   return TRANSLATIONS[lang]?.[key] ?? HR[key] ?? key;
+}
+
+/** Prevodi naziv paketa; za nepoznate pakete vraća izvorni naziv. */
+export function translatePackage(lang: Lang, packageType: string): string {
+  const key = `pkg.${packageType}` as keyof typeof HR;
+  if (key in HR) return TRANSLATIONS[lang]?.[key] ?? packageType;
+  return packageType;
 }
