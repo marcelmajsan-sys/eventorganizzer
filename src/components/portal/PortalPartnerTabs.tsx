@@ -5,6 +5,7 @@ import { Building2, File, FileText, FolderOpen } from "lucide-react";
 import { packageColor, paymentStatusLabel, paymentStatusColor, formatDate, formatFileSize } from "@/lib/utils";
 import type { PackageType, PaymentStatus } from "@/types";
 import PortalContactsSection from "@/components/portal/PortalContactsSection";
+import PortalCollaborationOptions from "@/components/portal/PortalCollaborationOptions";
 
 interface Contact {
   id: string;
@@ -43,6 +44,7 @@ interface Props {
 const TABS = [
   { id: "info",      label: "Informacije" },
   { id: "dokumenti", label: "Dokumenti" },
+  { id: "opcije",    label: "Opcije suradnje" },
 ] as const;
 
 type Tab = typeof TABS[number]["id"];
@@ -162,6 +164,9 @@ export default function PortalPartnerTabs({ sponsorId, sponsor, contacts, files 
           )}
         </div>
       )}
+
+      {/* Tab: Opcije suradnje */}
+      {activeTab === "opcije" && <PortalCollaborationOptions />}
     </div>
   );
 }
