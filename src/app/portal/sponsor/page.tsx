@@ -8,9 +8,11 @@ export default async function PortalSponsorPage() {
   if (!user) redirect("/login");
 
   const adminClient = await createAdminClient();
+
+  // select * so new columns (contract_accepted_at/by) are included if migration ran
   const { data: sponsorUser } = await adminClient
     .from("sponsor_users")
-    .select("sponsor_id")
+    .select("*")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -23,6 +25,11 @@ export default async function PortalSponsorPage() {
   ]);
 
   if (!sponsor) redirect("/login");
+
+  // Graceful degradation: columns may not exist before migration_035
+  const su = sponsorUser as Record<string, unknown>;
+  const contractAcceptedAt = (su.contract_accepted_at as string | null) ?? null;
+  const contractAcceptedBy = (su.contract_accepted_by as string | null) ?? null;
 
   return (
     <div className="animate-enter">
@@ -38,6 +45,9 @@ export default async function PortalSponsorPage() {
         sponsor={sponsor}
         contacts={contacts ?? []}
         files={files ?? []}
+        userEmail={user.email ?? ""}
+        contractAcceptedAt={contractAcceptedAt}
+        contractAcceptedBy={contractAcceptedBy}
       />
     </div>
   );
