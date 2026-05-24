@@ -47,6 +47,8 @@ interface Props {
   contractBenefits: string[];
 }
 
+const MAIN_PACKAGES = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
+
 const TABS = [
   { id: "info",      label: "Informacije" },
   { id: "dokumenti", label: "Dokumenti" },
@@ -61,6 +63,13 @@ export default function PortalPartnerTabs({
   userEmail, contractAcceptedAt, contractAcceptedBy, contractBenefits,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("info");
+
+  const isMainPackage = MAIN_PACKAGES.includes(sponsor.package_type);
+
+  function getTabLabel(tab: typeof TABS[number]): string {
+    if (tab.id === "opcije" && isMainPackage) return "Vaš paket";
+    return tab.label;
+  }
 
   return (
     <div>
@@ -127,7 +136,7 @@ export default function PortalPartnerTabs({
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            {tab.label}
+            {getTabLabel(tab)}
             {tab.id === "dokumenti" && files.length > 0 && (
               <span className="ml-1.5 text-xs bg-gray-200 text-gray-600 rounded-full px-1.5 py-0.5">
                 {files.length}
@@ -210,8 +219,12 @@ export default function PortalPartnerTabs({
         />
       )}
 
-      {/* Tab: Opcije suradnje */}
-      {activeTab === "opcije" && <PortalCollaborationOptions />}
+      {/* Tab: Vaš paket / Opcije suradnje */}
+      {activeTab === "opcije" && (
+        <PortalCollaborationOptions
+          currentPackage={isMainPackage ? sponsor.package_type : undefined}
+        />
+      )}
     </div>
   );
 }
