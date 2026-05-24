@@ -23,12 +23,14 @@ export async function recordPartnerLogin(userId: string, email: string, projectI
       | null;
     const sponsorName = sponsor?.name ?? "Nepoznati partner";
 
-    const { error } = await adminClient.from("notifications").insert({
-      sponsor_id: sponsorUser.sponsor_id,
-      title: "Prijava partnera",
-      message: `${sponsorName} (${email}) se prijavio/la u portal`,
+    // Koristimo SECURITY DEFINER RPC funkciju — pouzdano zaobilazi RLS
+    // (direktni INSERT u notifications blokira RLS čak i sa service role u nekim konfiguracijama)
+    const { error } = await adminClient.rpc("record_partner_login_notification", {
+      p_sponsor_id: sponsorUser.sponsor_id,
+      p_sponsor_name: sponsorName,
+      p_email: email,
     });
-    if (error) console.error("recordPartnerLogin insert error:", error.message);
+    if (error) console.error("recordPartnerLogin rpc error:", error.message);
   } catch (e) {
     console.error("recordPartnerLogin error:", e);
   }
