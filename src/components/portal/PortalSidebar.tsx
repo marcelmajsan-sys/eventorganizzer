@@ -20,7 +20,7 @@ interface Props {
 
 const navItems = [
   { href: "/portal/sponsor",  label: "Partner",  icon: Building2 },
-  { href: "/portal/benefits", label: "Benefiti", icon: Gift },
+  { href: "/portal/benefits", label: "Vaši benefiti", icon: Gift },
   { href: "/portal/program",  label: "Program",  icon: CalendarDays },
   { href: "/portal/video",    label: "CRO Commerce 2025 (Video)", icon: Youtube },
 ];
