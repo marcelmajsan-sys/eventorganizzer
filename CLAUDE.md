@@ -48,7 +48,7 @@ eventorganizzer/
 │   │   │   ├── userManagement.ts     ← Server action: CRUD admin korisnika u svim bazama
 │   │   │   ├── partnerManagement.ts  ← Server action: CRUD partner korisnika + updatePrimaryContact
 │   │   │   ├── findPartnerProject.ts ← Server action: pronađi u kojoj bazi postoji email
-│   │   │   ├── notifications.ts      ← Server actions: markRead/Unread/All, deleteNotification, deleteAllNotifications
+│   │   │   ├── notifications.ts      ← Server actions: markRead/Unread/All, deleteNotification, deleteAllNotifications, recordPartnerLogin
 │   │   │   └── sponsorBulkUpdate.ts  ← Server action: bulk update package_type/payment_status/lead_status za više sponzora
 │   │   ├── api/
 │   │   │   ├── benefits/[id]/
@@ -62,11 +62,12 @@ eventorganizzer/
 │   │   ├── login/                ← Login stranica za admins (email + lozinka)
 │   │   ├── partner/              ← Login stranica za partnere/sponzore (/partner)
 │   │   └── portal/               ← Sponzorski portal
-│   │       ├── layout.tsx        ← Auth: admin → /admin/dashboard, bez pristupa → /login?error=no_access
+│   │       ├── layout.tsx        ← Auth: admin → /admin/dashboard, bez pristupa → /login?error=no_access; wrapa PortalLangProvider
 │   │       ├── page.tsx          ← Redirect na /portal/sponsor (Partner je homepage)
 │   │       ├── benefits/         ← Read-only lista benefita s filterom po statusu
 │   │       ├── program/          ← Read-only program konferencije (bez uređivanja)
-│   │       └── sponsor/          ← Partner info: kontakti (editable), datoteke, primarni kontakt
+│   │       ├── sponsor/          ← Partner info: kontakti (editable), datoteke, primarni kontakt
+│   │       └── video/            ← CRO Commerce 2025 YouTube plejlista (embed)
 │   ├── components/
 │   │   ├── admin/
 │   │   │   ├── AdminSidebar.tsx
@@ -103,17 +104,25 @@ eventorganizzer/
 │   │   │   ├── PackageTypeManager.tsx        ← Pill kategorije; isti sort kao AddSponsorModal
 │   │   │   └── SponsorsTableWithSelect.tsx   ← Tablica sponzora s multi-select + bulk action barom + Iznos stupac
 │   │   └── portal/
-│   │       ├── PortalSidebar.tsx             ← Nav: Partner → Benefiti → Program + projekt switcher
-│   │       ├── PortalBenefitCard.tsx         ← Read-only benefit kartica (opis, kontakt, dokumenti)
-│   │       ├── PortalPartnerTabs.tsx         ← Tabovi: Informacije / Dokumenti
+│   │       ├── PortalSidebar.tsx             ← Nav: Partner → Benefiti → Program → Video + projekt switcher + jezik toggle
+│   │       ├── PortalBenefitCard.tsx         ← Read-only benefit kartica (opis, kontakt, dokumenti, napomena s labelom)
+│   │       ├── PortalBenefitsView.tsx        ← Klijentska komponenta: progress bar + status filtri + benefit kartice (useLang)
+│   │       ├── PortalPartnerTabs.tsx         ← Tabovi: Informacije / Dokumenti / Vaš paket (ili Opcije suradnje)
 │   │       ├── PortalContactsSection.tsx     ← Editable: primarni kontakt + kontakt osobe + ulaznice
-│   │       └── PortalProgramView.tsx         ← Read-only program (tabovi po pozornici)
+│   │       ├── PortalCollaborationOptions.tsx ← Tablica usporedbe paketa (prevedeni nazivi paketa)
+│   │       ├── PortalProgramView.tsx         ← Read-only program (tabovi po pozornici)
+│   │       ├── PortalPageHeader.tsx          ← Generička komponenta za translated naslove stranica
+│   │       └── PortalLangProvider.tsx        ← Client wrapper koji injektira LanguageProvider
+│   ├── context/
+│   │   └── LanguageContext.tsx   ← React context: lang (hr|en), toggleLang(), t() hook; localStorage persistence
 │   ├── lib/
 │   │   ├── supabase/
 │   │   │   ├── client.ts             ← Browser Supabase klijent
 │   │   │   ├── server.ts             ← Server Supabase klijent (SSR)
 │   │   │   ├── projects.ts           ← Konfiguracija projekata (2025/2026) — URL-ovi hardkodirani
 │   │   │   └── adminProjectClient.ts ← Service role klijent za bilo koji projekt
+│   │   ├── i18n/
+│   │   │   └── portal.ts         ← HR/EN prijevodi za portal; translate() + translatePackage() helperi
 │   │   ├── email.ts              ← Resend email helper (deadline reminder, welcome mail)
 │   │   └── utils.ts              ← Utility funkcije (boje, formatiranje, leadStatusLabel/Color)
 │   ├── middleware.ts              ← Auth guard (getSession + 1200ms timeout, ne getUser)
@@ -492,14 +501,18 @@ git push origin main
 - **Mail ikona** na hover — šalje Supabase pozivnicu za sponzorski portal + upisuje `sponsor_users`
 
 ### Sponzorski portal (`/portal`)
-- Login na `/partner` — namjenska stranica s "Prijava za sponzore" dizajnom
+- Login na `/partner` — namjenska stranica s "Prijava za sponzore" dizajnom; nakon uspješnog logina bilježi `recordPartnerLogin`
 - **Homepage: `/portal/sponsor`** (Partner) — `/portal` redirecta ovdje
-- Nav redoslijed: **Partner → Benefiti → Program** + gumb za promjenu projekta
+- Nav redoslijed: **Partner → Benefiti → Program → CRO Commerce 2025 (Video)** + projekt switcher + jezik toggle
 - **`/portal/sponsor`** (tab Informacije): primarni kontakt (editable inline), kontakt osobe (CRUD), osobe za ulaznice (CRUD)
 - **`/portal/sponsor`** (tab Dokumenti) — read-only lista datoteka sponzora
+- **`/portal/sponsor`** (tab Vaš paket / Opcije suradnje) — usporedba paketa; "Vaš paket" za Glavni/Zlatni/Srebrni/Brončani, "Opcije suradnje" za ostale
 - **`/portal/benefits`** — read-only benefiti s progress barom, filterom, opisom, kontaktom i dokumentima
 - **`/portal/program`** — read-only program, tabovi po pozornici
+- **`/portal/video`** — embed CRO Commerce 2025 YouTube plejliste
 - Pristup samo korisnicima u `sponsor_users` tablici; admini → `/admin/dashboard`
+- **i18n HR/EN**: gumb za promjenu jezika u sidebar footeru; localStorage persistenca; `useLang()` hook u svim portal komponentama
+- **`translatePackage(lang, packageType)`** — helper za prevođenje naziva paketa (Brončani→Bronze, Srebrni→Silver, Zlatni→Gold, Glavni→Main, Medijski→Media)
 
 ### Upravljanje partnerima (Postavke)
 - `PartnerManagementSection` — lista partner korisnika s delete + promjena lozinke
@@ -530,7 +543,7 @@ git push origin main
 - **Partneri po paketu** — prikazuje postotak plaćenih za svaki paket (zelena progress bar); link → `/admin/sponsors`; samo potvrđeni sponzori
 - **Status plaćanja** — tortni prikaz; samo potvrđeni sponzori
 - **Isporuka benefita** — kružni progress chart
-- Tablice: nedavno uređeni partneri + nedavno dodani kontakti
+- Tablice: nedavno uređeni partneri + **nedavne prijave partnera** (naziv tvrtke, email, datum+sat) + nedavno dodani kontakti
 
 ### Zadaci
 - Kanban board — kliktabilni naslovi kartica vode na detaljnu stranicu
@@ -538,12 +551,13 @@ git push origin main
 - **Inbox notifikacija pri dodjeli**: Postgres trigger (`migration_021`) automatski upisuje notifikaciju
 
 ### Inbox obavijesti
-- Ruta `/admin/inbox` — tabovi: **Novi zadatak / Novi kontakt / Nova osoba za ulaznice / Sve obavijesti**
+- Ruta `/admin/inbox` — tabovi: **Novi zadatak / Novi kontakt / Nova osoba za ulaznice / Prijave partnera / Sve obavijesti**
 - Badge s brojem nepročitanih vidljiv u sidebaru
 - Per-user read tracking via `notification_reads` tablica
 - Akcije: označi kao pročitano / nepročitano (po notifikaciji), označi sve kao pročitano
 - **Brisanje po notifikaciji** (trash ikona) — vidljivo samo za `marcel@ecommerce.hr`
 - **Obriši sve** (gumb u headeru, s Da/Ne potvrdom) — vidljivo samo za `marcel@ecommerce.hr`; briše sve zapise iz baze; nitko ih više ne vidi
+- **Prijava partnera** (tab narančaste boje, `LogIn` ikona): `recordPartnerLogin(userId, email, projectId)` server action se poziva iz `/partner` nakon uspješnog logina; prikazuje naziv tvrtke i email; link na profil sponzora
 
 ### Rokovnik
 - Ruta `/admin/calendar`
@@ -587,7 +601,9 @@ git push origin main
 - **Graceful degradation pattern** za nove kolone: probati s novim kolonama; na error retry bez novih kolona; `as any` cast za TypeScript
 - **Brisanje benefita**: Trash2 ikona briše specifičan `sponsor_benefits` zapis po `id` — ne sve zapise s istim `benefit_name`
 - **Spread operater na `Set`** (`[...new Set(...)]`) zahtijeva `downlevelIteration` — umjesto toga koristiti `forEach` + ručno deduplicirani array
-- **Notifikacije — koristiti Postgres trigere, NE JS klijent**: `createServerClient` s service role keyem ne bypassira RLS pouzdano za INSERT u `notifications`. Jedino sigurno rješenje je Postgres trigger s `SECURITY DEFINER`
+- **Notifikacije — koristiti Postgres trigere, NE JS klijent**: `createServerClient` s service role keyem ne bypassira RLS pouzdano za INSERT u `notifications`. Jedino sigurno rješenje je Postgres trigger s `SECURITY DEFINER`. Iznimka: `recordPartnerLogin` koristi `createAdminClientForProject` (direktni `createClient` iz `@supabase/supabase-js`, ne `createServerClient`) koji pouzdano bypassira RLS
+- **`recordPartnerLogin` pattern**: prima `userId` (iz `signInWithPassword` response — ne treba `listUsers`!); awaita se u `partner/page.tsx` PRIJE `router.push` (fire-and-forget može biti prekinut navigacijom); email se parsira iz poruke regex-om `/\(([^)]+@[^)]+)\)/` na dashboardu
+- **Portal i18n**: `LanguageProvider` u `context/LanguageContext.tsx`; `useLang()` hook vraća `{ lang, toggleLang, t }`. Prijevodi u `lib/i18n/portal.ts`. `translatePackage(lang, type)` za nazive paketa — za nepoznate pakete vraća izvorni naziv. Svi portal klijentski komponenti koriste `useLang()`
 - **`notifications` tablica**: `sponsor_id` nullable (od migration_020), `task_id` nullable UUID FK. Inbox query uključuje `task_id` — obavezno pokrenuti migration_020
 - **`sponsor_contacts.type` CHECK constraint** (migration_006) originalno ima samo `contact` i `ticket` — migration_023 proširuje. Bez te migracije, spremanje kontakta s novim tipom tiho faila
 - **`ContactDetailActions` graceful degradation**: retry update bez `notes` ako kolona ne postoji
