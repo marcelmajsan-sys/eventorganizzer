@@ -153,7 +153,10 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
           {benefit.notes && (
             <p className="flex items-start gap-1 text-xs text-gray-400 mt-2">
               <FileText size={11} className="mt-0.5 flex-shrink-0" />
-              {benefit.notes}
+              <span>
+                <span className="font-medium text-gray-500">{t("benefits.note")}: </span>
+                {benefit.notes}
+              </span>
             </p>
           )}
         </div>
