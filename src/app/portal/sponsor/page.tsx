@@ -1,6 +1,7 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import PortalPartnerTabs from "@/components/portal/PortalPartnerTabs";
+import PortalPageHeader from "@/components/portal/PortalPageHeader";
 
 export default async function PortalSponsorPage() {
   const supabase = await createClient();
@@ -44,12 +45,7 @@ export default async function PortalSponsorPage() {
 
   return (
     <div className="animate-enter">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Moj partner</h1>
-          <p className="page-subtitle">Informacije o vašem partnerstvu</p>
-        </div>
-      </div>
+      <PortalPageHeader titleKey="partner.title" subtitleKey="partner.subtitle" />
 
       <PortalPartnerTabs
         sponsorId={sponsorUser.sponsor_id}

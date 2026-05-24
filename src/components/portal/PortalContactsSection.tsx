@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket, User } from "lucide-react";
 import { updatePrimaryContact } from "@/app/actions/partnerManagement";
+import { useLang } from "@/context/LanguageContext";
 
 type ContactType = "contact" | "ticket";
 type TicketType = "vip" | "standard";
@@ -57,6 +58,7 @@ function ContactRow({
   const [confirming, setConfirming] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const { t } = useLang();
 
   async function handleSave() {
     setSaving(true);
@@ -74,7 +76,6 @@ function ContactRow({
       .update(updateData)
       .eq("id", contact.id);
 
-    // Graceful degradation: retry without ticket_type if column doesn't exist yet
     if (error && isTicket && error.message.includes("ticket_type")) {
       const { name, email, phone, role } = form;
       await supabase
@@ -99,7 +100,7 @@ function ContactRow({
       <div className="bg-gray-50 rounded-lg p-3 space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Ime i prezime *</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("contacts.fullName")}</label>
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -108,16 +109,16 @@ function ContactRow({
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Funkcija</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("contacts.role")}</label>
             <input
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               className="input-field text-sm py-1.5"
-              placeholder="npr. Marketing manager"
+              placeholder={t("contacts.rolePlaceholder")}
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Email</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("contacts.email")}</label>
             <input
               type="email"
               value={form.email}
@@ -126,17 +127,17 @@ function ContactRow({
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Mobitel</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("contacts.phone")}</label>
             <input
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               className="input-field text-sm py-1.5"
-              placeholder="+385 91 ..."
+              placeholder={t("contacts.phonePlaceholder")}
             />
           </div>
           {isTicket && (
             <div className="col-span-2">
-              <label className="text-xs text-gray-500 mb-1 block">Tip ulaznice</label>
+              <label className="text-xs text-gray-500 mb-1 block">{t("contacts.ticketType")}</label>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -169,7 +170,7 @@ function ContactRow({
             onClick={() => setEditing(false)}
             className="btn-secondary text-xs py-1 px-2"
           >
-            <X size={12} /> Odustani
+            <X size={12} /> {t("contacts.cancel")}
           </button>
           <button
             onClick={handleSave}
@@ -177,7 +178,7 @@ function ContactRow({
             className="btn-primary text-xs py-1 px-2"
           >
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-            Spremi
+            {t("contacts.save")}
           </button>
         </div>
       </div>
@@ -221,13 +222,13 @@ function ContactRow({
               onClick={handleDelete}
               className="text-xs px-1.5 py-0.5 bg-red-600 text-white rounded hover:bg-red-700"
             >
-              Da
+              {t("contacts.yes")}
             </button>
             <button
               onClick={() => setConfirming(false)}
               className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
             >
-              Ne
+              {t("contacts.no")}
             </button>
           </div>
         ) : (
@@ -259,6 +260,7 @@ function AddContactForm({
   const [error, setError] = useState("");
   const router = useRouter();
   const supabase = createClient();
+  const { t } = useLang();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -283,7 +285,6 @@ function AddContactForm({
       .select()
       .single();
 
-    // Graceful degradation: retry without ticket_type if column doesn't exist yet
     if (err && isTicket && err.message.includes("ticket_type")) {
       const fallback = await supabase
         .from("sponsor_contacts")
@@ -318,7 +319,7 @@ function AddContactForm({
         className="flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-medium mt-1 px-3"
       >
         <Plus size={13} />
-        {isTicket ? "Dodaj osobu za ulaznice" : "Dodaj kontakt osobu"}
+        {isTicket ? t("contacts.addTicket") : t("contacts.addContact")}
       </button>
     );
   }
@@ -327,7 +328,7 @@ function AddContactForm({
     <form onSubmit={handleSubmit} className="bg-gray-50 rounded-lg p-3 mt-2 space-y-2">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Ime i prezime *</label>
+          <label className="text-xs text-gray-500 mb-1 block">{t("contacts.fullName")}</label>
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -337,16 +338,16 @@ function AddContactForm({
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Funkcija</label>
+          <label className="text-xs text-gray-500 mb-1 block">{t("contacts.role")}</label>
           <input
             value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value })}
             className="input-field text-sm py-1.5"
-            placeholder="npr. Marketing manager"
+            placeholder={t("contacts.rolePlaceholder")}
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Email</label>
+          <label className="text-xs text-gray-500 mb-1 block">{t("contacts.email")}</label>
           <input
             type="email"
             value={form.email}
@@ -355,17 +356,17 @@ function AddContactForm({
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Mobitel</label>
+          <label className="text-xs text-gray-500 mb-1 block">{t("contacts.phone")}</label>
           <input
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
             className="input-field text-sm py-1.5"
-            placeholder="+385 91 ..."
+            placeholder={t("contacts.phonePlaceholder")}
           />
         </div>
         {isTicket && (
           <div className="col-span-2">
-            <label className="text-xs text-gray-500 mb-1 block">Tip ulaznice</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("contacts.ticketType")}</label>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -399,7 +400,7 @@ function AddContactForm({
           onClick={() => { setOpen(false); setForm(emptyContactForm); }}
           className="btn-secondary text-xs py-1 px-2"
         >
-          <X size={12} /> Odustani
+          <X size={12} /> {t("contacts.cancel")}
         </button>
         <button
           type="submit"
@@ -407,7 +408,7 @@ function AddContactForm({
           className="btn-primary text-xs py-1 px-2"
         >
           {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-          Dodaj
+          {t("contacts.add")}
         </button>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
@@ -438,6 +439,7 @@ function PrimaryContactSection({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { t } = useLang();
 
   useEffect(() => {
     setDisplayed(initial);
@@ -464,7 +466,7 @@ function PrimaryContactSection({
       <div className="bg-gray-50 rounded-lg p-3 space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <div className="col-span-2">
-            <label className="text-xs text-gray-500 mb-1 block">Ime i prezime</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("contacts.fullName")}</label>
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -473,7 +475,7 @@ function PrimaryContactSection({
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Email</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("contacts.email")}</label>
             <input
               type="email"
               value={form.email}
@@ -482,23 +484,23 @@ function PrimaryContactSection({
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Mobitel</label>
+            <label className="text-xs text-gray-500 mb-1 block">{t("contacts.phone")}</label>
             <input
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               className="input-field text-sm py-1.5"
-              placeholder="+385 91 ..."
+              placeholder={t("contacts.phonePlaceholder")}
             />
           </div>
         </div>
         {error && <p className="text-xs text-red-600">{error}</p>}
         <div className="flex gap-2 justify-end">
           <button onClick={() => { setEditing(false); setError(null); }} className="btn-secondary text-xs py-1 px-2">
-            <X size={12} /> Odustani
+            <X size={12} /> {t("contacts.cancel")}
           </button>
           <button onClick={handleSave} disabled={saving} className="btn-primary text-xs py-1 px-2">
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-            Spremi
+            {t("contacts.save")}
           </button>
         </div>
       </div>
@@ -517,7 +519,7 @@ function PrimaryContactSection({
             {displayed.phone && <p className="text-xs text-gray-500">{displayed.phone}</p>}
           </>
         ) : (
-          <p className="text-xs text-gray-400">Nije postavljeno</p>
+          <p className="text-xs text-gray-400">{t("contacts.notSet")}</p>
         )}
       </div>
       <button
@@ -540,6 +542,7 @@ export default function PortalContactsSection({
   contacts: Contact[];
 }) {
   const [contacts, setContacts] = useState(initial);
+  const { t } = useLang();
 
   useEffect(() => {
     setContacts(initial);
@@ -562,7 +565,7 @@ export default function PortalContactsSection({
       <div>
         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
           <User size={15} className="text-gray-400" />
-          Primarni kontakt
+          {t("contacts.primary")}
         </h3>
         <PrimaryContactSection sponsorId={sponsorId} initial={primaryContact} />
       </div>
@@ -571,11 +574,11 @@ export default function PortalContactsSection({
       <div className="border-t border-gray-100 pt-5">
         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
           <Users size={15} className="text-gray-400" />
-          Kontakt osobe
+          {t("contacts.contacts")}
         </h3>
         <div className="divide-y divide-gray-100">
           {mainContacts.length === 0 && (
-            <p className="text-xs text-gray-400 px-3 py-2">Nema dodanih kontakt osoba</p>
+            <p className="text-xs text-gray-400 px-3 py-2">{t("contacts.noContacts")}</p>
           )}
           {mainContacts.map((c) => (
             <ContactRow key={c.id} contact={c} onDelete={handleDelete} />
@@ -588,11 +591,11 @@ export default function PortalContactsSection({
       <div className="border-t border-gray-100 pt-5">
         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
           <Ticket size={15} className="text-gray-400" />
-          Osobe za ulaznice
+          {t("contacts.tickets")}
         </h3>
         <div className="divide-y divide-gray-100">
           {ticketContacts.length === 0 && (
-            <p className="text-xs text-gray-400 px-3 py-2">Nema dodanih osoba za ulaznice</p>
+            <p className="text-xs text-gray-400 px-3 py-2">{t("contacts.noTickets")}</p>
           )}
           {ticketContacts.map((c) => (
             <ContactRow key={c.id} contact={c} onDelete={handleDelete} />

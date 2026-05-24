@@ -1,8 +1,9 @@
 "use client";
 
 import { CheckCircle2, Clock, AlertTriangle, XCircle, Calendar, User, FileText, File, Phone, Mail } from "lucide-react";
-import { benefitStatusLabel, benefitStatusColor, formatDate, daysUntil } from "@/lib/utils";
+import { benefitStatusColor, formatDate, daysUntil } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
+import { useLang } from "@/context/LanguageContext";
 
 interface ContactPerson {
   id: string;
@@ -40,8 +41,12 @@ const statusIcon: Record<string, React.ReactNode> = {
 };
 
 export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
+  const { t } = useLang();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
   const isOverdue = benefit.deadline && new Date(benefit.deadline) < new Date() && benefit.status !== "completed" && benefit.status !== "not_started";
+
+  const statusKey = `status.${benefit.status}` as Parameters<typeof t>[0];
+  const statusLabel = t(statusKey);
 
   return (
     <div className={`card p-4 ${isOverdue ? "border-red-200" : ""}`}>
@@ -51,7 +56,7 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
           <div className="flex items-start justify-between gap-2">
             <p className="font-medium text-gray-900 text-sm">{benefit.benefit_name}</p>
             <span className={`badge text-xs flex-shrink-0 ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
-              {benefitStatusLabel(benefit.status as BenefitStatus)}
+              {statusLabel}
             </span>
           </div>
 
@@ -61,7 +66,7 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
                 <Calendar size={11} />
                 {formatDate(benefit.deadline)}
                 {days !== null && days > 0 && !isOverdue && ` · ${days}d`}
-                {isOverdue && " · Rok prošao"}
+                {isOverdue && ` · ${t("benefits.deadlinePassed")}`}
               </span>
             )}
           </div>
@@ -101,7 +106,7 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 items-center">
               <span className="flex items-center gap-1 text-xs text-gray-400">
                 <User size={11} className="flex-shrink-0" />
-                Vaša kontakt osoba:
+                {t("benefits.yourContact")}
               </span>
               {benefit.assigned_to_name && (
                 <span className="text-xs text-gray-700 font-medium">{benefit.assigned_to_name}</span>

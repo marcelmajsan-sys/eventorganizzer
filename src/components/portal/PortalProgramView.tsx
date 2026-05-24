@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, CalendarDays } from "lucide-react";
+import { useLang } from "@/context/LanguageContext";
 
 type Stage = "future" | "action" | "wonderland" | "all";
 type SessionType = "talk" | "panel" | "fireside" | "keynote" | "break" | "networking";
@@ -16,23 +17,14 @@ interface Session {
   session_type: SessionType;
 }
 
-const STAGE_TABS = [
-  { id: "sve",        label: "Sve" },
+const STAGE_TABS_BASE = [
+  { id: "sve",        labelKey: "program.all" as const },
   { id: "future",     label: "Future Stage" },
   { id: "action",     label: "Action Stage" },
   { id: "wonderland", label: "Wonderland Stage" },
 ] as const;
 
-type StageTab = typeof STAGE_TABS[number]["id"];
-
-const SESSION_TYPE_LABELS: Record<SessionType, string> = {
-  talk:       "Predavanje",
-  panel:      "Panel",
-  fireside:   "Fireside",
-  keynote:    "Keynote",
-  break:      "Pauza",
-  networking: "Networking",
-};
+type StageTab = typeof STAGE_TABS_BASE[number]["id"];
 
 function typeStyle(type: SessionType) {
   switch (type) {
@@ -54,13 +46,28 @@ function stageStyle(stage: Stage) {
   }
 }
 
-function stageLabel(stage: Stage) {
-  return STAGE_TABS.find(s => s.id === stage)?.label ?? stage;
-}
-
 export default function PortalProgramView({ sessions }: { sessions: Session[] }) {
   const [activeTab, setActiveTab] = useState<StageTab>("sve");
   const [query, setQuery] = useState("");
+  const { t } = useLang();
+
+  const sessionTypeLabels: Record<SessionType, string> = {
+    talk:       t("session.talk"),
+    panel:      t("session.panel"),
+    fireside:   t("session.fireside"),
+    keynote:    t("session.keynote"),
+    break:      t("session.break"),
+    networking: t("session.networking"),
+  };
+
+  const stageTabs = STAGE_TABS_BASE.map((tab) => ({
+    id: tab.id,
+    label: "labelKey" in tab ? t(tab.labelKey) : tab.label,
+  }));
+
+  function stageLabel(stage: Stage) {
+    return stageTabs.find(s => s.id === stage)?.label ?? stage;
+  }
 
   const q = query.toLowerCase();
   const filtered = sessions
@@ -82,7 +89,7 @@ export default function PortalProgramView({ sessions }: { sessions: Session[] })
       {/* Controls */}
       <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {STAGE_TABS.map(tab => (
+          {stageTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -102,7 +109,7 @@ export default function PortalProgramView({ sessions }: { sessions: Session[] })
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Traži govornika ili temu..."
+            placeholder={t("program.search")}
             className="input-field pl-8 text-sm py-2 w-full"
           />
           {query && (
@@ -115,9 +122,10 @@ export default function PortalProgramView({ sessions }: { sessions: Session[] })
 
       {/* Timeline */}
       {groups.length === 0 ? (
-        <div className="card p-12 text-center">
+        <div className="card p-16 text-center">
+          <CalendarDays size={36} className="text-gray-200 mx-auto mb-3" />
           <p className="text-gray-400 text-sm">
-            {query ? "Nema rezultata za traženi pojam." : "Program još nije objavljen."}
+            {query ? t("program.noResults") : t("program.notPublished")}
           </p>
         </div>
       ) : (
@@ -133,7 +141,7 @@ export default function PortalProgramView({ sessions }: { sessions: Session[] })
                   <span className="text-gray-300 text-xs">—</span>
                   <span className="text-sm text-gray-400 tabular-nums">{timeEnd}</span>
                   {items.length > 1 && (
-                    <span className="ml-2 text-xs text-gray-400">{items.length} paralelne sesije</span>
+                    <span className="ml-2 text-xs text-gray-400">{items.length} {t("program.parallel")}</span>
                   )}
                 </div>
 
@@ -146,7 +154,7 @@ export default function PortalProgramView({ sessions }: { sessions: Session[] })
                       <div className="flex-1 min-w-0 space-y-1.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${typeStyle(session.session_type)}`}>
-                            {SESSION_TYPE_LABELS[session.session_type]}
+                            {sessionTypeLabels[session.session_type]}
                           </span>
                           {activeTab === "sve" && session.stage !== "all" && (
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${stageStyle(session.stage)}`}>

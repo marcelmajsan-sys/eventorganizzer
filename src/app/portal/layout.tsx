@@ -5,6 +5,7 @@ import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { PROJECTS, PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
 import PortalSidebar from "@/components/portal/PortalSidebar";
+import PortalLangProvider from "@/components/portal/PortalLangProvider";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -89,18 +90,20 @@ export default async function PortalLayout({ children }: { children: React.React
   } catch {}
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <PortalSidebar
-        sponsor={sponsor}
-        userEmail={user.email ?? ""}
-        activeProjectId={projectId}
-        otherProjectId={otherProjectAvailable ? otherProjectId : undefined}
-      />
-      <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
-        <div className="p-4 md:p-8 max-w-[1200px] mx-auto">
-          {children}
-        </div>
-      </main>
-    </div>
+    <PortalLangProvider>
+      <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <PortalSidebar
+          sponsor={sponsor}
+          userEmail={user.email ?? ""}
+          activeProjectId={projectId}
+          otherProjectId={otherProjectAvailable ? otherProjectId : undefined}
+        />
+        <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
+          <div className="p-4 md:p-8 max-w-[1200px] mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
+    </PortalLangProvider>
   );
 }

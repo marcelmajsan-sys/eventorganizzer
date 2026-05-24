@@ -6,6 +6,7 @@ import { packageColor, paymentStatusLabel, paymentStatusColor, formatDate, forma
 import type { PackageType, PaymentStatus } from "@/types";
 import PortalContactsSection from "@/components/portal/PortalContactsSection";
 import PortalCollaborationOptions from "@/components/portal/PortalCollaborationOptions";
+import { useLang } from "@/context/LanguageContext";
 // import PortalContractView from "@/components/portal/PortalContractView"; // UGOVOR — zakomentirano, vidi dolje
 
 interface Contact {
@@ -54,31 +55,28 @@ const MAIN_PACKAGES = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
 // Da vratiš tab "Ugovor o suradnji":
 //   1. Odkomentiraj import PortalContractView gore
 //   2. Dodaj natrag u TABS: { id: "ugovor", label: "Ugovor o suradnji" }
-//   3. Odkomentiraj render blok "Tab: Ugovor o suradnji" dolje (~redak 160)
-//   4. Odkomentiraj onClick => setActiveTab("ugovor") na pločicama gore (~redak 90)
+//   3. Odkomentiraj render blok "Tab: Ugovor o suradnji" dolje (~zadnji blok)
 // ---------------------------------------------------------------------------
 
-const TABS = [
-  { id: "info",      label: "Informacije" },
-  { id: "dokumenti", label: "Dokumenti" },
-  // { id: "ugovor",    label: "Ugovor o suradnji" }, // UGOVOR — sakriven
-  { id: "opcije",    label: "Opcije suradnje" },
-] as const;
-
-type Tab = typeof TABS[number]["id"];
+const TAB_IDS = ["info", "dokumenti", "opcije"] as const;
+// const TAB_IDS = ["info", "dokumenti", "ugovor", "opcije"] as const; // s ugovorom
+type Tab = typeof TAB_IDS[number];
 
 export default function PortalPartnerTabs({
   sponsorId, sponsor, contacts, files,
   userEmail, contractAcceptedAt, contractAcceptedBy, contractBenefits,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("info");
+  const { t } = useLang();
 
   const isMainPackage = MAIN_PACKAGES.includes(sponsor.package_type);
 
-  function getTabLabel(tab: typeof TABS[number]): string {
-    if (tab.id === "opcije" && isMainPackage) return "Vaš paket";
-    return tab.label;
-  }
+  const TABS = [
+    { id: "info"      as const, label: t("tabs.info") },
+    { id: "dokumenti" as const, label: t("tabs.documents") },
+    // { id: "ugovor" as const, label: "Ugovor o suradnji" }, // UGOVOR — sakriven
+    { id: "opcije"    as const, label: isMainPackage ? t("tabs.myPackage") : t("tabs.options") },
+  ];
 
   return (
     <div>
@@ -93,18 +91,20 @@ export default function PortalPartnerTabs({
             <div className="flex items-center gap-6 mt-3 flex-wrap">
 
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Kategorija</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                  {t("info.category")}
+                </p>
                 <span className={`badge text-sm ${packageColor(sponsor.package_type as PackageType)}`}>
-                  {/* onClick={() => setActiveTab("ugovor")} — UGOVOR sakriven */}
                   {sponsor.package_type}
                 </span>
               </div>
 
               {sponsor.payment_status && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Plaćanje</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                    {t("info.payment")}
+                  </p>
                   <span className={`badge text-sm ${paymentStatusColor(sponsor.payment_status as PaymentStatus)}`}>
-                    {/* onClick={() => setActiveTab("ugovor")} — UGOVOR sakriven */}
                     {paymentStatusLabel(sponsor.payment_status as PaymentStatus)}
                   </span>
                 </div>
@@ -144,13 +144,12 @@ export default function PortalPartnerTabs({
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            {getTabLabel(tab)}
+            {tab.label}
             {tab.id === "dokumenti" && files.length > 0 && (
               <span className="ml-1.5 text-xs bg-gray-200 text-gray-600 rounded-full px-1.5 py-0.5">
                 {files.length}
               </span>
             )}
-            {/* Amber dot za ugovor tab — sakriven zajedno s tabom */}
           </button>
         ))}
       </div>
@@ -174,13 +173,13 @@ export default function PortalPartnerTabs({
           {files.length === 0 ? (
             <div className="card p-16 text-center">
               <FolderOpen size={36} className="text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">Nema uploadanih dokumenata.</p>
+              <p className="text-gray-400 text-sm">{t("docs.empty")}</p>
             </div>
           ) : (
             <div className="card p-5">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-sm">
                 <FileText size={15} className="text-gray-400" />
-                Dokumenti ({files.length})
+                {t("docs.title")} ({files.length})
               </h3>
               <div className="space-y-2">
                 {files.map((file) => (
@@ -211,7 +210,7 @@ export default function PortalPartnerTabs({
       )}
 
       {/* Tab: Ugovor o suradnji — SAKRIVEN
-          Da vratiš: odkomentiraj TABS unos + import gore, i ovaj blok.
+          Da vratiš: odkomentiraj TAB_IDS unos + import gore, i ovaj blok.
       {activeTab === "ugovor" && (
         <PortalContractView
           sponsorId={sponsorId}
