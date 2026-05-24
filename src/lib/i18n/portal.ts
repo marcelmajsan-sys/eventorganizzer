@@ -180,7 +180,7 @@ const EN: typeof HR = {
   "pkg.Brončani": "Bronze",
   "pkg.Srebrni": "Silver",
   "pkg.Zlatni": "Gold",
-  "pkg.Glavni": "Title",
+  "pkg.Glavni": "Main",
   "pkg.Medijski": "Media",
   "pkg.Community": "Community",
   // Category labels
