@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import {
   Users, CreditCard, AlertTriangle, CheckCircle2,
-  TrendingUp, Clock, Package, Wallet, CircleDollarSign, ListChecks
+  TrendingUp, Clock, Package, Wallet, CircleDollarSign, ListChecks, LogIn
 } from "lucide-react";
 import { packageColor, packageBadgeColor, paymentStatusColor, paymentStatusLabel, leadStatusColor, leadStatusLabel } from "@/lib/utils";
 import type { PackageType, LeadStatus } from "@/types";
@@ -100,6 +101,25 @@ export default async function AdminDashboard() {
       .order("created_at", { ascending: false })
       .limit(5);
     recentContacts = data ?? [];
+  } catch {}
+
+  // Recent partner logins
+  let recentLogins: any[] = [];
+  try {
+    const adminClient = await createAdminClient();
+    const { data } = await adminClient
+      .from("notifications")
+      .select("id, message, created_at, sponsor_id, sponsors(id, name)")
+      .eq("title", "Prijava partnera")
+      .order("created_at", { ascending: false })
+      .limit(8);
+    recentLogins = (data ?? []).map((n: any) => {
+      // Izvuci email iz poruke: "Naziv tvrtke (email@example.com) se prijavio/la..."
+      const emailMatch = n.message?.match(/\(([^)]+@[^)]+)\)/);
+      const email = emailMatch?.[1] ?? "—";
+      const sponsor = Array.isArray(n.sponsors) ? n.sponsors[0] : n.sponsors;
+      return { id: n.id, email, sponsorName: sponsor?.name ?? "—", sponsorId: n.sponsor_id, created_at: n.created_at };
+    });
   } catch {}
 
   const statCards = [
@@ -349,6 +369,58 @@ export default async function AdminDashboard() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Recent partner logins */}
+      <div className="mt-6 card p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <LogIn size={18} className="text-orange-500" />
+            <h3 className="font-semibold text-gray-900">Nedavne prijave partnera</h3>
+          </div>
+          <a href="/admin/inbox" className="text-sm text-brand-600 hover:text-brand-700 font-medium">
+            Inbox →
+          </a>
+        </div>
+        {recentLogins.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4 text-center">Nema zabilježenih prijava</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium">Partner</th>
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium">Email</th>
+                  <th className="text-left py-2 px-3 text-gray-500 font-medium">Vrijeme prijave</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentLogins.map((login) => {
+                  const dt = new Date(login.created_at);
+                  const dateStr = dt.toLocaleDateString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric" });
+                  const timeStr = dt.toLocaleTimeString("hr-HR", { hour: "2-digit", minute: "2-digit" });
+                  return (
+                    <tr key={login.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                      <td className="py-2.5 px-3">
+                        {login.sponsorId ? (
+                          <a href={`/admin/sponsors/${login.sponsorId}`} className="font-medium text-gray-900 hover:text-brand-600">
+                            {login.sponsorName}
+                          </a>
+                        ) : (
+                          <span className="font-medium text-gray-900">{login.sponsorName}</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-gray-500">{login.email}</td>
+                      <td className="py-2.5 px-3 text-gray-400 text-xs">
+                        {dateStr} · {timeStr}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Recent contacts */}

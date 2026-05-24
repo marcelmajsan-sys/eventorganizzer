@@ -38,8 +38,8 @@ function PartnerLoginForm() {
 
     if (!authError && data.user) {
       document.cookie = `${PROJECT_COOKIE}=${projectId}; path=/; max-age=31536000`;
-      // Bilježi prijavu u inbox (fire-and-forget — ne blokira redirect)
-      recordPartnerLogin(email, projectId).catch(() => {});
+      // Await bilježenja prijave — brz insert, osigurava da ne bude prekinut redirectom
+      await recordPartnerLogin(data.user.id, email, projectId);
       router.push("/portal/sponsor");
       router.refresh();
       return;

@@ -4,22 +4,15 @@ import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { ProjectId } from "@/lib/supabase/projects";
 
-export async function recordPartnerLogin(email: string, projectId: ProjectId) {
+export async function recordPartnerLogin(userId: string, email: string, projectId: ProjectId) {
   try {
     const adminClient = createAdminClientForProject(projectId);
 
-    // Pronađi korisnika po emailu
-    const { data: authList } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-    const authUser = authList?.users?.find(
-      (u) => u.email?.toLowerCase() === email.toLowerCase()
-    );
-    if (!authUser) return;
-
-    // Pronađi sponsor_users unos
+    // Koristi userId koji već imamo iz signInWithPassword — nema potrebe za listUsers
     const { data: sponsorUser } = await adminClient
       .from("sponsor_users")
       .select("sponsor_id, sponsors(name)")
-      .eq("user_id", authUser.id)
+      .eq("user_id", userId)
       .maybeSingle();
 
     if (!sponsorUser) return;
@@ -30,11 +23,12 @@ export async function recordPartnerLogin(email: string, projectId: ProjectId) {
       | null;
     const sponsorName = sponsor?.name ?? "Nepoznati partner";
 
-    await adminClient.from("notifications").insert({
+    const { error } = await adminClient.from("notifications").insert({
       sponsor_id: sponsorUser.sponsor_id,
       title: "Prijava partnera",
       message: `${sponsorName} (${email}) se prijavio/la u portal`,
     });
+    if (error) console.error("recordPartnerLogin insert error:", error.message);
   } catch (e) {
     console.error("recordPartnerLogin error:", e);
   }
