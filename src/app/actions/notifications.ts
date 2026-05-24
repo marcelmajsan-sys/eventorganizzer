@@ -4,35 +4,47 @@ import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { ProjectId } from "@/lib/supabase/projects";
 
-export async function recordPartnerLogin(userId: string, email: string, projectId: ProjectId) {
+export async function recordPartnerLogin(
+  userId: string, email: string, projectId: ProjectId
+): Promise<{ ok: boolean; debug: string }> {
   try {
     const adminClient = createAdminClientForProject(projectId);
 
-    // Koristi userId koji već imamo iz signInWithPassword — nema potrebe za listUsers
-    const { data: sponsorUser } = await adminClient
+    // Korak 1: dohvati sponsor_users
+    const { data: sponsorUser, error: suErr } = await adminClient
       .from("sponsor_users")
       .select("sponsor_id, sponsors(name)")
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (!sponsorUser) return;
+    if (suErr) return { ok: false, debug: `sponsor_users error: ${suErr.message}` };
+    if (!sponsorUser) return { ok: false, debug: `no sponsor_users row for userId=${userId} in project=${projectId}` };
 
     const sponsorsRaw = sponsorUser.sponsors as unknown;
-    const sponsor = (Array.isArray(sponsorsRaw) ? sponsorsRaw[0] : sponsorsRaw) as
-      | { name: string }
-      | null;
+    const sponsor = (Array.isArray(sponsorsRaw) ? sponsorsRaw[0] : sponsorsRaw) as { name: string } | null;
     const sponsorName = sponsor?.name ?? "Nepoznati partner";
 
-    // Koristimo SECURITY DEFINER RPC funkciju — pouzdano zaobilazi RLS
-    // (direktni INSERT u notifications blokira RLS čak i sa service role u nekim konfiguracijama)
-    const { error } = await adminClient.rpc("record_partner_login_notification", {
+    // Korak 2: pozovi SECURITY DEFINER RPC (migration_035)
+    const { error: rpcErr } = await adminClient.rpc("record_partner_login_notification", {
       p_sponsor_id: sponsorUser.sponsor_id,
       p_sponsor_name: sponsorName,
       p_email: email,
     });
-    if (error) console.error("recordPartnerLogin rpc error:", error.message);
-  } catch (e) {
-    console.error("recordPartnerLogin error:", e);
+
+    if (rpcErr) {
+      // Fallback: direktni INSERT ako RPC funkcija ne postoji (migracija još nije pokrenuta)
+      const { error: insertErr } = await adminClient.from("notifications").insert({
+        sponsor_id: sponsorUser.sponsor_id,
+        title: "Prijava partnera",
+        message: `${sponsorName} (${email}) se prijavio/la u portal`,
+      });
+      if (insertErr) return { ok: false, debug: `rpc: ${rpcErr.message} | insert: ${insertErr.message}` };
+      return { ok: true, debug: `fallback insert ok (rpc error: ${rpcErr.message})` };
+    }
+
+    return { ok: true, debug: `rpc ok, sponsor=${sponsorName}` };
+  } catch (e: any) {
+    return { ok: false, debug: `exception: ${e?.message ?? e}` };
   }
 }
 
