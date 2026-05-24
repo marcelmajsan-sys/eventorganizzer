@@ -1,11 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE } from "@/lib/supabase/projects";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Building2, FileText,
-  Calendar, CheckCircle2, Clock, AlertTriangle, XCircle
+  Calendar, CheckCircle2, Clock, AlertTriangle, XCircle,
+  FileSignature, User
 } from "lucide-react";
 import {
   packageColor, paymentStatusColor, paymentStatusLabel,
@@ -28,6 +29,7 @@ interface Props {
 
 export default async function SponsorDetailPage({ params }: Props) {
   const supabase = await createClient();
+  const adminClient = await createAdminClient();
   const cookieStore = await cookies();
   const projectId = cookieStore.get(PROJECT_COOKIE)?.value ?? "2026";
 
@@ -37,6 +39,28 @@ export default async function SponsorDetailPage({ params }: Props) {
     supabase.from("files").select("*").eq("sponsor_id", params.id).order("uploaded_at", { ascending: false }),
     supabase.from("sponsor_contacts").select("*").eq("sponsor_id", params.id).order("created_at"),
   ]);
+
+  // Dohvati status ugovora iz sponsor_users (service role da zaobiđe RLS)
+  let contractAcceptedAt: string | null = null;
+  let contractAcceptedBy: string | null = null;
+  let hasPortalUser = false;
+  try {
+    const { data: sponsorUsers } = await adminClient
+      .from("sponsor_users")
+      .select("contract_accepted_at, contract_accepted_by, user_id")
+      .eq("sponsor_id", params.id)
+      .order("contract_accepted_at", { ascending: false });
+    if (sponsorUsers && sponsorUsers.length > 0) {
+      hasPortalUser = true;
+      // Uzmi prvog koji je prihvatio, ili prvog ako nitko nije prihvatio
+      const accepted = sponsorUsers.find((su: Record<string, unknown>) => su.contract_accepted_at);
+      const su = accepted ?? sponsorUsers[0];
+      contractAcceptedAt = (su.contract_accepted_at as string | null) ?? null;
+      contractAcceptedBy = (su.contract_accepted_by as string | null) ?? null;
+    }
+  } catch {
+    // migration_035 možda nije pokrenuta — graceful degradation
+  }
 
   let packageTypeNames: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
   try {
@@ -132,6 +156,58 @@ export default async function SponsorDetailPage({ params }: Props) {
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-500 mb-1">Napomene</p>
                 <p className="text-sm text-gray-700">{sponsor.notes}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Ugovor o suradnji */}
+          <div className="card p-5">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FileSignature size={16} className="text-gray-400" />
+              Ugovor o suradnji
+            </h3>
+            {!hasPortalUser ? (
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <XCircle size={15} className="flex-shrink-0" />
+                <span>Nema konfiguriranog portal korisnika</span>
+              </div>
+            ) : contractAcceptedAt ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-emerald-700">Ugovor prihvaćen</span>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 space-y-2">
+                  <div className="flex items-start gap-2 text-xs text-gray-600">
+                    <Calendar size={13} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-gray-400 font-medium uppercase tracking-wide text-[10px] mb-0.5">Datum prihvaćanja</p>
+                      <p className="font-medium text-gray-700">
+                        {new Date(contractAcceptedAt).toLocaleString("hr-HR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  {contractAcceptedBy && (
+                    <div className="flex items-start gap-2 text-xs text-gray-600">
+                      <User size={13} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-gray-400 font-medium uppercase tracking-wide text-[10px] mb-0.5">Prihvatio/la</p>
+                        <p className="font-medium text-gray-700">{contractAcceptedBy}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Clock size={15} className="text-amber-500 flex-shrink-0" />
+                <span className="text-sm text-amber-700 font-medium">Čeka prihvaćanje od partnera</span>
               </div>
             )}
           </div>

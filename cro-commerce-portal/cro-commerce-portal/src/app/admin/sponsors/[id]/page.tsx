@@ -1,11 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE } from "@/lib/supabase/projects";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Building2, FileText,
-  Calendar, CheckCircle2, Clock, AlertTriangle, XCircle
+  Calendar, CheckCircle2, Clock, AlertTriangle, XCircle,
+  FileSignature, User
 } from "lucide-react";
 import {
   packageColor, paymentStatusColor, paymentStatusLabel,
@@ -21,7 +22,6 @@ import DeleteBenefitButton from "@/components/admin/DeleteBenefitButton";
 import ContactsSection from "@/components/admin/ContactsSection";
 import DeleteSponsorButton from "@/components/admin/DeleteSponsorButton";
 import AdminPrimaryContactEdit from "@/components/admin/AdminPrimaryContactEdit";
-import BenefitFileUpload from "@/components/admin/BenefitFileUpload";
 
 interface Props {
   params: { id: string };
@@ -29,6 +29,7 @@ interface Props {
 
 export default async function SponsorDetailPage({ params }: Props) {
   const supabase = await createClient();
+  const adminClient = await createAdminClient();
   const cookieStore = await cookies();
   const projectId = cookieStore.get(PROJECT_COOKIE)?.value ?? "2026";
 
@@ -38,6 +39,28 @@ export default async function SponsorDetailPage({ params }: Props) {
     supabase.from("files").select("*").eq("sponsor_id", params.id).order("uploaded_at", { ascending: false }),
     supabase.from("sponsor_contacts").select("*").eq("sponsor_id", params.id).order("created_at"),
   ]);
+
+  // Dohvati status ugovora iz sponsor_users (service role da zaobiđe RLS)
+  let contractAcceptedAt: string | null = null;
+  let contractAcceptedBy: string | null = null;
+  let hasPortalUser = false;
+  try {
+    const { data: sponsorUsers } = await adminClient
+      .from("sponsor_users")
+      .select("contract_accepted_at, contract_accepted_by, user_id")
+      .eq("sponsor_id", params.id)
+      .order("contract_accepted_at", { ascending: false });
+    if (sponsorUsers && sponsorUsers.length > 0) {
+      hasPortalUser = true;
+      // Uzmi prvog koji je prihvatio, ili prvog ako nitko nije prihvatio
+      const accepted = sponsorUsers.find((su: Record<string, unknown>) => su.contract_accepted_at);
+      const su = accepted ?? sponsorUsers[0];
+      contractAcceptedAt = (su.contract_accepted_at as string | null) ?? null;
+      contractAcceptedBy = (su.contract_accepted_by as string | null) ?? null;
+    }
+  } catch {
+    // migration_035 možda nije pokrenuta — graceful degradation
+  }
 
   let packageTypeNames: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
   try {
@@ -66,7 +89,7 @@ export default async function SponsorDetailPage({ params }: Props) {
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4"
         >
           <ArrowLeft size={14} />
-          Natrag na sponzore
+          Natrag na partnere
         </Link>
 
         <div className="flex items-start justify-between">
@@ -77,7 +100,7 @@ export default async function SponsorDetailPage({ params }: Props) {
                 {sponsor.package_type}
               </span>
             </h1>
-            <p className="page-subtitle">Detalji sponzora i upravljanje benefitima</p>
+            <p className="page-subtitle">Detalji partnera i upravljanje benefitima</p>
           </div>
           <div className="flex items-center gap-2">
             <DeleteSponsorButton sponsorId={sponsor.id} sponsorName={sponsor.name} />
@@ -137,6 +160,58 @@ export default async function SponsorDetailPage({ params }: Props) {
             )}
           </div>
 
+          {/* Ugovor o suradnji */}
+          <div className="card p-5">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FileSignature size={16} className="text-gray-400" />
+              Ugovor o suradnji
+            </h3>
+            {!hasPortalUser ? (
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <XCircle size={15} className="flex-shrink-0" />
+                <span>Nema konfiguriranog portal korisnika</span>
+              </div>
+            ) : contractAcceptedAt ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-emerald-700">Ugovor prihvaćen</span>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 space-y-2">
+                  <div className="flex items-start gap-2 text-xs text-gray-600">
+                    <Calendar size={13} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-gray-400 font-medium uppercase tracking-wide text-[10px] mb-0.5">Datum prihvaćanja</p>
+                      <p className="font-medium text-gray-700">
+                        {new Date(contractAcceptedAt).toLocaleString("hr-HR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  {contractAcceptedBy && (
+                    <div className="flex items-start gap-2 text-xs text-gray-600">
+                      <User size={13} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-gray-400 font-medium uppercase tracking-wide text-[10px] mb-0.5">Prihvatio/la</p>
+                        <p className="font-medium text-gray-700">{contractAcceptedBy}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Clock size={15} className="text-amber-500 flex-shrink-0" />
+                <span className="text-sm text-amber-700 font-medium">Čeka prihvaćanje od partnera</span>
+              </div>
+            )}
+          </div>
+
           {/* Progress */}
           <div className="card p-5">
             <h3 className="font-semibold text-gray-900 mb-4">Isporuka benefita</h3>
@@ -158,7 +233,7 @@ export default async function SponsorDetailPage({ params }: Props) {
           <ContactsSection sponsorId={sponsor.id} sponsorName={sponsor.name} contacts={contacts ?? []} projectId={projectId} />
 
           {/* Files */}
-          <FileUploadSection sponsorId={sponsor.id} existingFiles={(files ?? []).filter(f => !f.benefit_id)} />
+          <FileUploadSection sponsorId={sponsor.id} existingFiles={files ?? []} />
         </div>
 
         {/* Right: benefits */}
@@ -177,8 +252,6 @@ export default async function SponsorDetailPage({ params }: Props) {
                 const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
                 const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
                 const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
-                const contactPerson = contacts?.find(c => c.id === benefit.contact_person_id);
-                const benefitSpecificFiles = (files ?? []).filter(f => f.benefit_id === benefit.id);
 
                 return (
                   <div
@@ -196,9 +269,9 @@ export default async function SponsorDetailPage({ params }: Props) {
                         <span className="mt-0.5">
                           {statusIcon[benefit.status as BenefitStatus]}
                         </span>
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0">
                           <p className="font-medium text-gray-900 text-sm">{benefit.benefit_name}</p>
-                          <div className="flex items-center gap-3 mt-1 flex-wrap">
+                          <div className="flex items-center gap-3 mt-1">
                             {benefit.deadline && (
                               <span className="text-xs text-gray-500">
                                 Rok: {formatDate(benefit.deadline)}
@@ -214,25 +287,20 @@ export default async function SponsorDetailPage({ params }: Props) {
                                 Za {days} dana
                               </span>
                             )}
-                            {contactPerson && (
-                              <span className="text-xs text-gray-500">
-                                Kontakt: <span className="font-medium">{contactPerson.name}</span>
-                              </span>
-                            )}
                           </div>
-                          {benefit.description && (
-                            <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">{benefit.description}</p>
+                          {benefit.file_url && (
+                            <a
+                              href={benefit.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-brand-600 hover:text-brand-700 mt-1 inline-block"
+                            >
+                              📎 Preuzmi datoteku
+                            </a>
                           )}
-                          <div className="mt-2">
-                            <BenefitFileUpload
-                              benefitId={benefit.id}
-                              sponsorId={sponsor.id}
-                              initialFiles={benefitSpecificFiles}
-                            />
-                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-2">
                         <DeleteBenefitButton
                           benefitId={benefit.id}
                           benefitName={benefit.benefit_name}
@@ -249,7 +317,7 @@ export default async function SponsorDetailPage({ params }: Props) {
               })}
               {(!benefits || benefits.length === 0) && (
                 <p className="text-gray-400 text-sm text-center py-8">
-                  Nema definiranih benefita za ovog sponzora
+                  Nema definiranih benefita za ovog partnera
                 </p>
               )}
             </div>
