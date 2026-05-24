@@ -6,7 +6,7 @@ import { packageColor, paymentStatusLabel, paymentStatusColor, formatDate, forma
 import type { PackageType, PaymentStatus } from "@/types";
 import PortalContactsSection from "@/components/portal/PortalContactsSection";
 import PortalCollaborationOptions from "@/components/portal/PortalCollaborationOptions";
-import PortalContractView from "@/components/portal/PortalContractView";
+// import PortalContractView from "@/components/portal/PortalContractView"; // UGOVOR — zakomentirano, vidi dolje
 
 interface Contact {
   id: string;
@@ -49,10 +49,19 @@ interface Props {
 
 const MAIN_PACKAGES = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
 
+// ---------------------------------------------------------------------------
+// UGOVOR TAB — privremeno sakriven (može se lako vratiti)
+// Da vratiš tab "Ugovor o suradnji":
+//   1. Odkomentiraj import PortalContractView gore
+//   2. Dodaj natrag u TABS: { id: "ugovor", label: "Ugovor o suradnji" }
+//   3. Odkomentiraj render blok "Tab: Ugovor o suradnji" dolje (~redak 160)
+//   4. Odkomentiraj onClick => setActiveTab("ugovor") na pločicama gore (~redak 90)
+// ---------------------------------------------------------------------------
+
 const TABS = [
   { id: "info",      label: "Informacije" },
   { id: "dokumenti", label: "Dokumenti" },
-  { id: "ugovor",    label: "Uvjeti suradnje" },
+  // { id: "ugovor",    label: "Ugovor o suradnji" }, // UGOVOR — sakriven
   { id: "opcije",    label: "Opcije suradnje" },
 ] as const;
 
@@ -85,26 +94,24 @@ export default function PortalPartnerTabs({
 
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Kategorija</p>
-                <button
-                  onClick={() => setActiveTab("dokumenti")}
-                  className={`badge text-sm cursor-pointer hover:opacity-75 transition-opacity ${packageColor(sponsor.package_type as PackageType)}`}
-                >
+                <span className={`badge text-sm ${packageColor(sponsor.package_type as PackageType)}`}>
+                  {/* onClick={() => setActiveTab("ugovor")} — UGOVOR sakriven */}
                   {sponsor.package_type}
-                </button>
+                </span>
               </div>
 
               {sponsor.payment_status && (
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Plaćanje</p>
-                  <button
-                    onClick={() => setActiveTab("dokumenti")}
-                    className={`badge text-sm cursor-pointer hover:opacity-75 transition-opacity ${paymentStatusColor(sponsor.payment_status as PaymentStatus)}`}
-                  >
+                  <span className={`badge text-sm ${paymentStatusColor(sponsor.payment_status as PaymentStatus)}`}>
+                    {/* onClick={() => setActiveTab("ugovor")} — UGOVOR sakriven */}
                     {paymentStatusLabel(sponsor.payment_status as PaymentStatus)}
-                  </button>
+                  </span>
                 </div>
               )}
 
+              {/* UGOVOR pločica — sakrijena dok je tab sakriven */}
+              {/*
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Ugovor</p>
                 <button
@@ -118,6 +125,7 @@ export default function PortalPartnerTabs({
                   {contractAcceptedAt ? "Prihvaćen" : "Čeka prihvaćanje"}
                 </button>
               </div>
+              */}
 
             </div>
           </div>
@@ -142,9 +150,7 @@ export default function PortalPartnerTabs({
                 {files.length}
               </span>
             )}
-            {tab.id === "ugovor" && !contractAcceptedAt && (
-              <span className="ml-1.5 inline-block w-1.5 h-1.5 bg-amber-400 rounded-full align-middle" />
-            )}
+            {/* Amber dot za ugovor tab — sakriven zajedno s tabom */}
           </button>
         ))}
       </div>
@@ -204,7 +210,8 @@ export default function PortalPartnerTabs({
         </div>
       )}
 
-      {/* Tab: Uvjeti suradnje */}
+      {/* Tab: Ugovor o suradnji — SAKRIVEN
+          Da vratiš: odkomentiraj TABS unos + import gore, i ovaj blok.
       {activeTab === "ugovor" && (
         <PortalContractView
           sponsorId={sponsorId}
@@ -218,6 +225,7 @@ export default function PortalPartnerTabs({
           dynamicBenefits={contractBenefits}
         />
       )}
+      */}
 
       {/* Tab: Vaš paket / Opcije suradnje */}
       {activeTab === "opcije" && (
