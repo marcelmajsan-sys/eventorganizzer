@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import {
@@ -106,13 +106,14 @@ export default async function AdminDashboard() {
   // Recent partner logins
   let recentLogins: any[] = [];
   try {
-    const adminClient = await createAdminClient();
-    const { data } = await adminClient
+    const adminClient = createAdminClientForProject(projectId);
+    const { data, error } = await adminClient
       .from("notifications")
       .select("id, message, created_at, sponsor_id, sponsors(id, name)")
       .eq("title", "Prijava partnera")
       .order("created_at", { ascending: false })
       .limit(8);
+    if (error) console.error("[dashboard recentLogins]", error.message);
     recentLogins = (data ?? []).map((n: any) => {
       // Izvuci email iz poruke: "Naziv tvrtke (email@example.com) se prijavio/la..."
       const emailMatch = n.message?.match(/\(([^)]+@[^)]+)\)/);
@@ -120,7 +121,9 @@ export default async function AdminDashboard() {
       const sponsor = Array.isArray(n.sponsors) ? n.sponsors[0] : n.sponsors;
       return { id: n.id, email, sponsorName: sponsor?.name ?? "—", sponsorId: n.sponsor_id, created_at: n.created_at };
     });
-  } catch {}
+  } catch (e: any) {
+    console.error("[dashboard recentLogins exception]", e?.message ?? e);
+  }
 
   const statCards = [
     {

@@ -1,4 +1,7 @@
-import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { cookies } from "next/headers";
+import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import InboxView from "@/components/admin/InboxView";
 
 type NotifType = "task" | "contact" | "ticket" | "login";
@@ -15,7 +18,9 @@ export default async function InboxPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id ?? null;
 
-  const adminClient = await createAdminClient();
+  const cookieStore = await cookies();
+  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+  const adminClient = createAdminClientForProject(projectId);
 
   const [{ data: raw }, { data: reads }] = await Promise.all([
     adminClient

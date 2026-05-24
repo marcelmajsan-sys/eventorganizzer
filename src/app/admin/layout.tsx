@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { PROJECT_COOKIE, resolveProjectId, PROJECTS } from "@/lib/supabase/projects";
 
@@ -29,7 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let unreadCount = 0;
 
   try {
-    const adminClient = await createAdminClient();
+    const adminClient = createAdminClientForProject(activeProject);
     const [adminsRes, settingsRes, allNotifsRes, readsRes] = await Promise.all([
       adminClient.from("project_admins").select("email"),
       adminClient.from("project_settings").select("key, value"),

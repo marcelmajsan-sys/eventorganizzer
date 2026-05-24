@@ -1,8 +1,16 @@
 "use server";
 
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
-import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
+
+async function getProjectAdminClient() {
+  const cookieStore = await cookies();
+  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+  return createAdminClientForProject(projectId);
+}
 
 export async function recordPartnerLogin(
   userId: string, email: string, projectId: ProjectId
@@ -108,7 +116,7 @@ async function getCurrentUserId(): Promise<string | null> {
 export async function markNotificationRead(id: string) {
   const userId = await getCurrentUserId();
   if (!userId) return;
-  const adminClient = await createAdminClient();
+  const adminClient = await getProjectAdminClient();
   await adminClient
     .from("notification_reads")
     .upsert({ notification_id: id, user_id: userId }, { onConflict: "notification_id,user_id" });
@@ -117,7 +125,7 @@ export async function markNotificationRead(id: string) {
 export async function markNotificationUnread(id: string) {
   const userId = await getCurrentUserId();
   if (!userId) return;
-  const adminClient = await createAdminClient();
+  const adminClient = await getProjectAdminClient();
   await adminClient
     .from("notification_reads")
     .delete()
@@ -126,19 +134,19 @@ export async function markNotificationUnread(id: string) {
 }
 
 export async function deleteNotification(id: string) {
-  const adminClient = await createAdminClient();
+  const adminClient = await getProjectAdminClient();
   await adminClient.from("notifications").delete().eq("id", id);
 }
 
 export async function deleteAllNotifications() {
-  const adminClient = await createAdminClient();
+  const adminClient = await getProjectAdminClient();
   await adminClient.from("notifications").delete().neq("id", "00000000-0000-0000-0000-000000000000");
 }
 
 export async function markAllNotificationsRead() {
   const userId = await getCurrentUserId();
   if (!userId) return;
-  const adminClient = await createAdminClient();
+  const adminClient = await getProjectAdminClient();
 
   // Dohvati sve notification ID-eve kojih još nema u reads za ovog usera
   const { data: allNotifs } = await adminClient.from("notifications").select("id");
