@@ -18,6 +18,8 @@ interface Props {
   acceptedAt: string | null;
   acceptedBy: string | null;
   userEmail: string;
+  /** Stvarni benefiti sponzora iz baze; ako je prazan, koristi se fallback po paketu */
+  dynamicBenefits?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -119,6 +121,7 @@ export default function PortalContractView({
   acceptedAt,
   acceptedBy,
   userEmail,
+  dynamicBenefits,
 }: Props) {
   const router = useRouter();
   const [accepting, setAccepting] = useState(false);
@@ -129,7 +132,10 @@ export default function PortalContractView({
   const isAccepted = !!localAcceptedAt;
   const acceptedDate = localAcceptedAt ? new Date(localAcceptedAt) : null;
   const halfAmount = iznos ? iznos / 2 : null;
-  const benefits = getBenefits(packageType);
+  // Koristi stvarne benefite iz baze ako postoje, inače fallback po paketu
+  const benefits = (dynamicBenefits && dynamicBenefits.length > 0)
+    ? dynamicBenefits
+    : getBenefits(packageType);
 
   async function handleAccept() {
     setAccepting(true);

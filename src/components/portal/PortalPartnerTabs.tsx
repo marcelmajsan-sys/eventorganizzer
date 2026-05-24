@@ -44,6 +44,7 @@ interface Props {
   userEmail: string;
   contractAcceptedAt: string | null;
   contractAcceptedBy: string | null;
+  contractBenefits: string[];
 }
 
 const TABS = [
@@ -57,7 +58,7 @@ type Tab = typeof TABS[number]["id"];
 
 export default function PortalPartnerTabs({
   sponsorId, sponsor, contacts, files,
-  userEmail, contractAcceptedAt, contractAcceptedBy,
+  userEmail, contractAcceptedAt, contractAcceptedBy, contractBenefits,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("info");
 
@@ -205,6 +206,7 @@ export default function PortalPartnerTabs({
           acceptedAt={contractAcceptedAt}
           acceptedBy={contractAcceptedBy}
           userEmail={userEmail}
+          dynamicBenefits={contractBenefits}
         />
       )}
 
