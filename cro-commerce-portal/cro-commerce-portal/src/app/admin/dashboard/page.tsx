@@ -190,7 +190,7 @@ export default async function AdminDashboard() {
         ].map((c) => {
           const Icon = c.icon;
           return (
-            <Link key={c.label} href={c.href} className="card p-4 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
+            <a key={c.label} href={c.href} className="card p-4 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-medium text-gray-500">{c.label}</p>
                 <Icon size={16} className={c.iconCls} />
@@ -217,7 +217,7 @@ export default async function AdminDashboard() {
         ].map((card, i) => {
           const Icon = card.icon;
           return (
-            <Link key={i} href={card.href} className={`card p-5 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent`} style={{ animationDelay: `${i * 0.05}s` }}>
+            <a key={i} href={card.href} className={`card p-5 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent`} style={{ animationDelay: `${i * 0.05}s` }}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="stat-value text-gray-900">{card.value}</p>
