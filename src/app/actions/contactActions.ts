@@ -70,7 +70,7 @@ export async function deleteDuplicateContacts(): Promise<{ deleted: number; erro
 
   const toDelete: string[] = [];
 
-  for (const [, group] of byEmail) {
+  byEmail.forEach((group) => {
     if (group.length <= 1) continue;
 
     // Sortiraj: najmanji prioritetni broj = zadrži; unutar istog tipa dulje ime = zadrži
@@ -88,7 +88,7 @@ export async function deleteDuplicateContacts(): Promise<{ deleted: number; erro
     for (let i = 1; i < group.length; i++) {
       toDelete.push(group[i].id);
     }
-  }
+  });
 
   if (toDelete.length === 0) return { deleted: 0, error: null };
 
