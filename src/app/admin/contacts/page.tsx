@@ -5,7 +5,7 @@ export default async function ContactsPage() {
   const supabase = await createAdminClient();
 
   const [{ data: existingContacts }, { data: sponsors }] = await Promise.all([
-    supabase.from("sponsor_contacts").select("sponsor_id, name"),
+    supabase.from("sponsor_contacts").select("sponsor_id, name, email"),
     supabase
       .from("sponsors")
       .select("id, name, contact_name, contact_email, contact_phone")
@@ -13,17 +13,24 @@ export default async function ContactsPage() {
   ]);
 
   // Automatski stvori sponsor_contacts za primarne kontakte koji još ne postoje
-  const existingKeys = new Set(
+  // Provjera po imenu I po emailu — sprječava duplikate kad isti email ima drugačije ime
+  const existingByName = new Set(
     (existingContacts ?? []).map(
       (c) => `${c.sponsor_id}|${(c.name ?? "").toLowerCase()}`
     )
+  );
+  const existingByEmail = new Set(
+    (existingContacts ?? [])
+      .filter((c) => c.email)
+      .map((c) => `${c.sponsor_id}|${(c.email ?? "").toLowerCase()}`)
   );
 
   const toInsert = (sponsors ?? [])
     .filter(
       (s) =>
         s.contact_name &&
-        !existingKeys.has(`${s.id}|${s.contact_name.toLowerCase()}`)
+        !existingByName.has(`${s.id}|${s.contact_name.toLowerCase()}`) &&
+        !(s.contact_email && existingByEmail.has(`${s.id}|${s.contact_email.toLowerCase()}`))
     )
     .map((s) => ({
       sponsor_id: s.id,
