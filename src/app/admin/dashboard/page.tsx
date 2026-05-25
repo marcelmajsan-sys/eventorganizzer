@@ -43,26 +43,27 @@ export default async function AdminDashboard() {
   const budgetAll     = budgetItems.reduce((s: number, i: any) => s + (i.amount ?? 0), 0);
   const budgetAllCount = budgetItems.length;
 
-  // Naplaćeno = plaćeni iznos + djelomično plaćeni iznosi
+  const totalSponsors = sponsors?.length ?? 0;
+  const confirmedSponsors = sponsors?.filter(
+    (s) => s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning"
+  ) ?? [];
+
+  // Naplaćeno = plaćeni iznos + djelomično plaćeni iznosi (iznosi iz SVIH sponzora)
   const naplaceno = (sponsors ?? []).reduce((sum, s) => {
     if (s.payment_status === "paid") return sum + ((s as any).iznos ?? 0);
     if (s.payment_status === "partial") return sum + ((s as any).partial_amount ?? 0);
     return sum;
   }, 0);
-  const naplacenoCount = sponsors?.filter(s => s.payment_status === "paid").length ?? 0;
-  const partialCount = sponsors?.filter(s => s.payment_status === "partial").length ?? 0;
-  // Neplaćeno = neplaćeni iznosi + preostali dio djelomičnih
+  // Brojevi ispod iznosa — samo aktivni klijenti (potvrđeno novi/stari)
+  const naplacenoCount = confirmedSponsors.filter(s => s.payment_status === "paid").length;
+  const partialCount = confirmedSponsors.filter(s => s.payment_status === "partial").length;
+  // Neplaćeno = neplaćeni iznosi + preostali dio djelomičnih (iznosi iz SVIH sponzora)
   const neplaceno = (sponsors ?? []).reduce((sum, s) => {
     if (s.payment_status === "paid") return sum;
     if (s.payment_status === "partial") return sum + Math.max(0, ((s as any).iznos ?? 0) - ((s as any).partial_amount ?? 0));
     return sum + ((s as any).iznos ?? 0);
   }, 0);
-  const neplacenoCount = sponsors?.filter(s => s.payment_status !== "paid").length ?? 0;
-
-  const totalSponsors = sponsors?.length ?? 0;
-  const confirmedSponsors = sponsors?.filter(
-    (s) => s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning"
-  ) ?? [];
+  const neplacenoCount = confirmedSponsors.filter(s => s.payment_status !== "paid").length;
   const confirmedTotal = confirmedSponsors.length;
 
   const paidCount = confirmedSponsors.filter((s) => s.payment_status === "paid").length;
