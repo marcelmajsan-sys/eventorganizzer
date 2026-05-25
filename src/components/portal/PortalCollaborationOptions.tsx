@@ -113,7 +113,7 @@ export default function PortalCollaborationOptions({ currentPackage }: Props = {
         <h3 className="font-semibold text-gray-900 text-base mb-0.5">
           {t("options.title")}
         </h3>
-        <p className="text-sm text-gray-500 mb-5">
+        <p className="text-sm text-gray-500 mb-5 whitespace-pre-line">
           {t("options.subtitle")}
         </p>
 

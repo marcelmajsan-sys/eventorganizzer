@@ -43,7 +43,7 @@ const HR = {
 
   // Collaboration options
   "options.title": "Usporedba paketa sponzorstva",
-  "options.subtitle": "Pregled benefita po paketima. Kontaktiraj nas za prilagodbu ili nadogradnju.",
+  "options.subtitle": "Pregled benefita po paketima. Ako ste dogovorili nešto van paketa, možete to vidjeti kao zasebni benefit u izborniku s lijeve strane pod Vaši benefiti.\nAko imate pitanja ili želite prilagoditi svoj paket, slobodno nas kontaktirajte!",
   "options.benefit": "Benefit",
   "options.yourPackage": "Vaš paket",
   "options.ctaText": "Želiš nadograditi svoje benefite? Kontaktiraj nas!",
@@ -171,7 +171,7 @@ const EN: typeof HR = {
 
   // Collaboration options
   "options.title": "Sponsorship Package Comparison",
-  "options.subtitle": "Overview of benefits by package. Contact us for customisation or upgrade.",
+  "options.subtitle": "Overview of benefits by package. If you have agreed on anything outside the package, you can see it as a separate benefit in the left menu under Your Benefits.\nIf you have any questions or would like to customise your package, feel free to contact us!",
   "options.benefit": "Benefit",
   "options.yourPackage": "Your Package",
   "options.ctaText": "Want to upgrade your benefits? Contact us!",
