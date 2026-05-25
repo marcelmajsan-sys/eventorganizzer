@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Search, X, ChevronRight, Trash2, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AddContactModal from "@/components/admin/AddContactModal";
+import { deleteContact } from "@/app/actions/contactActions";
 
 interface Contact {
   id: string;
@@ -56,6 +57,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
@@ -107,7 +109,12 @@ export default function ContactsView({ contacts, sponsors }: Props) {
 
   async function handleDeleteOne(id: string, name: string) {
     if (!confirm(`Obriši kontakt "${name}"?`)) return;
-    await supabase.from("sponsor_contacts").delete().eq("id", id);
+    setDeleteError("");
+    const { error } = await deleteContact(id);
+    if (error) {
+      setDeleteError(error);
+      return;
+    }
     setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
     router.refresh();
   }
@@ -116,9 +123,17 @@ export default function ContactsView({ contacts, sponsors }: Props) {
     const count = selectedIds.size;
     if (!confirm(`Obriši ${count} odabranih kontakata?`)) return;
     setDeleting(true);
-    await supabase.from("sponsor_contacts").delete().in("id", Array.from(selectedIds));
+    setDeleteError("");
+    const errors: string[] = [];
+    for (const id of Array.from(selectedIds)) {
+      const { error } = await deleteContact(id);
+      if (error) errors.push(error);
+    }
     setSelectedIds(new Set());
     setDeleting(false);
+    if (errors.length > 0) {
+      setDeleteError(errors[0]);
+    }
     router.refresh();
   }
 
@@ -145,6 +160,16 @@ export default function ContactsView({ contacts, sponsors }: Props) {
           >
             {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
             Obriši odabrane
+          </button>
+        </div>
+      )}
+
+      {/* Delete error */}
+      {deleteError && (
+        <div className="flex items-start justify-between bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-700">
+          <span>{deleteError}</span>
+          <button onClick={() => setDeleteError("")} className="ml-3 flex-shrink-0 text-red-400 hover:text-red-600">
+            <X size={14} />
           </button>
         </div>
       )}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Save, Trash2 } from "lucide-react";
+import { deleteContact } from "@/app/actions/contactActions";
 
 const CONTACT_TYPES = [
   { value: "contact",          label: "Kontakt" },
@@ -36,6 +37,7 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [form, setForm] = useState({
     name:       contact.name       ?? "",
@@ -89,7 +91,12 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
 
   async function handleDelete() {
     if (!confirm(`Obriši kontakt "${contact.name}"?`)) return;
-    await supabase.from("sponsor_contacts").delete().eq("id", contact.id);
+    setDeleteError("");
+    const { error } = await deleteContact(contact.id);
+    if (error) {
+      setDeleteError(error);
+      return;
+    }
     router.push("/admin/contacts");
   }
 
@@ -97,14 +104,24 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
 
   if (!editing) {
     return (
-      <div className="flex gap-2">
-        <button onClick={openEdit} className="btn-secondary">
-          <Pencil size={14} />
-          Uredi
-        </button>
-        <button onClick={handleDelete} className="btn-secondary text-red-600 hover:bg-red-50 hover:border-red-200">
-          <Trash2 size={14} />
-        </button>
+      <div className="flex flex-col items-end gap-2">
+        <div className="flex gap-2">
+          <button onClick={openEdit} className="btn-secondary">
+            <Pencil size={14} />
+            Uredi
+          </button>
+          <button onClick={handleDelete} className="btn-secondary text-red-600 hover:bg-red-50 hover:border-red-200">
+            <Trash2 size={14} />
+          </button>
+        </div>
+        {deleteError && (
+          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700 max-w-sm text-right">
+            <span>{deleteError}</span>
+            <button onClick={() => setDeleteError("")} className="flex-shrink-0 text-red-400 hover:text-red-600 mt-0.5">
+              <X size={12} />
+            </button>
+          </div>
+        )}
       </div>
     );
   }
