@@ -49,6 +49,7 @@ eventorganizzer/
 │   │   │   ├── partnerManagement.ts  ← Server action: CRUD partner korisnika + updatePrimaryContact
 │   │   │   ├── findPartnerProject.ts ← Server action: pronađi u kojoj bazi postoji email
 │   │   │   ├── notifications.ts      ← Server actions: markRead/Unread/All, deleteNotification, deleteAllNotifications, recordPartnerLogin
+│   │   │   ├── contactActions.ts     ← Server action: deleteContact() + deleteDuplicateContacts() — koristi createAdminClientForProject, zaobilazi RLS
 │   │   │   └── sponsorBulkUpdate.ts  ← Server action: bulk update package_type/payment_status/lead_status za više sponzora
 │   │   ├── api/
 │   │   │   ├── benefits/[id]/
@@ -490,7 +491,8 @@ git push origin main
 
 ### Kontakti (`/admin/contacts`)
 - Stranica koristi **`createAdminClient()`** (service role) da zaobiđe RLS — inače admini vide 0 kontakata jer nisu u `sponsor_users`
-- **Auto-sync primarnih kontakata**: pri svakom učitavanju stranice, provjerava se `sponsors.contact_name` i insertaju nedostajući kontakti u `sponsor_contacts` (type='contact') — migration_033 radi isti posao jednom u bazi
+- **Auto-sync primarnih kontakata**: pri svakom učitavanju stranice, provjerava se `sponsors.contact_name` i insertaju nedostajući kontakti u `sponsor_contacts` (type='contact') — duplikat se detektira po **imenu I emailu** (`sponsor_id|name` + `sponsor_id|email`); provjera samo po imenu uzrokuje duplikate kad isti email ima drugačije ime (npr. "Domagoj" vs "Domagoj Ostović")
+- **Brisanje kontakata**: `deleteContact(id)` server action u `contactActions.ts` — koristi `createAdminClientForProject` (pravi service role), automatski nullira `sponsor_benefits.contact_person_id` prije brisanja da izbjegne FK grešku; prikazuje grešku u UI ako delete i dalje faila
 - Filter po tipu, sponzoru i tražilica; bulk delete
 - Email ćelija u tablici = **link na profil kontakta** (ne mailto:)
 - **Dodavanje kontakta** (`AddContactModal`) — tip, sponzor (dropdown), ime, firma, email, telefon, funkcija, napomena
@@ -622,3 +624,6 @@ git push origin main
 - **EditBenefitDialog/Modal — primarni kontakt**: fetchuje sve kontakte sponzora (bez type filtera) + `sponsors.contact_name` i `contact_email`; matching: ime (case-insensitive trim) → fallback email; primarni sort prvi + ★ u dropdownu; pre-select kad `contact_person_id` je prazan. Ako kontakt nije u `sponsor_contacts`, pokrenuti migration_033
 - **Inbox brisanje** (samo `marcel@ecommerce.hr`): `DeleteNotificationButton` (inline Da/Ne po notifikaciji) + `DeleteAllNotificationsButton` (header, briše sve iz baze); korisnik email se dohvaća u server komponenti (`inbox/page.tsx`) i prosljeđuje kao prop
 - **`deleteAllNotifications` server action**: koristi `.neq("id", "00000000-...")` jer Supabase zahtijeva WHERE uvjet za DELETE (ne može obrisati sve bez filtera)
+- **`deleteContact` server action** (`contactActions.ts`): uvijek nulliraj `sponsor_benefits.contact_person_id` PRIJE brisanja kontakta — inače FK constraint tiho blokira DELETE. Koristiti `createAdminClientForProject` (ne `createAdminClient` iz server.ts) jer `createServerClient` iz `@supabase/ssr` može biti podložan RLS čak i sa service role keyem
+- **Auto-sync kontakata i duplikati**: `contacts/page.tsx` insertira kontakte iz `sponsors.contact_name` na svaki page load. Provjera duplikata mora biti po **i imenu i emailu** — provjera samo po imenu (`sponsor_id|name`) ne hvata duplikate s različitim imenima i istim emailom. Brisanje takvih duplikata ne pomaže jer ih stranica odmah re-kreira pri sljedećem učitavanju
+- **`for...of` na Map/Set nije dozvoljen** u ovom TypeScript targetu — koristiti `.forEach()` i `return` umjesto `continue`
