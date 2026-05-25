@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Search, X, ChevronRight, Trash2, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AddContactModal from "@/components/admin/AddContactModal";
-import { deleteContact } from "@/app/actions/contactActions";
+import { deleteContact, deleteDuplicateContacts } from "@/app/actions/contactActions";
 
 interface Contact {
   id: string;
@@ -57,6 +57,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [deduping, setDeduping] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const router = useRouter();
   const supabase = createClient();
@@ -107,6 +108,17 @@ export default function ContactsView({ contacts, sponsors }: Props) {
     }
   }
 
+  async function handleDedup() {
+    if (!confirm("Obriši sve duplikate (isti email)? Zadržat će se kontakt tipa Partner, zatim Ulaznica, zatim Kontakt.")) return;
+    setDeduping(true);
+    setDeleteError("");
+    const { deleted, error } = await deleteDuplicateContacts();
+    setDeduping(false);
+    if (error) { setDeleteError(error); return; }
+    if (deleted === 0) { alert("Nema duplikata za brisanje."); return; }
+    router.refresh();
+  }
+
   async function handleDeleteOne(id: string, name: string) {
     if (!confirm(`Obriši kontakt "${name}"?`)) return;
     setDeleteError("");
@@ -144,7 +156,18 @@ export default function ContactsView({ contacts, sponsors }: Props) {
           <h1 className="page-title">Kontakti</h1>
           <p className="page-subtitle">{contacts.length} kontakata ukupno</p>
         </div>
-        <AddContactModal sponsors={sponsors} />
+        <div className="flex gap-2">
+          <button
+            onClick={handleDedup}
+            disabled={deduping}
+            className="btn-secondary text-sm"
+            title="Obriši sve kontakte s istim emailom (zadrži Partner > Ulaznica > Kontakt)"
+          >
+            {deduping ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+            {deduping ? "Briše duplikate..." : "Obriši duplikate"}
+          </button>
+          <AddContactModal sponsors={sponsors} />
+        </div>
       </div>
 
       {/* Bulk delete bar */}
