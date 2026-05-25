@@ -65,6 +65,8 @@ export default async function AdminDashboard() {
   }, 0);
   const neplacenoCount = confirmedSponsors.filter(s => s.payment_status !== "paid").length;
   const confirmedTotal = confirmedSponsors.length;
+  const confirmedNewCount = confirmedSponsors.filter(s => s.lead_status === "confirmed_new").length;
+  const confirmedReturningCount = confirmedSponsors.filter(s => s.lead_status === "confirmed_returning").length;
 
   const paidCount = confirmedSponsors.filter((s) => s.payment_status === "paid").length;
   const pendingCount = confirmedSponsors.filter((s) => s.payment_status === "pending").length;
@@ -195,7 +197,7 @@ export default async function AdminDashboard() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { value: totalSponsors, label: "Ukupno partnera", icon: Users, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/sponsors" },
+          { value: confirmedTotal, label: "Potvrđeni partneri", icon: Users, color: "text-blue-600", bg: "bg-blue-50", sub: `Potvrđeni stari: ${confirmedReturningCount}`, sub2: `Potvrđeni novi: ${confirmedNewCount}`, sub2Cls: "text-gray-400", href: "/admin/sponsors?lead=confirmed_returning,confirmed_new" },
           { value: paidCount, label: "Plaćenih", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50", sub: `${pendingCount} na čekanju`, sub2: `${overduePayments} kasni`, href: "/admin/sponsors?payment=paid" },
           { value: openTasks, label: "Otvorenih zadataka", icon: Clock, color: "text-orange-600", bg: "bg-orange-50", href: "/admin/tasks" },
           { value: overdueBenefits, label: "Benefita kasni", icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50", href: "/admin/benefits" },
@@ -208,7 +210,7 @@ export default async function AdminDashboard() {
                   <p className="stat-value text-gray-900">{card.value}</p>
                   <p className="stat-label mt-0.5">{card.label}</p>
                   {card.sub && <p className="text-xs text-gray-400 mt-1">{card.sub}</p>}
-                  {(card as any).sub2 && <p className="text-xs text-red-400 mt-0.5">{(card as any).sub2}</p>}
+                  {(card as any).sub2 && <p className={`text-xs mt-0.5 ${(card as any).sub2Cls ?? "text-red-400"}`}>{(card as any).sub2}</p>}
                 </div>
                 <div className={`${card.bg} p-2.5 rounded-lg`}>
                   <Icon size={20} className={card.color} />
