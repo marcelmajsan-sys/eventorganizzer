@@ -55,6 +55,11 @@ npm run dev   # → http://localhost:3000
 - `sponsorBulkUpdate.ts` — bulk update paketa/plaćanja/statusa
 - `findPartnerProject.ts` — pronađi u kojoj bazi postoji email
 
+**Ključne portal komponente** (`src/components/portal/`):
+- `PortalSidebar.tsx` — nav + projekt switcher + jezik toggle + `<PortalHelpModal />`
+- `PortalHelpModal.tsx` — step-by-step wizard modal s uputama; `steps?` prop za buduću Supabase integraciju; svaki korak ima `preview` ReactNode koji prikazuje relevantan UI element; prijevodi u `lib/i18n/portal.ts` pod `help.*` ključevima
+- `PortalBenefitsView.tsx`, `PortalPartnerTabs.tsx`, `PortalContactsSection.tsx`, `PortalCollaborationOptions.tsx`, `PortalProgramView.tsx`, `PortalPageHeader.tsx`, `PortalLangProvider.tsx`
+
 ---
 
 ## Baza podataka (Supabase)
@@ -191,9 +196,10 @@ git add . && git commit -m "Opis" && git push origin main
 - **`getProjectAdminClient()` helper** u `actions/notifications.ts`: čita `PROJECT_COOKIE`, vraća `createAdminClientForProject(projectId)`
 - **Dashboard**: Naplaćeno = `sum(iznos za paid) + sum(partial_amount za partial)`; Neplaćeno = ostalo + `sum(iznos − partial_amount za partial)`; Profitabilnost = prihodi − budgetAll
 - **Email**: FROM adresa `konferencija@ecommerce.hr`; subject uključuje godinu iz cookieja `cro_active_project`
-- **Portal i18n**: `useLang()` hook iz `LanguageContext`; prijevodi u `lib/i18n/portal.ts`; `translatePackage(lang, type)` za nazive paketa
+- **Portal i18n**: `useLang()` hook iz `LanguageContext`; prijevodi u `lib/i18n/portal.ts`; `translatePackage(lang, type)` za nazive paketa. **Ne koristiti tipografske navodnike** („ ") unutar TS string literala — parser baca syntax error; koristiti `'` ili `\"`
 - **EditBenefitDialog/Modal** — primarni kontakt: fetchuje sve kontakte sponzora (bez type filtera) + primarni; matching ime (case-insensitive) → fallback email; ★ oznaka + pre-select
 - **Inbox brisanje** vidljivo samo za `marcel@ecommerce.hr`; `deleteAllNotifications` koristi `.neq("id", "00000000-...")` jer Supabase zahtijeva WHERE uvjet za DELETE
+- **CSS animacije** u `globals.css`: `animate-enter` (slideUp 0.35s), `animate-fade-in` (fadeIn 0.2s), `animate-slide-up` (slideUp 0.25s) — koristiti za modalne prozore i page transitions
 
 ---
 
