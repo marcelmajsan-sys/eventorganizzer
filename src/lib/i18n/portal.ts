@@ -126,6 +126,23 @@ const HR = {
   // Partner page
   "partner.title": "Moj partner",
   "partner.subtitle": "Informacije o vašem partnerstvu",
+
+  // Help modal
+  "help.btn": "Upute",
+  "help.title": "Dobrodošli u Partner Portal",
+  "help.close": "Zatvori",
+  "help.next": "Dalje",
+  "help.prev": "Nazad",
+  "help.step1.title": "Vaši benefiti",
+  "help.step1.desc": "U izborniku „Vaši benefiti" možeš vidjeti sve benefite koje si ugovorio/la kao sponzor. Svaki benefit ima naziv, status isporuke i rok — sve na jednom mjestu.",
+  "help.step2.title": "Rokovi i statusi",
+  "help.step2.desc": "Svaki benefit nosi oznaku statusa: Nije počelo, U tijeku, Završeno ili Kasni. Prati rokove kako bi sve bilo isporučeno pravovremeno. Ako ti nešto nije jasno, javi nam se.",
+  "help.step3.title": "Dokumenti sponzorstva",
+  "help.step3.desc": "Pod tabom „Dokumenti" u sekciji Partner možeš preuzeti sve dokumente vezane uz tvoje sponzorstvo — ugovore, upute i materijale koje ti organizator pošalje.",
+  "help.step4.title": "Kontakt osobe i ulaznice",
+  "help.step4.desc": "U sekciji Partner → Informacije dodaj ili uredi svoje kontakt osobe i osobe za ulaznice. Te osobe primaju komunikaciju od organizatora i ulaze na konferenciju.",
+  "help.step5.title": "Pitanja? Tu smo!",
+  "help.step5.desc": "Za sva pitanja o sponzorstvu, benefitima ili logistici konferencije kontaktiraj nas na konferencija@ecommerce.hr — odgovaramo u roku 24 sata.",
 };
 
 const EN: typeof HR = {
@@ -254,6 +271,23 @@ const EN: typeof HR = {
   // Partner page
   "partner.title": "My Partnership",
   "partner.subtitle": "Information about your partnership",
+
+  // Help modal
+  "help.btn": "Help",
+  "help.title": "Welcome to Partner Portal",
+  "help.close": "Close",
+  "help.next": "Next",
+  "help.prev": "Back",
+  "help.step1.title": "Your Benefits",
+  "help.step1.desc": "In the \"Your Benefits\" menu you can see all the benefits you have agreed as a sponsor. Each benefit has a name, delivery status and deadline — all in one place.",
+  "help.step2.title": "Deadlines & Statuses",
+  "help.step2.desc": "Each benefit has a status label: Not Started, In Progress, Completed or Overdue. Keep track of deadlines to ensure timely delivery. If anything is unclear, reach out to us.",
+  "help.step3.title": "Sponsorship Documents",
+  "help.step3.desc": "Under the \"Documents\" tab in the Partner section you can download all documents related to your sponsorship — contracts, guidelines and materials sent by the organiser.",
+  "help.step4.title": "Contacts & Ticket Holders",
+  "help.step4.desc": "In Partner → Information you can add or edit your contact persons and ticket holders. These people receive communications from the organiser and attend the conference.",
+  "help.step5.title": "Questions? We're here!",
+  "help.step5.desc": "For any questions about sponsorship, benefits or conference logistics, contact us at konferencija@ecommerce.hr — we respond within 24 hours.",
 };
 
 export const TRANSLATIONS: Record<Lang, typeof HR> = { hr: HR, en: EN };

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight, CalendarDays, Youtube, Languages } from "lucide-react";
+import PortalHelpModal from "@/components/portal/PortalHelpModal";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { packageColor } from "@/lib/utils";
@@ -121,6 +122,9 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
           <Languages size={14} />
           {t("nav.langToggle")}
         </button>
+
+        {/* Help modal */}
+        <PortalHelpModal />
 
         <button
           onClick={handleSignOut}
