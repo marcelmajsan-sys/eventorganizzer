@@ -1,6 +1,14 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { resolveProjectId, PROJECT_COOKIE } from "@/lib/supabase/projects";
+
+async function getAdminClient() {
+  const cookieStore = await cookies();
+  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+  return createAdminClientForProject(projectId);
+}
 
 /**
  * Briše kontakt iz sponsor_contacts tablice koristeći admin klijent.
@@ -8,7 +16,7 @@ import { createAdminClient } from "@/lib/supabase/server";
  * Vraća { error: string | null }
  */
 export async function deleteContact(id: string): Promise<{ error: string | null }> {
-  const supabase = await createAdminClient();
+  const supabase = await getAdminClient();
 
   // 1. Poništi referencu kontakta na benefitima (contact_person_id → NULL)
   await supabase
@@ -42,7 +50,7 @@ export async function deleteContact(id: string): Promise<{ error: string | null 
  * Vraća { deleted: number, error: string | null }
  */
 export async function deleteDuplicateContacts(): Promise<{ deleted: number; error: string | null }> {
-  const supabase = await createAdminClient();
+  const supabase = await getAdminClient();
 
   // Dohvati sve kontakte s emailom
   const { data: contacts, error: fetchError } = await supabase
