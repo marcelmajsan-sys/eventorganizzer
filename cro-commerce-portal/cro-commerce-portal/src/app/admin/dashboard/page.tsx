@@ -42,6 +42,7 @@ export default async function AdminDashboard() {
   const budgetTotal   = budgetItems.filter(i => i.status !== "cancelled").reduce((s: number, i: any) => s + i.amount, 0);
   const budgetAll     = budgetItems.reduce((s: number, i: any) => s + (i.amount ?? 0), 0);
   const budgetAllCount = budgetItems.length;
+  const budgetPendingOnly = budgetItems.filter(i => i.status === "pending").reduce((s: number, i: any) => s + (i.amount ?? 0), 0);
 
   const totalSponsors = sponsors?.length ?? 0;
   const confirmedSponsors = sponsors?.filter(
@@ -182,14 +183,14 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {[
           { label: "Profitabilnost", value: formatEur((naplaceno + neplaceno) - budgetAll), sub: `prihodi ${formatEur(naplaceno + neplaceno)} − troškovi ${formatEur(budgetAll)}`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: (naplaceno + neplaceno) - budgetAll >= 0 ? "text-emerald-600" : "text-red-600", href: "/admin/troskovi" },
+          { label: "Ukupni troškovi", value: formatEur(budgetAll), sub: `Potvrđeno: ${formatEur(budgetPendingOnly)}`, icon: TrendingUp, iconCls: "text-gray-400", valCls: "text-gray-700", href: "/admin/troskovi" },
           { label: "Plaćeno (troškovi)", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
-          { label: "Ukupni troškovi", value: formatEur(budgetAll), sub: `${budgetAllCount} stavki`, icon: TrendingUp, iconCls: "text-gray-400", valCls: "text-gray-700", href: "/admin/troskovi" },
           { label: "Naplaćeno", value: formatEur(naplaceno), sub: partialCount > 0 ? `${naplacenoCount} plaćenih + ${partialCount} djelomičnih` : `${naplacenoCount} partnera`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid,partial" },
           { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} partnera`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors?payment=overdue,partial,pending&type=clients" },
         ].map((c) => {
           const Icon = c.icon;
           return (
-            <a key={c.label} href={c.href} className="card p-4 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
+            <Link key={c.label} href={c.href} className="card p-4 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-medium text-gray-500">{c.label}</p>
                 <Icon size={16} className={c.iconCls} />
@@ -216,7 +217,7 @@ export default async function AdminDashboard() {
         ].map((card, i) => {
           const Icon = card.icon;
           return (
-            <a key={i} href={card.href} className={`card p-5 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent`} style={{ animationDelay: `${i * 0.05}s` }}>
+            <Link key={i} href={card.href} className={`card p-5 block hover:shadow-md transition-shadow hover:border-brand-200 border border-transparent`} style={{ animationDelay: `${i * 0.05}s` }}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="stat-value text-gray-900">{card.value}</p>
