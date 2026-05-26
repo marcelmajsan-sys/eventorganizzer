@@ -49,7 +49,10 @@ export async function middleware(request: NextRequest) {
     if (!user) return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (pathname === "/login" && user) {
+  // Ne redirectaj s /login ako ima ?error= param — sprječava beskonačnu petlju
+  // kada signOut() ne uspije očistiti cookies u Server Component layoutu
+  const hasError = request.nextUrl.searchParams.get("error");
+  if (pathname === "/login" && user && !hasError) {
     return NextResponse.redirect(new URL("/admin/dashboard", request.url));
   }
 

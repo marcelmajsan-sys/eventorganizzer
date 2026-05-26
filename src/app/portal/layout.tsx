@@ -49,9 +49,9 @@ export default async function PortalLayout({ children }: { children: React.React
   );
 
   if (!activeAuthUser) {
-    // Korisnik nema račun u aktivnom projektu — odjavi i vrati na login
-    await makeAnonClient(projectId).auth.signOut();
-    redirect("/login?error=no_access");
+    // Korisnik nema račun u aktivnom projektu — odjavi putem API route-a
+    // (signOut u Server Component layoutu ne može pisati cookies, pa koristimo Route Handler)
+    redirect("/api/auth/signout?redirect=%2Flogin%3Ferror%3Dno_access");
   }
 
   // Provjeri sponsor_users s ispravnim UUID-om aktivnog projekta
@@ -62,8 +62,8 @@ export default async function PortalLayout({ children }: { children: React.React
     .maybeSingle();
 
   if (!sponsorUser) {
-    await makeAnonClient(projectId).auth.signOut();
-    redirect("/login?error=no_access");
+    // Korisnik nema unos u sponsor_users — odjavi putem API route-a
+    redirect("/api/auth/signout?redirect=%2Flogin%3Ferror%3Dno_access");
   }
 
   const sponsorsRaw = sponsorUser.sponsors as unknown;
