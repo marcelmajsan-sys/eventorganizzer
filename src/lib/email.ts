@@ -132,7 +132,7 @@ export async function sendWelcomeEmail(
             Otvorite partnerski portal &rarr;
           </a>
           <p style="font-size: 13px; color: #9ca3af; margin: 32px 0 0;">
-            Za pitanja kontaktirajte nas na <a href="mailto:${ADMIN_EMAIL}" style="color: #ea580c;">${ADMIN_EMAIL}</a>
+            Za pitanja kontaktirajte nas na <a href="mailto:konferencija@ecommerce.hr" style="color: #ea580c;">konferencija@ecommerce.hr</a>
           </p>
         </div>
       </div>
