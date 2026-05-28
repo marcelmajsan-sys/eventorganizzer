@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export interface PartnerUser {
   id: string; // sponsor_users.id
@@ -21,7 +22,7 @@ export async function createPartnerUser(
   password: string,
   sponsorId: string,
   name: string
-) {
+): Promise<{ emailSent: boolean }> {
   const cookieStore = await cookies();
   const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
   const adminClient = createAdminClientForProject(projectId);
@@ -33,7 +34,6 @@ export async function createPartnerUser(
 
   if (existingUser) {
     userId = existingUser.id;
-    // Ažuriraj lozinku i ime — admin je možda unio novu lozinku
     await adminClient.auth.admin.updateUserById(userId, {
       password,
       user_metadata: { name: name.trim() },
@@ -57,6 +57,33 @@ export async function createPartnerUser(
     .upsert({ user_id: userId, sponsor_id: sponsorId, invited_by: "admin" }, { onConflict: "user_id" });
 
   if (suError) throw new Error(`sponsor_users: ${suError.message}`);
+
+  // Dohvati naziv sponzora za welcome email
+  const { data: sponsorData } = await adminClient
+    .from("sponsors")
+    .select("name")
+    .eq("id", sponsorId)
+    .single();
+  const sponsorName = sponsorData?.name ?? "";
+
+  // Pošalji welcome email
+  const { error: emailError } = await sendWelcomeEmail(
+    email.toLowerCase().trim(),
+    sponsorName,
+    name.trim(),
+    password,
+    projectId
+  );
+
+  // Logiraj u email_logs
+  await adminClient.from("email_logs").insert({
+    recipient: email.toLowerCase().trim(),
+    subject: `Pristup CRO Commerce ${projectId} partnerskom portalu — ${sponsorName}`,
+    status: emailError ? "error" : "sent",
+    sent_at: new Date().toISOString(),
+  });
+
+  return { emailSent: !emailError };
 }
 
 export async function changePartnerPassword(userId: string, newPassword: string, projectId: "2026" | "2025") {

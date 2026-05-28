@@ -88,33 +88,55 @@ export async function sendWelcomeEmail(
   to: string,
   sponsorName: string,
   contactName: string,
-  temporaryPassword: string
-) {
-  await resend.emails.send({
-    from: FROM_EMAIL,
+  password: string,
+  year: string = "2026"
+): Promise<{ data: unknown; error: unknown }> {
+  const { data, error } = await resend.emails.send({
+    from: "CRO Commerce <konferencija@ecommerce.hr>",
     to,
-    subject: `Dobrodošli u CRO Commerce 2025 partnerski portal`,
+    subject: `Pristup CRO Commerce ${year} partnerskom portalu — ${sponsorName}`,
     html: `
       <div style="font-family: 'DM Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
         <div style="background: linear-gradient(135deg, #ea580c, #c2410c); padding: 40px;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">CRO Commerce 2025</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">CRO Commerce ${year}</h1>
           <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 16px;">Partnerski portal</p>
         </div>
         <div style="padding: 40px;">
-          <p style="font-size: 16px; color: #374151;">Dragi/a <strong>${contactName}</strong>,</p>
-          <p style="font-size: 16px; color: #374151;">Dobrodošli u partnerski portal za tvrtku <strong>${sponsorName}</strong>!</p>
-          <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 24px 0;">
-            <p style="margin: 0 0 8px; font-size: 14px; color: #6b7280;">Vaši pristupni podaci:</p>
-            <p style="margin: 0 0 4px;"><strong>Email:</strong> ${to}</p>
-            <p style="margin: 0;"><strong>Lozinka:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${temporaryPassword}</code></p>
+          <p style="font-size: 16px; color: #374151; margin: 0 0 12px;">Dragi/a <strong>${contactName || sponsorName}</strong>,</p>
+          <p style="font-size: 16px; color: #374151; margin: 0 0 24px;">
+            Kreiran vam je pristup partnerskom portalu za CRO Commerce ${year} konferenciju kao predstavniku tvrtke <strong>${sponsorName}</strong>.
+          </p>
+          <table style="width: 100%; border-collapse: collapse; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 24px;">
+            <tr>
+              <td style="padding: 12px 16px; font-size: 14px; color: #6b7280; width: 120px;">Email:</td>
+              <td style="padding: 12px 16px; font-size: 14px; font-weight: 600; color: #111827;">${to}</td>
+            </tr>
+            <tr style="border-top: 1px solid #e5e7eb;">
+              <td style="padding: 12px 16px; font-size: 14px; color: #6b7280;">Lozinka:</td>
+              <td style="padding: 12px 16px;">
+                <code style="background: #e5e7eb; padding: 3px 8px; border-radius: 4px; font-size: 14px; font-weight: 600; letter-spacing: 0.5px;">${password}</code>
+              </td>
+            </tr>
+          </table>
+          <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 16px; margin-bottom: 28px;">
+            <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #9a3412;">U portalu mozete:</p>
+            <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #7c2d12; line-height: 1.8;">
+              <li>Pratiti status benefita vase sponzorske suradnje</li>
+              <li>Pregledati i upravljati kontakt osobama</li>
+              <li>Preuzeti uploadane dokumente</li>
+              <li>Pratiti program konferencije</li>
+            </ul>
           </div>
-          <p style="font-size: 14px; color: #6b7280;">Molimo promijenite lozinku pri prvom prijavi.</p>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" 
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/partner"
             style="display: inline-block; background: #ea580c; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-            Prijavi se u portal →
+            Otvorite partnerski portal &rarr;
           </a>
+          <p style="font-size: 13px; color: #9ca3af; margin: 32px 0 0;">
+            Za pitanja kontaktirajte nas na <a href="mailto:${ADMIN_EMAIL}" style="color: #ea580c;">${ADMIN_EMAIL}</a>
+          </p>
         </div>
       </div>
     `,
   });
+  return { data, error };
 }

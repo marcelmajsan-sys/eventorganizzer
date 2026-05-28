@@ -42,7 +42,7 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
     setLoading(true);
     setError(null);
     try {
-      await createPartnerUser(form.email, form.password, form.sponsor_id, form.name);
+      const result = await createPartnerUser(form.email, form.password, form.sponsor_id, form.name);
       const sponsor = sponsors.find((s) => s.id === form.sponsor_id);
       setPartners((prev) => [...prev, {
         id: "new",
@@ -55,7 +55,10 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
       }]);
       setForm({ name: "", email: "", password: "", sponsor_id: "" });
       setShowAdd(false);
-      flash("Partner kreiran.");
+      flash(result.emailSent
+        ? "Partner kreiran, welcome email poslan."
+        : "Partner kreiran (slanje emaila nije uspjelo)."
+      );
     } catch (e: any) {
       setError(e.message);
     } finally {
