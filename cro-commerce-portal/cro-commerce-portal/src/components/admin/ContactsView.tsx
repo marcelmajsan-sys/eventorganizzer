@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, X, ChevronRight, Trash2, Loader2 } from "lucide-react";
+import { Search, X, ChevronRight, Trash2, Loader2, FileSpreadsheet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AddContactModal from "@/components/admin/AddContactModal";
 
@@ -46,6 +46,29 @@ interface Sponsor {
 interface Props {
   contacts: Contact[];
   sponsors: Sponsor[];
+}
+
+async function exportToXlsx(rows: Contact[], sponsorMap: Record<string, string>) {
+  const { utils, writeFile } = await import("xlsx");
+
+  const data = rows.map((c) => ({
+    "Ime":      c.name,
+    "Firma":    c.company ?? "",
+    "Email":    c.email ?? "",
+    "Telefon":  c.phone ?? "",
+    "Funkcija": c.role ?? "",
+    "Sponzor":  c.sponsor_id ? (sponsorMap[c.sponsor_id] ?? "") : "",
+    "Tip":      TYPE_LABELS[c.type] ?? c.type,
+  }));
+
+  const ws = utils.json_to_sheet(data);
+  ws["!cols"] = [
+    { wch: 28 }, { wch: 24 }, { wch: 30 }, { wch: 18 },
+    { wch: 20 }, { wch: 26 }, { wch: 18 },
+  ];
+  const wb = utils.book_new();
+  utils.book_append_sheet(wb, ws, "Kontakti");
+  writeFile(wb, `kontakti_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 export default function ContactsView({ contacts, sponsors }: Props) {
@@ -127,7 +150,17 @@ export default function ContactsView({ contacts, sponsors }: Props) {
           <h1 className="page-title">Kontakti</h1>
           <p className="page-subtitle">{contacts.length} kontakata ukupno</p>
         </div>
-        <AddContactModal sponsors={sponsors} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToXlsx(filtered, sponsorMap)}
+            title="Izvezi u Excel"
+            className="btn-secondary flex items-center gap-1.5"
+          >
+            <FileSpreadsheet size={15} />
+            <span className="hidden sm:inline">Izvezi XLSX</span>
+          </button>
+          <AddContactModal sponsors={sponsors} />
+        </div>
       </div>
 
       {/* Bulk delete bar */}

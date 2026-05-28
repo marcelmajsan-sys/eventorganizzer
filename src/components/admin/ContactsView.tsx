@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, X, ChevronRight, Trash2, Loader2 } from "lucide-react";
+import { Search, X, ChevronRight, Trash2, Loader2, FileSpreadsheet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AddContactModal from "@/components/admin/AddContactModal";
-import { deleteContact } from "@/app/actions/contactActions";
 
 interface Contact {
   id: string;
@@ -27,7 +26,6 @@ const TYPE_LABELS: Record<string, string> = {
   speaker:          "Speaker",
   service_provider: "Service Provider",
   brand_ambassador: "Brand Ambassador",
-  primary:          "Primarni kontakt",
 };
 
 const TYPE_STYLE: Record<string, string> = {
@@ -38,7 +36,6 @@ const TYPE_STYLE: Record<string, string> = {
   speaker:          "bg-purple-50 text-purple-700 border-purple-200",
   service_provider: "bg-gray-100 text-gray-600 border-gray-200",
   brand_ambassador: "bg-pink-50 text-pink-700 border-pink-200",
-  primary:          "bg-orange-50 text-orange-700 border-orange-200",
 };
 
 interface Sponsor {
@@ -51,13 +48,35 @@ interface Props {
   sponsors: Sponsor[];
 }
 
+async function exportToXlsx(rows: Contact[], sponsorMap: Record<string, string>) {
+  const { utils, writeFile } = await import("xlsx");
+
+  const data = rows.map((c) => ({
+    "Ime":      c.name,
+    "Firma":    c.company ?? "",
+    "Email":    c.email ?? "",
+    "Telefon":  c.phone ?? "",
+    "Funkcija": c.role ?? "",
+    "Sponzor":  c.sponsor_id ? (sponsorMap[c.sponsor_id] ?? "") : "",
+    "Tip":      TYPE_LABELS[c.type] ?? c.type,
+  }));
+
+  const ws = utils.json_to_sheet(data);
+  ws["!cols"] = [
+    { wch: 28 }, { wch: 24 }, { wch: 30 }, { wch: 18 },
+    { wch: 20 }, { wch: 26 }, { wch: 18 },
+  ];
+  const wb = utils.book_new();
+  utils.book_append_sheet(wb, ws, "Kontakti");
+  writeFile(wb, `kontakti_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
 export default function ContactsView({ contacts, sponsors }: Props) {
   const [selectedSponsor, setSelectedSponsor] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
@@ -109,12 +128,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
 
   async function handleDeleteOne(id: string, name: string) {
     if (!confirm(`Obriši kontakt "${name}"?`)) return;
-    setDeleteError("");
-    const { error } = await deleteContact(id);
-    if (error) {
-      setDeleteError(error);
-      return;
-    }
+    await supabase.from("sponsor_contacts").delete().eq("id", id);
     setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
     router.refresh();
   }
@@ -123,17 +137,9 @@ export default function ContactsView({ contacts, sponsors }: Props) {
     const count = selectedIds.size;
     if (!confirm(`Obriši ${count} odabranih kontakata?`)) return;
     setDeleting(true);
-    setDeleteError("");
-    const errors: string[] = [];
-    for (const id of Array.from(selectedIds)) {
-      const { error } = await deleteContact(id);
-      if (error) errors.push(error);
-    }
+    await supabase.from("sponsor_contacts").delete().in("id", Array.from(selectedIds));
     setSelectedIds(new Set());
     setDeleting(false);
-    if (errors.length > 0) {
-      setDeleteError(errors[0]);
-    }
     router.refresh();
   }
 
@@ -144,7 +150,17 @@ export default function ContactsView({ contacts, sponsors }: Props) {
           <h1 className="page-title">Kontakti</h1>
           <p className="page-subtitle">{contacts.length} kontakata ukupno</p>
         </div>
-        <AddContactModal sponsors={sponsors} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToXlsx(filtered, sponsorMap)}
+            title="Izvezi u Excel"
+            className="btn-secondary flex items-center gap-1.5"
+          >
+            <FileSpreadsheet size={15} />
+            <span className="hidden sm:inline">Izvezi XLSX</span>
+          </button>
+          <AddContactModal sponsors={sponsors} />
+        </div>
       </div>
 
       {/* Bulk delete bar */}
@@ -164,23 +180,13 @@ export default function ContactsView({ contacts, sponsors }: Props) {
         </div>
       )}
 
-      {/* Delete error */}
-      {deleteError && (
-        <div className="flex items-start justify-between bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-700">
-          <span>{deleteError}</span>
-          <button onClick={() => setDeleteError("")} className="ml-3 flex-shrink-0 text-red-400 hover:text-red-600">
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
       {/* Search */}
       <div className="relative mb-4">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Pretraži po imenu, emailu, funkciji ili partneru..."
+          placeholder="Pretraži po imenu, emailu, funkciji ili sponzoru..."
           className="input-field pl-9 pr-8"
         />
         {query && (
@@ -256,7 +262,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
       {/* Table */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-max text-sm">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="px-4 py-3 w-px">
@@ -273,7 +279,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Telefon</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Funkcija</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Partner</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Sponzor</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Tip</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -299,9 +305,9 @@ export default function ContactsView({ contacts, sponsors }: Props) {
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {c.email ? (
-                      <Link href={`/admin/contacts/${c.id}`} className="hover:text-brand-600 transition-colors">
+                      <a href={`mailto:${c.email}`} className="hover:text-brand-600 transition-colors">
                         {c.email}
-                      </Link>
+                      </a>
                     ) : (
                       <span className="text-gray-300">—</span>
                     )}

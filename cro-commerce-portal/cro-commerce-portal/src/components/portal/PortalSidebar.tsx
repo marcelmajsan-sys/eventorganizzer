@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight, CalendarDays, Youtube } from "lucide-react";
+import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight, CalendarDays, Youtube, Languages } from "lucide-react";
+import PortalHelpModal from "@/components/portal/PortalHelpModal";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { packageColor } from "@/lib/utils";
@@ -10,6 +11,8 @@ import { PROJECTS } from "@/lib/supabase/projects";
 import { switchPortalProject } from "@/app/actions/switchProject";
 import type { PackageType } from "@/types";
 import type { ProjectId } from "@/lib/supabase/projects";
+import { useLang } from "@/context/LanguageContext";
+import { translatePackage } from "@/lib/i18n/portal";
 
 interface Props {
   sponsor: { id: string; name: string; package_type: string };
@@ -18,13 +21,6 @@ interface Props {
   otherProjectId?: ProjectId;
 }
 
-const navItems = [
-  { href: "/portal/sponsor",  label: "Partner",  icon: Building2 },
-  { href: "/portal/benefits", label: "Vaši benefiti", icon: Gift },
-  { href: "/portal/program",  label: "Program",  icon: CalendarDays },
-  { href: "/portal/video",    label: "CRO Commerce 2025 (Video)", icon: Youtube },
-];
-
 export default function PortalSidebar({ sponsor, userEmail, activeProjectId, otherProjectId }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -32,9 +28,17 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
   const [signingOut, setSigningOut] = useState(false);
   const [switching, setSwitching] = useState(false);
   const supabase = createClient();
+  const { t, toggleLang, lang } = useLang();
 
   const activeLabel = PROJECTS[activeProjectId].label;
   const otherLabel = otherProjectId ? PROJECTS[otherProjectId].label : null;
+
+  const navItems = [
+    { href: "/portal/sponsor",  label: "Partner",       icon: Building2 },
+    { href: "/portal/benefits", label: t("nav.benefits"), icon: Gift },
+    { href: "/portal/program",  label: "Program",       icon: CalendarDays },
+    { href: "/portal/video",    label: "CRO Commerce 2025 (Video)", icon: Youtube },
+  ];
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -66,7 +70,7 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
           <div className="min-w-0">
             <p className="font-semibold text-gray-900 text-sm truncate">{sponsor.name}</p>
             <span className={`badge text-xs ${packageColor(sponsor.package_type as PackageType)}`}>
-              {sponsor.package_type}
+              {translatePackage(lang, sponsor.package_type)}
             </span>
           </div>
         </div>
@@ -79,7 +83,7 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
             className="mt-3 w-full flex items-center gap-1.5 text-xs text-gray-500 hover:text-brand-600 transition-colors bg-gray-50 hover:bg-brand-50 rounded-lg px-2.5 py-1.5"
           >
             <ArrowLeftRight size={12} />
-            {switching ? "Prebacivanje..." : `Prebaci na ${otherLabel}`}
+            {switching ? t("nav.switching") : `${t("nav.switchProject")} ${otherLabel}`}
           </button>
         )}
       </div>
@@ -107,15 +111,28 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-100">
-        <p className="text-xs text-gray-400 truncate mb-2">{userEmail}</p>
+      <div className="p-4 border-t border-gray-100 space-y-2">
+        <p className="text-xs text-gray-400 truncate">{userEmail}</p>
+
+        {/* Language toggle */}
+        <button
+          onClick={toggleLang}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-brand-600 transition-colors w-full"
+        >
+          <Languages size={14} />
+          {t("nav.langToggle")}
+        </button>
+
+        {/* Help modal */}
+        <PortalHelpModal />
+
         <button
           onClick={handleSignOut}
           disabled={signingOut}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-600 transition-colors w-full"
         >
           <LogOut size={14} />
-          {signingOut ? "Odjava..." : "Odjava"}
+          {signingOut ? t("nav.signingOut") : t("nav.signOut")}
         </button>
       </div>
     </div>
