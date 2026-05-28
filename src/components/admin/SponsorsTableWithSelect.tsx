@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronRight, CheckSquare, Square, Minus } from "lucide-react";
+import { ChevronRight, CheckSquare, Square, Minus, FileSpreadsheet } from "lucide-react";
 import { packageColor, paymentStatusColor, paymentStatusLabel, leadStatusColor, leadStatusLabel } from "@/lib/utils";
 import type { PackageType, PaymentStatus, LeadStatus } from "@/types";
 import { bulkUpdateSponsors } from "@/app/actions/sponsorBulkUpdate";
@@ -42,6 +42,37 @@ const LEAD_STATUSES = [
   { value: "confirmed_new",       label: "Potvrđeno Novi" },
   { value: "confirmed_returning", label: "Potvrđeno Stari" },
 ];
+
+async function exportToXlsx(rows: SponsorRow[]) {
+  const { utils, writeFile } = await import("xlsx");
+
+  const data = rows.map((s) => {
+    const contacts = s.sponsor_contacts ?? [];
+    const primary = contacts.find((c) => c.type === "contact") ?? contacts[0] ?? null;
+    const benefits = s.sponsor_benefits ?? [];
+    const completed = benefits.filter((b) => b.status === "completed").length;
+    return {
+      "Tvrtka": s.name,
+      "Paket": s.package_type ?? "",
+      "Status": leadStatusLabel((s.lead_status ?? "") as LeadStatus) || (s.lead_status ?? ""),
+      "Kontakt ime": primary?.name ?? s.contact_name ?? "",
+      "Kontakt email": primary?.email ?? s.contact_email ?? "",
+      "Iznos (EUR)": s.iznos ?? 0,
+      "Plaćanje": paymentStatusLabel((s.payment_status ?? "") as PaymentStatus),
+      "Benefiti završeni": completed,
+      "Benefiti ukupno": benefits.length,
+    };
+  });
+
+  const ws = utils.json_to_sheet(data);
+  ws["!cols"] = [
+    { wch: 30 }, { wch: 14 }, { wch: 18 }, { wch: 24 },
+    { wch: 30 }, { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 16 },
+  ];
+  const wb = utils.book_new();
+  utils.book_append_sheet(wb, ws, "Partneri");
+  writeFile(wb, `partneri_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
 
 export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -157,6 +188,14 @@ export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: 
               className="px-4 py-1.5 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors"
             >
               {isPending ? "Spremam..." : "Primijeni"}
+            </button>
+            <button
+              onClick={() => exportToXlsx(sponsors.filter((s) => selected.has(s.id)))}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-colors"
+              title="Izvezi odabrane u Excel"
+            >
+              <FileSpreadsheet size={14} />
+              XLSX
             </button>
             <button
               onClick={clearSelection}
