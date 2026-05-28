@@ -49,7 +49,7 @@ npm run dev   # → http://localhost:3000
 **Ključne server actions** (`src/app/actions/`):
 - `switchProject.ts` — token exchange za admin i partner projekt switch
 - `userManagement.ts` — CRUD admin korisnika u svim bazama
-- `partnerManagement.ts` — CRUD partner korisnika + `updatePrimaryContact`
+- `partnerManagement.ts` — CRUD partner korisnika + `updatePrimaryContact`; `createPartnerUser` šalje welcome email i logira u `email_logs`
 - `notifications.ts` — markRead/Unread/All, delete, `recordPartnerLogin`
 - `contactActions.ts` — `deleteContact()` + `deleteDuplicateContacts()` (koristi `createAdminClientForProject`)
 - `sponsorBulkUpdate.ts` — bulk update paketa/plaćanja/statusa
@@ -196,6 +196,7 @@ git add . && git commit -m "Opis" && git push origin main
 - **`getProjectAdminClient()` helper** u `actions/notifications.ts`: čita `PROJECT_COOKIE`, vraća `createAdminClientForProject(projectId)`
 - **Dashboard**: Naplaćeno = `sum(iznos za paid) + sum(partial_amount za partial)`; Neplaćeno = ostalo + `sum(iznos − partial_amount za partial)`; Profitabilnost = prihodi − budgetAll
 - **Email**: FROM adresa `konferencija@ecommerce.hr`; subject uključuje godinu iz cookieja `cro_active_project`
+- **Welcome email**: `sendWelcomeEmail(to, sponsorName, contactName, password, year)` — poziva se iz `createPartnerUser` nakon upserта u `sponsor_users`; logira u `email_logs`; `PartnerManagementSection` prikazuje toast "welcome email poslan" ili "(slanje emaila nije uspjelo)" ovisno o `{ emailSent }` returnu
 - **Portal i18n**: `useLang()` hook iz `LanguageContext`; prijevodi u `lib/i18n/portal.ts`; `translatePackage(lang, type)` za nazive paketa. **Ne koristiti tipografske navodnike** („ ") unutar TS string literala — parser baca syntax error; koristiti `'` ili `\"`
 - **EditBenefitDialog/Modal** — primarni kontakt: fetchuje sve kontakte sponzora (bez type filtera) + primarni; matching ime (case-insensitive) → fallback email; ★ oznaka + pre-select
 - **Inbox brisanje** vidljivo samo za `marcel@ecommerce.hr`; `deleteAllNotifications` koristi `.neq("id", "00000000-...")` jer Supabase zahtijeva WHERE uvjet za DELETE
