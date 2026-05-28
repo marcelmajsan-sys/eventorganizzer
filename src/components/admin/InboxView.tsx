@@ -133,7 +133,7 @@ function NotifCard({ n, canDelete }: { n: Notification; canDelete: boolean }) {
 }
 
 export default function InboxView({ notifications, userEmail }: { notifications: Notification[]; userEmail: string | null }) {
-  const [activeTab, setActiveTab] = useState<Tab>("task");
+  const [activeTab, setActiveTab] = useState<Tab>("all");
   const canDelete = userEmail === ADMIN_DELETE_EMAIL;
 
   const unread = notifications.filter((n) => !n.read);
