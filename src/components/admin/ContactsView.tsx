@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, X, ChevronRight, Trash2, Loader2, FileSpreadsheet } from "lucide-react";
+import { Search, X, ChevronRight, ChevronDown, Trash2, Loader2, FileSpreadsheet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AddContactModal from "@/components/admin/AddContactModal";
 
@@ -75,6 +75,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
   const [selectedSponsor, setSelectedSponsor] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [query, setQuery] = useState("");
+  const [showAllSponsors, setShowAllSponsors] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const router = useRouter();
@@ -230,33 +231,58 @@ export default function ContactsView({ contacts, sponsors }: Props) {
       </div>
 
       {/* Sponsor filters */}
-      <div className="flex gap-2 flex-wrap mb-6">
-        <button
-          onClick={() => setSelectedSponsor("all")}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-            selectedSponsor === "all"
-              ? "bg-brand-600 text-white border-brand-600"
-              : "bg-white border-gray-200 text-gray-600 hover:border-brand-300"
-          }`}
-        >
-          Sve tvrtke ({contacts.length})
-        </button>
-        {sponsorsWithContacts.map((s) => {
-          const count = contacts.filter((c) => c.sponsor_id === s.id).length;
-          return (
+      <div className="mb-6">
+        <div className="relative">
+          <div
+            className={`flex gap-1.5 flex-wrap transition-all ${
+              !showAllSponsors ? "max-h-[76px] overflow-hidden" : ""
+            }`}
+          >
             <button
-              key={s.id}
-              onClick={() => setSelectedSponsor(s.id)}
+              onClick={() => setSelectedSponsor("all")}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-                selectedSponsor === s.id
+                selectedSponsor === "all"
                   ? "bg-brand-600 text-white border-brand-600"
                   : "bg-white border-gray-200 text-gray-600 hover:border-brand-300"
               }`}
             >
-              {s.name} ({count})
+              Sve tvrtke ({contacts.length})
             </button>
-          );
-        })}
+            {sponsorsWithContacts.map((s) => {
+              const count = contacts.filter((c) => c.sponsor_id === s.id).length;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedSponsor(s.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                    selectedSponsor === s.id
+                      ? "bg-brand-600 text-white border-brand-600"
+                      : "bg-white border-gray-200 text-gray-600 hover:border-brand-300"
+                  }`}
+                >
+                  {s.name} ({count})
+                </button>
+              );
+            })}
+          </div>
+          {!showAllSponsors && sponsorsWithContacts.length > 10 && (
+            <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+          )}
+        </div>
+        {sponsorsWithContacts.length > 10 && (
+          <button
+            onClick={() => setShowAllSponsors((v) => !v)}
+            className="mt-2 text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 transition-colors"
+          >
+            <ChevronDown
+              size={12}
+              className={`transition-transform duration-200 ${showAllSponsors ? "rotate-180" : ""}`}
+            />
+            {showAllSponsors
+              ? "Prikaži manje"
+              : `Prikaži sve tvrtke (${sponsorsWithContacts.length})`}
+          </button>
+        )}
       </div>
 
       {/* Table */}
