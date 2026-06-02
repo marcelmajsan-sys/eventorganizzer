@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Save, MessageSquare, Send, Trash2, Check } from "lucide-react";
 import type { Sponsor, PackageType, LeadStatus } from "@/types";
-import { getSponsorComments, addSponsorComment, updateSponsorComment, deleteSponsorComment, type SponsorComment } from "@/app/actions/sponsorComments";
+import { getSponsorComments, addSponsorComment, updateSponsorComment, deleteSponsorComment, createCommentReminder, type SponsorComment } from "@/app/actions/sponsorComments";
 
 const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
@@ -36,6 +36,8 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [followUpEnabled, setFollowUpEnabled] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -81,10 +83,16 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
   async function handleAddComment() {
     if (!newComment.trim()) return;
     setCommentLoading(true);
-    const { data, error } = await addSponsorComment(sponsor.id, newComment.trim());
+    const text = newComment.trim();
+    const { data, error } = await addSponsorComment(sponsor.id, text);
     if (!error && data) {
+      if (followUpEnabled && followUpDate) {
+        await createCommentReminder(data.id, sponsor.id, text, followUpDate);
+      }
       setComments([data, ...comments]);
       setNewComment("");
+      setFollowUpEnabled(false);
+      setFollowUpDate("");
     }
     setCommentLoading(false);
   }
@@ -313,6 +321,27 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
               >
                 {commentLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="checkbox"
+                id="followup-toggle"
+                checked={followUpEnabled}
+                onChange={(e) => setFollowUpEnabled(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-gray-300 accent-orange-500 cursor-pointer"
+              />
+              <label htmlFor="followup-toggle" className="text-xs text-gray-500 cursor-pointer select-none">
+                Follow up podsjetnik
+              </label>
+              {followUpEnabled && (
+                <input
+                  type="date"
+                  value={followUpDate}
+                  onChange={(e) => setFollowUpDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="input-field text-xs py-1 flex-1"
+                />
+              )}
             </div>
             <p className="text-xs text-gray-400 mt-1">Ctrl+Enter za slanje</p>
           </div>

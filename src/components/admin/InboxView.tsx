@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bell, Building2, SquareCheckBig, UserPlus, Ticket, LayoutList, LogIn, MessageSquare } from "lucide-react";
+import { Bell, Building2, SquareCheckBig, UserPlus, Ticket, LayoutList, LogIn, MessageSquare, CalendarClock } from "lucide-react";
 import { MarkAllReadButton, MarkReadButton, MarkUnreadButton, DeleteNotificationButton, DeleteAllNotificationsButton } from "@/components/admin/InboxActions";
 
-type NotifType = "task" | "contact" | "ticket" | "login";
+type NotifType = "task" | "contact" | "ticket" | "login" | "followup";
 type Tab = NotifType | "comments" | "all";
 
 interface SponsorComment {
@@ -81,15 +81,24 @@ const TYPE_META: Record<NotifType, {
     border: "border-l-orange-500",
     badge: "bg-orange-100 text-orange-700",
   },
+  followup: {
+    label: "Follow up podsjetnik",
+    Icon: CalendarClock,
+    iconColor: "text-amber-600",
+    iconBg: "bg-amber-100",
+    border: "border-l-amber-500",
+    badge: "bg-amber-100 text-amber-700",
+  },
 };
 
 const TABS: { id: Tab; label: string; Icon: any }[] = [
-  { id: "task",     label: "Novi zadatak",          Icon: SquareCheckBig },
-  { id: "contact",  label: "Novi kontakt",           Icon: UserPlus },
-  { id: "ticket",   label: "Nova osoba za ulaznice", Icon: Ticket },
-  { id: "login",    label: "Prijave partnera",       Icon: LogIn },
-  { id: "comments", label: "Novi komentari",         Icon: MessageSquare },
-  { id: "all",      label: "Sve obavijesti",         Icon: LayoutList },
+  { id: "task",     label: "Novi zadatak",           Icon: SquareCheckBig },
+  { id: "contact",  label: "Novi kontakt",            Icon: UserPlus },
+  { id: "ticket",   label: "Nova osoba za ulaznice",  Icon: Ticket },
+  { id: "login",    label: "Prijave partnera",        Icon: LogIn },
+  { id: "followup", label: "Follow up podsjetnici",   Icon: CalendarClock },
+  { id: "comments", label: "Novi komentari",          Icon: MessageSquare },
+  { id: "all",      label: "Sve obavijesti",          Icon: LayoutList },
 ];
 
 const ADMIN_DELETE_EMAIL = "marcel@ecommerce.hr";

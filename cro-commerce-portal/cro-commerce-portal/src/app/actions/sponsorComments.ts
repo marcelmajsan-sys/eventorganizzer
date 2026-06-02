@@ -77,3 +77,26 @@ export async function deleteSponsorComment(
   if (error) return { error: error.message };
   return { error: null };
 }
+
+export async function createCommentReminder(
+  commentId: string,
+  sponsorId: string,
+  commentText: string,
+  remindAt: string
+): Promise<{ error: string | null }> {
+  const projectId = await getProjectId();
+  const adminClient = await createAdminClient();
+  const { data: { user } } = await adminClient.auth.getUser();
+  if (!user?.email) return { error: "Niste prijavljeni" };
+
+  const supabase = createAdminClientForProject(projectId);
+  const { error } = await supabase.from("sponsor_comment_reminders").insert({
+    comment_id: commentId,
+    sponsor_id: sponsorId,
+    comment_text: commentText,
+    admin_email: user.email,
+    remind_at: remindAt,
+  });
+  if (error) return { error: error.message };
+  return { error: null };
+}

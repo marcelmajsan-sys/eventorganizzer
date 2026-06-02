@@ -4,10 +4,11 @@ import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import InboxView from "@/components/admin/InboxView";
 
-type NotifType = "task" | "contact" | "ticket" | "login";
+type NotifType = "task" | "contact" | "ticket" | "login" | "followup";
 
 function getNotifType(n: any): NotifType {
   if (n.task_id) return "task";
+  if (n.title === "Follow up podsjetnik") return "followup";
   if (n.title === "Prijava partnera") return "login";
   if (n.title === "Nova osoba za ulaznice") return "ticket";
   return "contact";
