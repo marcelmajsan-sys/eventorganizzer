@@ -24,11 +24,21 @@ export async function getSponsorComments(
 ): Promise<{ data: SponsorComment[] | null; error: string | null }> {
   const projectId = await getProjectId();
   const supabase = createAdminClientForProject(projectId);
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("sponsor_comments")
     .select("*, sponsor_comment_reminders(remind_at)")
     .eq("sponsor_id", sponsorId)
     .order("created_at", { ascending: false });
+
+  if (error) {
+    // fallback: migration_025 nije pokrenuta, dohvati bez reminders
+    ({ data, error } = await supabase
+      .from("sponsor_comments")
+      .select("*")
+      .eq("sponsor_id", sponsorId)
+      .order("created_at", { ascending: false }));
+  }
+
   if (error) return { data: null, error: error.message };
   const mapped = (data ?? []).map((c: any) => {
     const reminders = Array.isArray(c.sponsor_comment_reminders)
