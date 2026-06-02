@@ -50,3 +50,30 @@ export async function addSponsorComment(
   if (error) return { data: null, error: error.message };
   return { data: data as SponsorComment, error: null };
 }
+
+export async function updateSponsorComment(
+  commentId: string,
+  comment: string
+): Promise<{ error: string | null }> {
+  const projectId = await getProjectId();
+  const supabase = createAdminClientForProject(projectId);
+  const { error } = await supabase
+    .from("sponsor_comments")
+    .update({ comment })
+    .eq("id", commentId);
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
+export async function deleteSponsorComment(
+  commentId: string
+): Promise<{ error: string | null }> {
+  const projectId = await getProjectId();
+  const supabase = createAdminClientForProject(projectId);
+  const { error } = await supabase
+    .from("sponsor_comments")
+    .delete()
+    .eq("id", commentId);
+  if (error) return { error: error.message };
+  return { error: null };
+}

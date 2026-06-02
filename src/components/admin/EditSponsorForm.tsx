@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Pencil, X, Loader2, Save, MessageSquare, Send } from "lucide-react";
+import { Pencil, X, Loader2, Save, MessageSquare, Send, Trash2, Check } from "lucide-react";
 import type { Sponsor, PackageType, LeadStatus } from "@/types";
-import { getSponsorComments, addSponsorComment, type SponsorComment } from "@/app/actions/sponsorComments";
+import { getSponsorComments, addSponsorComment, updateSponsorComment, deleteSponsorComment, type SponsorComment } from "@/app/actions/sponsorComments";
 
 const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
@@ -33,6 +33,9 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
   const [newComment, setNewComment] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -84,6 +87,26 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
       setNewComment("");
     }
     setCommentLoading(false);
+  }
+
+  async function handleUpdateComment(id: string) {
+    if (!editingText.trim()) return;
+    setCommentLoading(true);
+    const { error } = await updateSponsorComment(id, editingText.trim());
+    if (!error) {
+      setComments(comments.map((c) => c.id === id ? { ...c, comment: editingText.trim() } : c));
+      setEditingId(null);
+    }
+    setCommentLoading(false);
+  }
+
+  async function handleDeleteComment(id: string) {
+    setDeletingId(id);
+    const { error } = await deleteSponsorComment(id);
+    if (!error) {
+      setComments(comments.filter((c) => c.id !== id));
+    }
+    setDeletingId(null);
   }
 
   if (!open) {
@@ -201,7 +224,7 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
             ) : comments.length > 0 ? (
               <div className="space-y-2 mb-3 max-h-44 overflow-y-auto pr-1">
                 {comments.map((c) => (
-                  <div key={c.id} className="bg-gray-50 rounded-lg p-3 text-sm">
+                  <div key={c.id} className="bg-gray-50 rounded-lg p-3 text-sm group">
                     <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
                       <span>
                         {new Date(c.created_at).toLocaleDateString("hr-HR", {
@@ -212,8 +235,58 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
                       </span>
                       <span>•</span>
                       <span className="font-medium text-gray-500">{c.admin_email.split("@")[0]}</span>
+                      <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => { setEditingId(c.id); setEditingText(c.comment); }}
+                          className="p-0.5 text-gray-400 hover:text-gray-700"
+                        >
+                          <Pencil size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteComment(c.id)}
+                          disabled={deletingId === c.id}
+                          className="p-0.5 text-gray-400 hover:text-red-500"
+                        >
+                          {deletingId === c.id ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-gray-700 leading-snug whitespace-pre-wrap">{c.comment}</p>
+                    {editingId === c.id ? (
+                      <div className="flex gap-1.5 items-end mt-1">
+                        <textarea
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          className="input-field resize-none flex-1 text-sm"
+                          rows={2}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleUpdateComment(c.id);
+                            if (e.key === "Escape") setEditingId(null);
+                          }}
+                        />
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateComment(c.id)}
+                            disabled={commentLoading}
+                            className="p-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                          >
+                            {commentLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(null)}
+                            className="p-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-700 leading-snug whitespace-pre-wrap">{c.comment}</p>
+                    )}
                   </div>
                 ))}
               </div>
