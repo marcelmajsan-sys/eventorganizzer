@@ -1,0 +1,52 @@
+"use server";
+
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { createAdminClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
+
+async function getProjectId() {
+  const cookieStore = await cookies();
+  return resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+}
+
+export type SponsorComment = {
+  id: string;
+  sponsor_id: string;
+  comment: string;
+  admin_email: string;
+  created_at: string;
+};
+
+export async function getSponsorComments(
+  sponsorId: string
+): Promise<{ data: SponsorComment[] | null; error: string | null }> {
+  const projectId = await getProjectId();
+  const supabase = createAdminClientForProject(projectId);
+  const { data, error } = await supabase
+    .from("sponsor_comments")
+    .select("*")
+    .eq("sponsor_id", sponsorId)
+    .order("created_at", { ascending: false });
+  if (error) return { data: null, error: error.message };
+  return { data: data as SponsorComment[], error: null };
+}
+
+export async function addSponsorComment(
+  sponsorId: string,
+  comment: string
+): Promise<{ data: SponsorComment | null; error: string | null }> {
+  const projectId = await getProjectId();
+  const adminClient = await createAdminClient();
+  const { data: { user } } = await adminClient.auth.getUser();
+  if (!user?.email) return { data: null, error: "Niste prijavljeni" };
+
+  const supabase = createAdminClientForProject(projectId);
+  const { data, error } = await supabase
+    .from("sponsor_comments")
+    .insert({ sponsor_id: sponsorId, comment, admin_email: user.email })
+    .select()
+    .single();
+  if (error) return { data: null, error: error.message };
+  return { data: data as SponsorComment, error: null };
+}
