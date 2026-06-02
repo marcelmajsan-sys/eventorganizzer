@@ -133,12 +133,12 @@ export default function AdminSidebar({ userEmail, activeProject, conferenceDate,
                 )}
               >
                 <Icon size={17} />
-                <span className="flex-1">{item.label}</span>
-                {badge && !isActive && (
-                  <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                    {badge > 99 ? "99+" : badge}
-                  </span>
-                )}
+                <span className="flex-1">
+                  {item.label}
+                  {item.href === "/admin/inbox" && unreadCount > 0 && (
+                    <span className="ml-1 opacity-80">({unreadCount > 99 ? "99+" : unreadCount})</span>
+                  )}
+                </span>
                 {isActive && <ChevronRight size={14} />}
               </Link>
             );
