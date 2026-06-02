@@ -88,7 +88,7 @@ const TABS: { id: Tab; label: string; Icon: any }[] = [
   { id: "contact",  label: "Novi kontakt",            Icon: UserPlus },
   { id: "ticket",   label: "Nova osoba za ulaznice",  Icon: Ticket },
   { id: "followup", label: "Follow up podsjetnici",   Icon: CalendarClock },
-  { id: "comments", label: "Novi komentari",          Icon: MessageSquare },
+  { id: "comments", label: "Svi komentari",            Icon: MessageSquare },
   { id: "all",      label: "Sve obavijesti",          Icon: LayoutList },
 ];
 
