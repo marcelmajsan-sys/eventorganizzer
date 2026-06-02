@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquare, Send, Loader2 } from "lucide-react";
-import { addSponsorComment, createCommentReminder, type SponsorComment } from "@/app/actions/sponsorComments";
+import { MessageSquare, Send, Loader2, Pencil, Trash2, Check, X } from "lucide-react";
+import { addSponsorComment, updateSponsorComment, deleteSponsorComment, createCommentReminder, type SponsorComment } from "@/app/actions/sponsorComments";
 
 export default function SponsorCommentsSection({
   sponsorId,
@@ -16,6 +16,10 @@ export default function SponsorCommentsSection({
   const [loading, setLoading] = useState(false);
   const [followUpEnabled, setFollowUpEnabled] = useState(false);
   const [followUpDate, setFollowUpDate] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function handleAdd() {
     if (!newComment.trim()) return;
@@ -34,6 +38,24 @@ export default function SponsorCommentsSection({
     setLoading(false);
   }
 
+  async function handleUpdate(id: string) {
+    if (!editingText.trim()) return;
+    setEditLoading(true);
+    const { error } = await updateSponsorComment(id, editingText.trim());
+    if (!error) {
+      setComments(comments.map((c) => c.id === id ? { ...c, comment: editingText.trim() } : c));
+      setEditingId(null);
+    }
+    setEditLoading(false);
+  }
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    const { error } = await deleteSponsorComment(id);
+    if (!error) setComments(comments.filter((c) => c.id !== id));
+    setDeletingId(null);
+  }
+
   return (
     <div className="mt-4 pt-4 border-t border-gray-100">
       <div className="flex items-center gap-2 mb-3">
@@ -44,13 +66,11 @@ export default function SponsorCommentsSection({
       {comments.length > 0 && (
         <div className="space-y-2 mb-3">
           {comments.map((c) => (
-            <div key={c.id} className="bg-gray-50 rounded-lg p-3">
+            <div key={c.id} className="bg-gray-50 rounded-lg p-3 group">
               <div className="flex items-center gap-2 text-xs text-gray-400 mb-1 flex-wrap">
                 <span>
                   {new Date(c.created_at).toLocaleDateString("hr-HR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
+                    day: "2-digit", month: "2-digit", year: "numeric",
                   })}
                 </span>
                 <span>•</span>
@@ -61,8 +81,58 @@ export default function SponsorCommentsSection({
                     <span>&#128197; {new Date(c.remind_at).toLocaleDateString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
                   </span>
                 )}
+                <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => { setEditingId(c.id); setEditingText(c.comment); }}
+                    className="p-0.5 text-gray-400 hover:text-gray-700"
+                  >
+                    <Pencil size={11} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(c.id)}
+                    disabled={deletingId === c.id}
+                    className="p-0.5 text-gray-400 hover:text-red-500"
+                  >
+                    {deletingId === c.id ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                  </button>
+                </div>
               </div>
-              <p className="text-sm text-gray-700 leading-snug whitespace-pre-wrap">{c.comment}</p>
+              {editingId === c.id ? (
+                <div className="flex gap-1.5 items-end mt-1">
+                  <textarea
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    className="input-field resize-none flex-1 text-sm"
+                    rows={2}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleUpdate(c.id);
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                  />
+                  <div className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdate(c.id)}
+                      disabled={editLoading}
+                      className="p-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                    >
+                      {editLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(null)}
+                      className="p-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-700 leading-snug whitespace-pre-wrap">{c.comment}</p>
+              )}
             </div>
           ))}
         </div>
