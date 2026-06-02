@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Save, MessageSquare, Send, Trash2, Check } from "lucide-react";
 import type { Sponsor, PackageType, LeadStatus } from "@/types";
-import { getSponsorComments, addSponsorComment, updateSponsorComment, deleteSponsorComment, createCommentReminder, type SponsorComment } from "@/app/actions/sponsorComments";
+import { getSponsorComments, addSponsorComment, updateSponsorComment, deleteSponsorComment, createCommentReminder, updateCommentReminder, type SponsorComment } from "@/app/actions/sponsorComments";
 
 const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
@@ -38,6 +38,9 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [followUpEnabled, setFollowUpEnabled] = useState(false);
   const [followUpDate, setFollowUpDate] = useState("");
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
+  const [editingReminderDate, setEditingReminderDate] = useState("");
+  const [reminderLoading, setReminderLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -106,6 +109,17 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
       setEditingId(null);
     }
     setCommentLoading(false);
+  }
+
+  async function handleUpdateReminder(commentId: string) {
+    if (!editingReminderDate) return;
+    setReminderLoading(true);
+    const { error } = await updateCommentReminder(commentId, editingReminderDate);
+    if (!error) {
+      setComments(comments.map((c) => c.id === commentId ? { ...c, remind_at: editingReminderDate } : c));
+      setEditingReminderId(null);
+    }
+    setReminderLoading(false);
   }
 
   async function handleDeleteComment(id: string) {
@@ -244,10 +258,37 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
                       <span>•</span>
                       <span className="font-medium text-gray-500">{c.admin_email.split("@")[0]}</span>
                       {c.remind_at && (
-                        <span className="flex items-center gap-0.5 text-amber-600 font-medium">
-                          <span>•</span>
-                          <span>FOLLOW UP {new Date(c.remind_at).toLocaleDateString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
-                        </span>
+                        editingReminderId === c.id ? (
+                          <span className="flex items-center gap-1">
+                            <span>•</span>
+                            <input
+                              type="date"
+                              value={editingReminderDate}
+                              onChange={(e) => setEditingReminderDate(e.target.value)}
+                              className="border border-amber-400 rounded px-1 py-0.5 text-xs text-amber-700 bg-amber-50"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleUpdateReminder(c.id);
+                                if (e.key === "Escape") setEditingReminderId(null);
+                              }}
+                            />
+                            <button type="button" onClick={() => handleUpdateReminder(c.id)} disabled={reminderLoading} className="p-0.5 text-amber-600 hover:text-amber-800">
+                              {reminderLoading ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+                            </button>
+                            <button type="button" onClick={() => setEditingReminderId(null)} className="p-0.5 text-gray-400 hover:text-gray-600">
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ) : (
+                          <span
+                            className="flex items-center gap-0.5 text-amber-600 font-medium cursor-pointer hover:text-amber-800 hover:underline"
+                            onClick={() => { setEditingReminderId(c.id); setEditingReminderDate(c.remind_at!); }}
+                            title="Klikni za izmjenu datuma"
+                          >
+                            <span>•</span>
+                            <span>FOLLOW UP {new Date(c.remind_at).toLocaleDateString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+                          </span>
+                        )
                       )}
                       <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button

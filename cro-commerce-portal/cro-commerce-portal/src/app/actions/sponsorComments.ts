@@ -95,6 +95,20 @@ export async function deleteSponsorComment(
   return { error: null };
 }
 
+export async function updateCommentReminder(
+  commentId: string,
+  remindAt: string
+): Promise<{ error: string | null }> {
+  const projectId = await getProjectId();
+  const supabase = createAdminClientForProject(projectId);
+  const { error } = await supabase
+    .from("sponsor_comment_reminders")
+    .update({ remind_at: remindAt })
+    .eq("comment_id", commentId);
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
 export async function createCommentReminder(
   commentId: string,
   sponsorId: string,
