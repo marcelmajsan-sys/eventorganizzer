@@ -16,6 +16,7 @@ export type SponsorComment = {
   comment: string;
   admin_email: string;
   created_at: string;
+  remind_at?: string | null;
 };
 
 export async function getSponsorComments(
@@ -25,11 +26,17 @@ export async function getSponsorComments(
   const supabase = createAdminClientForProject(projectId);
   const { data, error } = await supabase
     .from("sponsor_comments")
-    .select("*")
+    .select("*, sponsor_comment_reminders(remind_at)")
     .eq("sponsor_id", sponsorId)
     .order("created_at", { ascending: false });
   if (error) return { data: null, error: error.message };
-  return { data: data as SponsorComment[], error: null };
+  const mapped = (data ?? []).map((c: any) => {
+    const reminders = Array.isArray(c.sponsor_comment_reminders)
+      ? c.sponsor_comment_reminders
+      : c.sponsor_comment_reminders ? [c.sponsor_comment_reminders] : [];
+    return { ...c, remind_at: reminders[0]?.remind_at ?? null };
+  });
+  return { data: mapped as SponsorComment[], error: null };
 }
 
 export async function addSponsorComment(
