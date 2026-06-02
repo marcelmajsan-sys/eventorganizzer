@@ -246,7 +246,7 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
                       {c.remind_at && (
                         <span className="flex items-center gap-0.5 text-amber-600 font-medium">
                           <span>•</span>
-                          <span>&#128197; {new Date(c.remind_at).toLocaleDateString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+                          <span>FOLLOW UP {new Date(c.remind_at).toLocaleDateString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
                         </span>
                       )}
                       <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
