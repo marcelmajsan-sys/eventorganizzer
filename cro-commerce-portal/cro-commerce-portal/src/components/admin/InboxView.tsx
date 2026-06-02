@@ -2,11 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bell, Building2, SquareCheckBig, UserPlus, Ticket, LayoutList } from "lucide-react";
+import { Bell, Building2, SquareCheckBig, UserPlus, Ticket, LayoutList, MessageSquare } from "lucide-react";
 import { MarkAllReadButton, MarkReadButton, MarkUnreadButton, DeleteNotificationButton, DeleteAllNotificationsButton } from "@/components/admin/InboxActions";
 
 type NotifType = "task" | "contact" | "ticket";
-type Tab = NotifType | "all";
+type Tab = NotifType | "comments" | "all";
+
+interface SponsorComment {
+  id: string;
+  sponsor_id: string;
+  comment: string;
+  admin_email: string;
+  created_at: string;
+  sponsor: { id: string; name: string } | null;
+}
 
 interface Notification {
   id: string;
@@ -67,10 +76,11 @@ const TYPE_META: Record<NotifType, {
 };
 
 const TABS: { id: Tab; label: string; Icon: any }[] = [
-  { id: "task",    label: "Novi zadatak",            Icon: SquareCheckBig },
-  { id: "contact", label: "Novi kontakt",             Icon: UserPlus },
-  { id: "ticket",  label: "Nova osoba za ulaznice",   Icon: Ticket },
-  { id: "all",     label: "Sve obavijesti",           Icon: LayoutList },
+  { id: "task",     label: "Novi zadatak",          Icon: SquareCheckBig },
+  { id: "contact",  label: "Novi kontakt",           Icon: UserPlus },
+  { id: "ticket",   label: "Nova osoba za ulaznice", Icon: Ticket },
+  { id: "comments", label: "Novi komentari",         Icon: MessageSquare },
+  { id: "all",      label: "Sve obavijesti",         Icon: LayoutList },
 ];
 
 const ADMIN_DELETE_EMAIL = "marcel@ecommerce.hr";
@@ -123,25 +133,59 @@ function NotifCard({ n, canDelete }: { n: Notification; canDelete: boolean }) {
   );
 }
 
-export default function InboxView({ notifications, userEmail }: { notifications: Notification[]; userEmail: string | null }) {
+function CommentCard({ c }: { c: SponsorComment }) {
+  return (
+    <div className="card p-4 flex items-start gap-4 border-l-4 border-l-orange-400">
+      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+        <MessageSquare size={14} className="text-orange-600" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-semibold text-gray-900">Novi komentar</p>
+          <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(c.created_at)}</span>
+        </div>
+        <p className="text-sm mt-0.5 text-gray-600 whitespace-pre-wrap">{c.comment}</p>
+        <p className="text-xs text-gray-400 mt-1">{c.admin_email.split("@")[0]}</p>
+        {c.sponsor && (
+          <Link
+            href={`/admin/sponsors/${c.sponsor.id}`}
+            className="flex items-center gap-1 text-xs mt-1 text-brand-600 hover:underline"
+          >
+            <Building2 size={11} />
+            {c.sponsor.name}
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function InboxView({ notifications, comments, userEmail }: {
+  notifications: Notification[];
+  comments: SponsorComment[];
+  userEmail: string | null;
+}) {
   const [activeTab, setActiveTab] = useState<Tab>("all");
   const canDelete = userEmail === ADMIN_DELETE_EMAIL;
 
   const unread = notifications.filter((n) => !n.read);
 
-  // Nepročitani prvi, onda pročitani
   function sortedFor(items: Notification[]) {
     return [...items.filter((n) => !n.read), ...items.filter((n) => n.read)];
   }
 
-  const visibleItems = sortedFor(
+  const isCommentsTab = activeTab === "comments";
+
+  const visibleNotifs = sortedFor(
     activeTab === "all"
       ? notifications
+      : activeTab === "comments"
+      ? []
       : notifications.filter((n) => n.notifType === activeTab)
   );
 
-  // Badge po tabu: broj nepročitanih
-  function unreadCount(tab: Tab) {
+  function badgeCount(tab: Tab) {
+    if (tab === "comments") return comments.length;
     if (tab === "all") return unread.length;
     return unread.filter((n) => n.notifType === tab).length;
   }
@@ -167,7 +211,7 @@ export default function InboxView({ notifications, userEmail }: { notifications:
       {/* Tabovi */}
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 overflow-x-auto">
         {TABS.map(({ id, label, Icon }) => {
-          const count = unreadCount(id);
+          const count = badgeCount(id);
           const isActive = activeTab === id;
           return (
             <button
@@ -194,14 +238,25 @@ export default function InboxView({ notifications, userEmail }: { notifications:
       </div>
 
       {/* Sadržaj */}
-      {visibleItems.length === 0 ? (
+      {isCommentsTab ? (
+        comments.length === 0 ? (
+          <div className="card p-16 text-center">
+            <MessageSquare size={32} className="text-gray-200 mx-auto mb-3" />
+            <p className="text-gray-400 text-sm">Nema komentara</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {comments.map((c) => <CommentCard key={c.id} c={c} />)}
+          </div>
+        )
+      ) : visibleNotifs.length === 0 ? (
         <div className="card p-16 text-center">
           <Bell size={32} className="text-gray-200 mx-auto mb-3" />
           <p className="text-gray-400 text-sm">Nema obavijesti u ovoj kategoriji</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {visibleItems.map((n) => (
+          {visibleNotifs.map((n) => (
             <NotifCard key={n.id} n={n} canDelete={canDelete} />
           ))}
         </div>
