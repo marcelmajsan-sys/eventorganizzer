@@ -89,7 +89,7 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
       if (followUpEnabled && followUpDate) {
         await createCommentReminder(data.id, sponsor.id, text, followUpDate);
       }
-      setComments([data, ...comments]);
+      setComments([{ ...data, remind_at: followUpEnabled && followUpDate ? followUpDate : null }, ...comments]);
       setNewComment("");
       setFollowUpEnabled(false);
       setFollowUpDate("");

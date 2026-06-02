@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MessageSquare, Send, Loader2 } from "lucide-react";
-import { addSponsorComment, type SponsorComment } from "@/app/actions/sponsorComments";
+import { addSponsorComment, createCommentReminder, type SponsorComment } from "@/app/actions/sponsorComments";
 
 export default function SponsorCommentsSection({
   sponsorId,
@@ -14,14 +14,22 @@ export default function SponsorCommentsSection({
   const [comments, setComments] = useState<SponsorComment[]>(initialComments);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const [followUpEnabled, setFollowUpEnabled] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState("");
 
   async function handleAdd() {
     if (!newComment.trim()) return;
     setLoading(true);
-    const { data, error } = await addSponsorComment(sponsorId, newComment.trim());
+    const text = newComment.trim();
+    const { data, error } = await addSponsorComment(sponsorId, text);
     if (!error && data) {
-      setComments([data, ...comments]);
+      if (followUpEnabled && followUpDate) {
+        await createCommentReminder(data.id, sponsorId, text, followUpDate);
+      }
+      setComments([{ ...data, remind_at: followUpEnabled && followUpDate ? followUpDate : null }, ...comments]);
       setNewComment("");
+      setFollowUpEnabled(false);
+      setFollowUpDate("");
     }
     setLoading(false);
   }
@@ -37,7 +45,7 @@ export default function SponsorCommentsSection({
         <div className="space-y-2 mb-3">
           {comments.map((c) => (
             <div key={c.id} className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
+              <div className="flex items-center gap-2 text-xs text-gray-400 mb-1 flex-wrap">
                 <span>
                   {new Date(c.created_at).toLocaleDateString("hr-HR", {
                     day: "2-digit",
@@ -47,6 +55,12 @@ export default function SponsorCommentsSection({
                 </span>
                 <span>•</span>
                 <span className="font-medium text-gray-500">{c.admin_email.split("@")[0]}</span>
+                {c.remind_at && (
+                  <span className="flex items-center gap-0.5 text-amber-600 font-medium">
+                    <span>•</span>
+                    <span>&#128197; {new Date(c.remind_at).toLocaleDateString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+                  </span>
+                )}
               </div>
               <p className="text-sm text-gray-700 leading-snug whitespace-pre-wrap">{c.comment}</p>
             </div>
@@ -73,6 +87,27 @@ export default function SponsorCommentsSection({
         >
           {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
         </button>
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <input
+          type="checkbox"
+          id="followup-section-toggle"
+          checked={followUpEnabled}
+          onChange={(e) => setFollowUpEnabled(e.target.checked)}
+          className="w-3.5 h-3.5 rounded border-gray-300 accent-orange-500 cursor-pointer"
+        />
+        <label htmlFor="followup-section-toggle" className="text-xs text-gray-500 cursor-pointer select-none">
+          Follow up podsjetnik
+        </label>
+        {followUpEnabled && (
+          <input
+            type="date"
+            value={followUpDate}
+            onChange={(e) => setFollowUpDate(e.target.value)}
+            min={new Date().toISOString().split("T")[0]}
+            className="input-field text-xs py-1 flex-1"
+          />
+        )}
       </div>
       <p className="text-xs text-gray-400 mt-1">Ctrl+Enter za slanje</p>
     </div>
