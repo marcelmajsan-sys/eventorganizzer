@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Bell, Building2, SquareCheckBig, UserPlus, Ticket, LayoutList, LogIn, MessageSquare, CalendarClock } from "lucide-react";
 import { MarkAllReadButton, MarkReadButton, MarkUnreadButton, DeleteNotificationButton, DeleteAllNotificationsButton } from "@/components/admin/InboxActions";
 
-type NotifType = "task" | "contact" | "ticket" | "login" | "followup";
+type NotifType = "task" | "contact" | "ticket" | "login" | "followup" | "comment";
 type Tab = NotifType | "comments" | "all";
 
 interface SponsorComment {
@@ -89,15 +89,24 @@ const TYPE_META: Record<NotifType, {
     border: "border-l-amber-500",
     badge: "bg-amber-100 text-amber-700",
   },
+  comment: {
+    label: "Novi komentar",
+    Icon: MessageSquare,
+    iconColor: "text-teal-600",
+    iconBg: "bg-teal-100",
+    border: "border-l-teal-500",
+    badge: "bg-teal-100 text-teal-700",
+  },
 };
 
 const TABS: { id: Tab; label: string; Icon: any }[] = [
   { id: "task",     label: "Novi zadatak",           Icon: SquareCheckBig },
   { id: "contact",  label: "Novi kontakt",            Icon: UserPlus },
   { id: "ticket",   label: "Nova osoba za ulaznice",  Icon: Ticket },
-  { id: "comments", label: "Novi komentar",           Icon: MessageSquare },
+  { id: "comment",  label: "Novi komentar",           Icon: MessageSquare },
   { id: "login",    label: "Prijave partnera",        Icon: LogIn },
   { id: "followup", label: "Follow up podsjetnici",   Icon: CalendarClock },
+  { id: "comments", label: "Svi komentari",           Icon: MessageSquare },
   { id: "all",      label: "Sve obavijesti",          Icon: LayoutList },
 ];
 

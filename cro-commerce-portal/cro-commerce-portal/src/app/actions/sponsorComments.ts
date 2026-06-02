@@ -65,6 +65,13 @@ export async function addSponsorComment(
     .select()
     .single();
   if (error) return { data: null, error: error.message };
+
+  await supabase.from("notifications").insert({
+    sponsor_id: sponsorId,
+    title: "Novi komentar",
+    message: `${user.email.split("@")[0]}: ${comment}`,
+  });
+
   return { data: data as SponsorComment, error: null };
 }
 
