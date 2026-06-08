@@ -5,27 +5,63 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { PROJECT_COOKIE, PROJECTS } from "@/lib/supabase/projects";
 import { findPartnerProject } from "@/app/actions/findPartnerProject";
-import { Eye, EyeOff, LogIn, Loader2, Building2 } from "lucide-react";
+import { Eye, EyeOff, LogIn, Loader2, Building2, Languages } from "lucide-react";
+
+type Lang = "hr" | "en";
+
+const TEXT = {
+  hr: {
+    subtitle: "Sponzorski portal",
+    cardTitle: "Prijava za sponzore",
+    emailLabel: "Email adresa",
+    emailPlaceholder: "vas@email.com",
+    passwordLabel: "Lozinka",
+    submit: "Prijavi se",
+    submitting: "Prijava u tijeku...",
+    noAccess: "Nemate pristup ovom portalu. Kontaktirajte CRO Commerce tim.",
+    invalid: "Neispravni podaci za prijavu. Provjerite email i lozinku.",
+    help: "Ako imate pitanja ili želite promijeniti lozinku, javite se na mail: konferencija@ecommerce.hr",
+    copyright: "© 2025 CRO Commerce · Sva prava pridržana",
+    langToggle: "EN",
+  },
+  en: {
+    subtitle: "Sponsor portal",
+    cardTitle: "Partner sign in",
+    emailLabel: "Email address",
+    emailPlaceholder: "you@email.com",
+    passwordLabel: "Password",
+    submit: "Sign in",
+    submitting: "Signing in...",
+    noAccess: "You do not have access to this portal. Please contact the CRO Commerce team.",
+    invalid: "Invalid login details. Please check your email and password.",
+    help: "If you have any questions or wish to change your password, contact us at: konferencija@ecommerce.hr",
+    copyright: "© 2025 CRO Commerce · All rights reserved",
+    langToggle: "HR",
+  },
+} as const;
 
 function PartnerLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const noAccess = searchParams.get("error") === "no_access";
+  const [lang, setLang] = useState<Lang>("hr");
+  const t = TEXT[lang];
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(noAccess ? "Nemate pristup ovom portalu. Kontaktirajte CRO Commerce tim." : "");
+  // null = no error; "noAccess" | "invalid" = error key (so message follows the selected language)
+  const [errorKey, setErrorKey] = useState<"noAccess" | "invalid" | null>(noAccess ? "noAccess" : null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setErrorKey(null);
 
     // Find which project this email belongs to (server-side, avoids createBrowserClient singleton issue)
     const projectId = await findPartnerProject(email);
     if (!projectId) {
-      setError("Neispravni podaci za prijavu. Provjerite email i lozinku.");
+      setErrorKey("invalid");
       setLoading(false);
       return;
     }
@@ -42,7 +78,7 @@ function PartnerLoginForm() {
       return;
     }
 
-    setError("Neispravni podaci za prijavu. Provjerite email i lozinku.");
+    setErrorKey("invalid");
     setLoading(false);
   }
 
@@ -53,26 +89,35 @@ function PartnerLoginForm() {
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-amber-100 rounded-full blur-3xl opacity-50" />
       </div>
 
+      <button
+        type="button"
+        onClick={() => setLang(lang === "hr" ? "en" : "hr")}
+        className="absolute top-4 right-4 z-10 flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-brand-600 transition-colors bg-white/70 backdrop-blur rounded-full px-3 py-1.5 shadow-sm"
+      >
+        <Languages size={14} />
+        {t.langToggle}
+      </button>
+
       <div className="relative w-full max-w-md animate-enter">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-2xl shadow-lg mb-4 shadow-orange-200">
             <Building2 size={28} className="text-white" />
           </div>
           <h1 className="font-display text-3xl font-bold text-gray-900">CRO Commerce</h1>
-          <p className="text-gray-500 mt-1">Sponzorski portal</p>
+          <p className="text-gray-500 mt-1">{t.subtitle}</p>
         </div>
 
         <div className="card p-8">
-          <h2 className="font-semibold text-lg text-gray-900 mb-6">Prijava za sponzore</h2>
+          <h2 className="font-semibold text-lg text-gray-900 mb-6">{t.cardTitle}</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email adresa</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.emailLabel}</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="vas@email.com"
+                placeholder={t.emailPlaceholder}
                 required
                 className="input-field"
                 autoComplete="email"
@@ -80,7 +125,7 @@ function PartnerLoginForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Lozinka</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.passwordLabel}</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -101,9 +146,9 @@ function PartnerLoginForm() {
               </div>
             </div>
 
-            {error && (
+            {errorKey && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                {error}
+                {t[errorKey]}
               </div>
             )}
 
@@ -113,23 +158,22 @@ function PartnerLoginForm() {
               className="btn-primary w-full justify-center py-3"
             >
               {loading ? (
-                <><Loader2 size={16} className="animate-spin" /> Prijava u tijeku...</>
+                <><Loader2 size={16} className="animate-spin" /> {t.submitting}</>
               ) : (
-                <><LogIn size={16} /> Prijavi se</>
+                <><LogIn size={16} /> {t.submit}</>
               )}
             </button>
           </form>
 
           <div className="mt-6 pt-6 border-t border-gray-100">
             <p className="text-xs text-gray-400 text-center">
-              Pristupni podaci su vam dostavljeni emailom.
-              Za tehničku podršku kontaktirajte tim CRO Commerce.
+              {t.help}
             </p>
           </div>
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          © 2025 CRO Commerce · Sva prava pridržana
+          {t.copyright}
         </p>
       </div>
     </div>
