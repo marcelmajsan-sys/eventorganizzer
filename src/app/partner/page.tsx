@@ -21,7 +21,7 @@ const TEXT = {
     noAccess: "Nemate pristup ovom portalu. Kontaktirajte CRO Commerce tim.",
     invalid: "Neispravni podaci za prijavu. Provjerite email i lozinku.",
     help: "Ako imate pitanja ili želite promijeniti lozinku, javite se na mail: konferencija@ecommerce.hr",
-    copyright: "2026 Copywrite Ecommerce doo",
+    copyright: "Copyright © Ecommerce d.o.o.",
     langToggle: "EN",
   },
   en: {
@@ -35,7 +35,7 @@ const TEXT = {
     noAccess: "You do not have access to this portal. Please contact the CRO Commerce team.",
     invalid: "Invalid login details. Please check your email and password.",
     help: "If you have any questions or wish to change your password, contact us at: konferencija@ecommerce.hr",
-    copyright: "2026 Copywrite Ecommerce doo",
+    copyright: "Copyright © Ecommerce d.o.o.",
     langToggle: "HR",
   },
 } as const;
