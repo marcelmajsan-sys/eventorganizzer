@@ -34,7 +34,7 @@ const TEXT = {
     submitting: "Signing in...",
     noAccess: "You do not have access to this portal. Please contact the CRO Commerce team.",
     invalid: "Invalid login details. Please check your email and password.",
-    help: "If you have any questions or wish to change your password, contact us at: konferencija@ecommerce.hr",
+    help: "If you have any questions or wish to change your password, contact us at: marcel@ecommerce.hr",
     copyright: "Powered by Ecommerce d.o.o. © 2026",
     langToggle: "Prevedi na hrvatski",
   },
