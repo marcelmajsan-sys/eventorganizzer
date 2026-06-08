@@ -36,7 +36,7 @@ export async function switchProject(projectId: ProjectId): Promise<"dashboard" |
   if (!hasAccess) return "login";
 
   // Token exchange: generate magic link in target project and set session server-side
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://eventorganizzer.vercel.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://partners.ecommerce.hr";
   const { data: linkData, error: linkError } = await targetAdmin.auth.admin.generateLink({
     type: "magiclink",
     email: user.email,
@@ -97,7 +97,7 @@ export async function switchPortalProject(targetProjectId: ProjectId): Promise<b
   const { data: linkData, error: linkError } = await targetAdmin.auth.admin.generateLink({
     type: "magiclink",
     email: user.email,
-    options: { redirectTo: "https://eventorganizzer.vercel.app/auth/callback" },
+    options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://partners.ecommerce.hr"}/auth/callback` },
   });
   if (linkError || !linkData?.properties?.action_link) return false;
 
