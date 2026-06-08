@@ -1,12 +1,13 @@
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { cookies } from "next/headers";
-import { PROJECT_COOKIE } from "@/lib/supabase/projects";
+import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Building2, FileText,
   Calendar, CheckCircle2, Clock, AlertTriangle, XCircle,
-  FileSignature, User
+  FileSignature, User, LogIn
 } from "lucide-react";
 import {
   packageColor, paymentStatusColor, paymentStatusLabel,
@@ -22,6 +23,8 @@ import DeleteBenefitButton from "@/components/admin/DeleteBenefitButton";
 import ContactsSection from "@/components/admin/ContactsSection";
 import DeleteSponsorButton from "@/components/admin/DeleteSponsorButton";
 import AdminPrimaryContactEdit from "@/components/admin/AdminPrimaryContactEdit";
+import SponsorCommentsSection from "@/components/admin/SponsorCommentsSection";
+import { getSponsorComments } from "@/app/actions/sponsorComments";
 
 interface Props {
   params: { id: string };
@@ -29,15 +32,16 @@ interface Props {
 
 export default async function SponsorDetailPage({ params }: Props) {
   const supabase = await createClient();
-  const adminClient = await createAdminClient();
   const cookieStore = await cookies();
-  const projectId = cookieStore.get(PROJECT_COOKIE)?.value ?? "2026";
+  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+  const adminClient = createAdminClientForProject(projectId);
 
-  const [{ data: sponsor }, { data: benefits }, { data: files }, { data: contacts }] = await Promise.all([
+  const [{ data: sponsor }, { data: benefits }, { data: files }, { data: contacts }, { data: sponsorComments }] = await Promise.all([
     supabase.from("sponsors").select("*").eq("id", params.id).single(),
     supabase.from("sponsor_benefits").select("*").eq("sponsor_id", params.id).order("deadline"),
     supabase.from("files").select("*").eq("sponsor_id", params.id).order("uploaded_at", { ascending: false }),
     supabase.from("sponsor_contacts").select("*").eq("sponsor_id", params.id).order("created_at"),
+    getSponsorComments(params.id),
   ]);
 
   // Dohvati status ugovora iz sponsor_users (service role da zaobiđe RLS)
@@ -61,6 +65,22 @@ export default async function SponsorDetailPage({ params }: Props) {
   } catch {
     // migration_035 možda nije pokrenuta — graceful degradation
   }
+
+  // Dohvati prijave partnera u portal
+  let loginHistory: { id: string; email: string; created_at: string }[] = [];
+  try {
+    const { data: loginNotifs } = await adminClient
+      .from("notifications")
+      .select("id, message, created_at")
+      .eq("sponsor_id", params.id)
+      .eq("title", "Prijava partnera")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    loginHistory = (loginNotifs ?? []).map((n: any) => {
+      const emailMatch = n.message?.match(/\(([^)]+@[^)]+)\)/);
+      return { id: n.id, email: emailMatch?.[1] ?? "—", created_at: n.created_at };
+    });
+  } catch {}
 
   let packageTypeNames: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
   try {
@@ -158,6 +178,10 @@ export default async function SponsorDetailPage({ params }: Props) {
                 <p className="text-sm text-gray-700">{sponsor.notes}</p>
               </div>
             )}
+            <SponsorCommentsSection
+              sponsorId={sponsor.id}
+              initialComments={sponsorComments ?? []}
+            />
           </div>
 
           {/* Ugovor o suradnji */}
@@ -208,6 +232,31 @@ export default async function SponsorDetailPage({ params }: Props) {
               <div className="flex items-center gap-2">
                 <Clock size={15} className="text-amber-500 flex-shrink-0" />
                 <span className="text-sm text-amber-700 font-medium">Čeka prihvaćanje od partnera</span>
+              </div>
+            )}
+          </div>
+
+          {/* Login history */}
+          <div className="card p-5">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <LogIn size={16} className="text-orange-400" />
+              Prijave u portal
+            </h3>
+            {loginHistory.length === 0 ? (
+              <p className="text-sm text-gray-400">Nema zabilježenih prijava</p>
+            ) : (
+              <div className="space-y-2">
+                {loginHistory.map((login) => {
+                  const dt = new Date(login.created_at);
+                  const dateStr = dt.toLocaleDateString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric" });
+                  const timeStr = dt.toLocaleTimeString("hr-HR", { hour: "2-digit", minute: "2-digit" });
+                  return (
+                    <div key={login.id} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 last:border-0">
+                      <span className="text-gray-600 truncate">{login.email}</span>
+                      <span className="text-xs text-gray-400 flex-shrink-0 ml-3">{dateStr} · {timeStr}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

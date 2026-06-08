@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Pencil, X, Loader2, Save } from "lucide-react";
+import { Pencil, X, Loader2, Save, MessageSquare, Send, Trash2, Check } from "lucide-react";
 import type { Sponsor, PackageType, LeadStatus } from "@/types";
+import { getSponsorComments, addSponsorComment, updateSponsorComment, deleteSponsorComment, createCommentReminder, updateCommentReminder, type SponsorComment } from "@/app/actions/sponsorComments";
 
 const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
@@ -27,6 +28,28 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
     iznos: sponsor.iznos != null ? String(sponsor.iznos) : "",
     partial_amount: sponsor.partial_amount != null ? String(sponsor.partial_amount) : "",
   });
+
+  const [comments, setComments] = useState<SponsorComment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [followUpEnabled, setFollowUpEnabled] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
+  const [editingReminderDate, setEditingReminderDate] = useState("");
+  const [reminderLoading, setReminderLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setCommentsLoading(true);
+    getSponsorComments(sponsor.id).then(({ data }) => {
+      setComments(data ?? []);
+      setCommentsLoading(false);
+    });
+  }, [open, sponsor.id]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,6 +83,54 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
     }
   }
 
+  async function handleAddComment() {
+    if (!newComment.trim()) return;
+    setCommentLoading(true);
+    const text = newComment.trim();
+    const { data, error } = await addSponsorComment(sponsor.id, text);
+    if (!error && data) {
+      if (followUpEnabled && followUpDate) {
+        await createCommentReminder(data.id, sponsor.id, text, followUpDate);
+      }
+      setComments([{ ...data, remind_at: followUpEnabled && followUpDate ? followUpDate : null }, ...comments]);
+      setNewComment("");
+      setFollowUpEnabled(false);
+      setFollowUpDate("");
+    }
+    setCommentLoading(false);
+  }
+
+  async function handleUpdateComment(id: string) {
+    if (!editingText.trim()) return;
+    setCommentLoading(true);
+    const { error } = await updateSponsorComment(id, editingText.trim());
+    if (!error) {
+      setComments(comments.map((c) => c.id === id ? { ...c, comment: editingText.trim() } : c));
+      setEditingId(null);
+    }
+    setCommentLoading(false);
+  }
+
+  async function handleUpdateReminder(commentId: string) {
+    if (!editingReminderDate) return;
+    setReminderLoading(true);
+    const { error } = await updateCommentReminder(commentId, editingReminderDate);
+    if (!error) {
+      setComments(comments.map((c) => c.id === commentId ? { ...c, remind_at: editingReminderDate } : c));
+      setEditingReminderId(null);
+    }
+    setReminderLoading(false);
+  }
+
+  async function handleDeleteComment(id: string) {
+    setDeletingId(id);
+    const { error } = await deleteSponsorComment(id);
+    if (!error) {
+      setComments(comments.filter((c) => c.id !== id));
+    }
+    setDeletingId(null);
+  }
+
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="btn-secondary">
@@ -71,15 +142,15 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-enter">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-enter max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
           <h2 className="font-display text-xl font-bold text-gray-900">Uredi partnera</h2>
           <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Naziv tvrtke</label>
@@ -161,6 +232,167 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
               <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field resize-none" rows={3} />
             </div>
           </div>
+
+          <div className="border-t border-gray-100 pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare size={15} className="text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">Komentari</span>
+            </div>
+
+            {commentsLoading ? (
+              <div className="flex justify-center py-3">
+                <Loader2 size={16} className="animate-spin text-gray-400" />
+              </div>
+            ) : comments.length > 0 ? (
+              <div className="space-y-2 mb-3 max-h-44 overflow-y-auto pr-1">
+                {comments.map((c) => (
+                  <div key={c.id} className="bg-gray-50 rounded-lg p-3 text-sm group">
+                    <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
+                      <span>
+                        {new Date(c.created_at).toLocaleDateString("hr-HR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
+                      </span>
+                      <span>•</span>
+                      <span className="font-medium text-gray-500">{c.admin_email.split("@")[0]}</span>
+                      {c.remind_at && (
+                        editingReminderId === c.id ? (
+                          <span className="flex items-center gap-1">
+                            <span>•</span>
+                            <input
+                              type="date"
+                              value={editingReminderDate}
+                              onChange={(e) => setEditingReminderDate(e.target.value)}
+                              className="border border-amber-400 rounded px-1 py-0.5 text-xs text-amber-700 bg-amber-50"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleUpdateReminder(c.id);
+                                if (e.key === "Escape") setEditingReminderId(null);
+                              }}
+                            />
+                            <button type="button" onClick={() => handleUpdateReminder(c.id)} disabled={reminderLoading} className="p-0.5 text-amber-600 hover:text-amber-800">
+                              {reminderLoading ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+                            </button>
+                            <button type="button" onClick={() => setEditingReminderId(null)} className="p-0.5 text-gray-400 hover:text-gray-600">
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ) : (
+                          <span
+                            className="flex items-center gap-0.5 text-amber-600 font-medium cursor-pointer hover:text-amber-800 hover:underline"
+                            onClick={() => { setEditingReminderId(c.id); setEditingReminderDate(c.remind_at!); }}
+                            title="Klikni za izmjenu datuma"
+                          >
+                            <span>•</span>
+                            <span>FOLLOW UP {new Date(c.remind_at).toLocaleDateString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+                          </span>
+                        )
+                      )}
+                      <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => { setEditingId(c.id); setEditingText(c.comment); }}
+                          className="p-0.5 text-gray-400 hover:text-gray-700"
+                        >
+                          <Pencil size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteComment(c.id)}
+                          disabled={deletingId === c.id}
+                          className="p-0.5 text-gray-400 hover:text-red-500"
+                        >
+                          {deletingId === c.id ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                        </button>
+                      </div>
+                    </div>
+                    {editingId === c.id ? (
+                      <div className="flex gap-1.5 items-end mt-1">
+                        <textarea
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          className="input-field resize-none flex-1 text-sm"
+                          rows={2}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleUpdateComment(c.id);
+                            if (e.key === "Escape") setEditingId(null);
+                          }}
+                        />
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateComment(c.id)}
+                            disabled={commentLoading}
+                            className="p-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                          >
+                            {commentLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(null)}
+                            className="p-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-700 leading-snug whitespace-pre-wrap">{c.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 mb-3">Nema komentara.</p>
+            )}
+
+            <div className="flex gap-2 items-end">
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                className="input-field resize-none flex-1 text-sm"
+                rows={2}
+                placeholder="Dodaj komentar..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAddComment();
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddComment}
+                disabled={commentLoading || !newComment.trim()}
+                className="btn-primary px-3 py-2"
+              >
+                {commentLoading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              </button>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="checkbox"
+                id="followup-toggle"
+                checked={followUpEnabled}
+                onChange={(e) => setFollowUpEnabled(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-gray-300 accent-orange-500 cursor-pointer"
+              />
+              <label htmlFor="followup-toggle" className="text-xs text-gray-500 cursor-pointer select-none">
+                Follow up podsjetnik
+              </label>
+              {followUpEnabled && (
+                <input
+                  type="date"
+                  value={followUpDate}
+                  onChange={(e) => setFollowUpDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="input-field text-xs py-1 flex-1"
+                />
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Ctrl+Enter za slanje</p>
+          </div>
+
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setOpen(false)} className="btn-secondary flex-1 justify-center">Odustani</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center">

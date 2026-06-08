@@ -36,6 +36,7 @@ Sve migracije su u `supabase/` folderu. Pokrenuti u Supabase Dashboard → SQL E
 | `migration_033_sync_primary_contacts` | Sync: primarni kontakti iz `sponsors.contact_name` → `sponsor_contacts` |
 | `migration_034_partial_amount` | `partial_amount NUMERIC(10,2) DEFAULT NULL` na `sponsors` tablici |
 | `migration_035_partner_login_notification_fn` | SECURITY DEFINER funkcija `record_partner_login_notification()` za INSERT u `notifications` zaobilazeći RLS — pokrenuti u **OBJE** baze |
+| `migration_037_sponsor_comments` | Tablica `sponsor_comments` — komentari admina po sponzoru (id, sponsor_id, comment, admin_email, created_at) |
 
 ## Napomene
 

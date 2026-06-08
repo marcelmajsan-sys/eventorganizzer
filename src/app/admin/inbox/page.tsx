@@ -4,10 +4,12 @@ import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import InboxView from "@/components/admin/InboxView";
 
-type NotifType = "task" | "contact" | "ticket" | "login";
+type NotifType = "task" | "contact" | "ticket" | "login" | "followup" | "comment";
 
 function getNotifType(n: any): NotifType {
   if (n.task_id) return "task";
+  if (n.title === "Follow up podsjetnik") return "followup";
+  if (n.title === "Novi komentar") return "comment";
   if (n.title === "Prijava partnera") return "login";
   if (n.title === "Nova osoba za ulaznice") return "ticket";
   return "contact";
@@ -22,7 +24,7 @@ export default async function InboxPage() {
   const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
   const adminClient = createAdminClientForProject(projectId);
 
-  const [{ data: raw }, { data: reads }] = await Promise.all([
+  const [{ data: raw }, { data: reads }, { data: rawComments }] = await Promise.all([
     adminClient
       .from("notifications")
       .select("id, title, message, created_at, sponsor_id, task_id, sponsors(id, name)")
@@ -33,6 +35,10 @@ export default async function InboxPage() {
           .select("notification_id")
           .eq("user_id", userId)
       : Promise.resolve({ data: [] }),
+    adminClient
+      .from("sponsor_comments")
+      .select("id, sponsor_id, comment, admin_email, created_at, sponsors(id, name)")
+      .order("created_at", { ascending: false }),
   ]);
 
   const readSet = new Set((reads ?? []).map((r: any) => r.notification_id));
@@ -48,5 +54,14 @@ export default async function InboxPage() {
     notifType: getNotifType(n),
   }));
 
-  return <InboxView notifications={notifications} userEmail={user?.email ?? null} />;
+  const comments = (rawComments ?? []).map((c: any) => ({
+    id: c.id,
+    sponsor_id: c.sponsor_id,
+    comment: c.comment,
+    admin_email: c.admin_email,
+    created_at: c.created_at,
+    sponsor: Array.isArray(c.sponsors) ? (c.sponsors[0] ?? null) : (c.sponsors ?? null),
+  }));
+
+  return <InboxView notifications={notifications} comments={comments} userEmail={user?.email ?? null} />;
 }

@@ -23,6 +23,8 @@ import DeleteBenefitButton from "@/components/admin/DeleteBenefitButton";
 import ContactsSection from "@/components/admin/ContactsSection";
 import DeleteSponsorButton from "@/components/admin/DeleteSponsorButton";
 import AdminPrimaryContactEdit from "@/components/admin/AdminPrimaryContactEdit";
+import SponsorCommentsSection from "@/components/admin/SponsorCommentsSection";
+import { getSponsorComments } from "@/app/actions/sponsorComments";
 
 interface Props {
   params: { id: string };
@@ -34,11 +36,12 @@ export default async function SponsorDetailPage({ params }: Props) {
   const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
   const adminClient = createAdminClientForProject(projectId);
 
-  const [{ data: sponsor }, { data: benefits }, { data: files }, { data: contacts }] = await Promise.all([
+  const [{ data: sponsor }, { data: benefits }, { data: files }, { data: contacts }, { data: sponsorComments }] = await Promise.all([
     supabase.from("sponsors").select("*").eq("id", params.id).single(),
     supabase.from("sponsor_benefits").select("*").eq("sponsor_id", params.id).order("deadline"),
     supabase.from("files").select("*").eq("sponsor_id", params.id).order("uploaded_at", { ascending: false }),
     supabase.from("sponsor_contacts").select("*").eq("sponsor_id", params.id).order("created_at"),
+    getSponsorComments(params.id),
   ]);
 
   // Dohvati status ugovora iz sponsor_users (service role da zaobiđe RLS)
@@ -175,6 +178,10 @@ export default async function SponsorDetailPage({ params }: Props) {
                 <p className="text-sm text-gray-700">{sponsor.notes}</p>
               </div>
             )}
+            <SponsorCommentsSection
+              sponsorId={sponsor.id}
+              initialComments={sponsorComments ?? []}
+            />
           </div>
 
           {/* Ugovor o suradnji */}
