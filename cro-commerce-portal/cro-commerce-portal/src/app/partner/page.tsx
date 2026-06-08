@@ -11,8 +11,8 @@ type Lang = "hr" | "en";
 
 const TEXT = {
   hr: {
-    subtitle: "Sponzorski portal",
-    cardTitle: "Prijava za sponzore",
+    subtitle: "Partnerski portal",
+    cardTitle: "Prijava za partnere",
     emailLabel: "Email adresa",
     emailPlaceholder: "vas@email.com",
     passwordLabel: "Lozinka",
@@ -21,11 +21,11 @@ const TEXT = {
     noAccess: "Nemate pristup ovom portalu. Kontaktirajte CRO Commerce tim.",
     invalid: "Neispravni podaci za prijavu. Provjerite email i lozinku.",
     help: "Ako imate pitanja ili želite promijeniti lozinku, javite se na mail: konferencija@ecommerce.hr",
-    copyright: "© 2025 CRO Commerce · Sva prava pridržana",
+    copyright: "2026 Copywrite Ecommerce doo",
     langToggle: "EN",
   },
   en: {
-    subtitle: "Sponsor portal",
+    subtitle: "Partner portal",
     cardTitle: "Partner sign in",
     emailLabel: "Email address",
     emailPlaceholder: "you@email.com",
@@ -35,7 +35,7 @@ const TEXT = {
     noAccess: "You do not have access to this portal. Please contact the CRO Commerce team.",
     invalid: "Invalid login details. Please check your email and password.",
     help: "If you have any questions or wish to change your password, contact us at: konferencija@ecommerce.hr",
-    copyright: "© 2025 CRO Commerce · All rights reserved",
+    copyright: "2026 Copywrite Ecommerce doo",
     langToggle: "HR",
   },
 } as const;
