@@ -64,7 +64,9 @@
       "Bash(cp \"C:\\\\Users\\\\marce\\\\desktop\\\\eventorganizzer\\\\eventorganizzer\\\\cro-commerce-portal\\\\cro-commerce-portal\\\\src\\\\components\\\\admin\\\\ContactDetailActions.tsx\" \"C:\\\\Users\\\\marce\\\\desktop\\\\eventorganizzer\\\\eventorganizzer\\\\src\\\\components\\\\admin\\\\ContactDetailActions.tsx\")",
       "Bash(cp \"C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/actions/sponsorBulkUpdate.ts\" \"C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/app/actions/sponsorBulkUpdate.ts\")",
       "Bash(cp \"C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/components/admin/SponsorsTableWithSelect.tsx\" \"C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/components/admin/SponsorsTableWithSelect.tsx\")",
-      "Bash(cp \"C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/admin/sponsors/page.tsx\" \"C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/app/admin/sponsors/page.tsx\")"
+      "Bash(cp \"C:/Users/marce/desktop/eventorganizzer/eventorganizzer/cro-commerce-portal/cro-commerce-portal/src/app/admin/sponsors/page.tsx\" \"C:/Users/marce/desktop/eventorganizzer/eventorganizzer/src/app/admin/sponsors/page.tsx\")",
+      "PowerShell(git pull *)",
+      "PowerShell(git *)"
     ]
   }
 }

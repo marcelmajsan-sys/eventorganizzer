@@ -20,9 +20,9 @@ const TEXT = {
     submitting: "Prijava u tijeku...",
     noAccess: "Nemate pristup ovom portalu. Kontaktirajte CRO Commerce tim.",
     invalid: "Neispravni podaci za prijavu. Provjerite email i lozinku.",
-    help: "Ako imate pitanja ili želite promijeniti lozinku, javite se na mail: konferencija@ecommerce.hr",
+    help: "Ako imate pitanja ili želite promijeniti lozinku, javite se na mail: marcel@ecommerce.hr",
     copyright: "Powered by Ecommerce d.o.o. © 2026",
-    langToggle: "EN",
+    langToggle: "Translate to english",
   },
   en: {
     subtitle: "Partner portal",
@@ -36,7 +36,7 @@ const TEXT = {
     invalid: "Invalid login details. Please check your email and password.",
     help: "If you have any questions or wish to change your password, contact us at: konferencija@ecommerce.hr",
     copyright: "Powered by Ecommerce d.o.o. © 2026",
-    langToggle: "HR",
+    langToggle: "Prevedi na hrvatski",
   },
 } as const;
 
@@ -89,26 +89,27 @@ function PartnerLoginForm() {
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-amber-100 rounded-full blur-3xl opacity-50" />
       </div>
 
-      <button
-        type="button"
-        onClick={() => setLang(lang === "hr" ? "en" : "hr")}
-        className="absolute top-4 right-4 z-10 flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-brand-600 transition-colors bg-white/70 backdrop-blur rounded-full px-3 py-1.5 shadow-sm"
-      >
-        <Languages size={14} />
-        {t.langToggle}
-      </button>
-
       <div className="relative w-full max-w-md animate-enter">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-2xl shadow-lg mb-4 shadow-orange-200">
             <Building2 size={28} className="text-white" />
           </div>
-          <h1 className="font-display text-3xl font-bold text-gray-900">CRO Commerce</h1>
+          <h1 className="font-display text-3xl font-bold text-gray-900">CRO Commerce 2026</h1>
           <p className="text-gray-500 mt-1">{t.subtitle}</p>
         </div>
 
         <div className="card p-8">
-          <h2 className="font-semibold text-lg text-gray-900 mb-6">{t.cardTitle}</h2>
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <h2 className="font-semibold text-lg text-gray-900">{t.cardTitle}</h2>
+            <button
+              type="button"
+              onClick={() => setLang(lang === "hr" ? "en" : "hr")}
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-brand-600 transition-colors whitespace-nowrap"
+            >
+              <Languages size={14} />
+              {t.langToggle}
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
