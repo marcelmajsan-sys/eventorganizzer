@@ -88,20 +88,21 @@ export default async function TicketPage({ params }: { params: { slug: string } 
           <div className="w-3 flex-shrink-0" style={{ background: "#111827" }} />
 
           <div className="flex-1 flex flex-col">
-            <div className="flex items-stretch">
+            <div className="flex flex-col sm:flex-row">
 
               {/* Left — event info */}
-              <div className="flex-1 px-8 py-7 border-r border-dashed border-gray-300">
+              <div className="flex-1 px-6 py-6 border-b sm:border-b-0 sm:border-r border-dashed border-gray-300">
                 <p className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-1">
                   Ulaznica · Ticket
                 </p>
                 <h1
                   className="font-black text-gray-900 leading-none tracking-tight"
-                  style={{ fontSize: "clamp(1.5rem, 4vw, 2.1rem)" }}
+                  style={{ fontSize: "clamp(1.4rem, 6vw, 2.1rem)" }}
                 >
                   CRO COMMERCE 2026
                 </h1>
                 <p className="font-bold text-gray-700 mt-1 text-xl">13.10.2026.</p>
+                <p className="text-gray-500 mt-0.5 text-sm">Mozaik Event Centar, Slavonska Avenija 6/2, Zagreb</p>
                 <p className="text-gray-500 mt-1 text-sm font-medium">Registracija i kava: 8:30</p>
 
                 <span className={`mt-3 inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold tracking-wide border ${
@@ -112,7 +113,7 @@ export default async function TicketPage({ params }: { params: { slug: string } 
                   {isVip ? "VIP" : "STANDARD"}
                 </span>
 
-                <div className="mt-5 space-y-1">
+                <div className="mt-4 space-y-1">
                   {contact.company && (
                     <div className="flex items-center gap-1.5 text-sm text-gray-500">
                       <Building2 size={13} className="text-gray-400" />{contact.company}
@@ -132,10 +133,10 @@ export default async function TicketPage({ params }: { params: { slug: string } 
               </div>
 
               {/* Right — QR + owner */}
-              <div className="flex flex-col items-center justify-center px-7 py-6 gap-3" style={{ minWidth: 190 }}>
+              <div className="flex flex-row sm:flex-col items-center justify-center px-6 py-5 gap-4 sm:gap-3 sm:min-w-[180px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qrDataUrl} alt="QR kod" width={130} height={130} className="block" style={{ imageRendering: "pixelated" }} />
-                <div className="text-center">
+                <img src={qrDataUrl} alt="QR kod" width={120} height={120} className="block flex-shrink-0" style={{ imageRendering: "pixelated" }} />
+                <div className="text-left sm:text-center">
                   <p className="text-xs text-gray-400 uppercase tracking-wider">Vlasnik ulaznice</p>
                   <p className="font-bold text-gray-900 text-base mt-0.5 leading-tight">{contact.name}</p>
                 </div>
