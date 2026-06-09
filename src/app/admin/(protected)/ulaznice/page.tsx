@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { Ticket, Building2, Mail, Phone, User, Briefcase } from "lucide-react";
-import UlazniceActions, { DeleteTicketButton } from "@/components/admin/UlazniceActions";
+import UlazniceActions, { DeleteTicketButton, QRButton, GenerateSlugsButton } from "@/components/admin/UlazniceActions";
 
 type TicketContact = {
   id: string;
@@ -11,6 +11,7 @@ type TicketContact = {
   phone: string | null;
   ticket_type: "vip" | "standard" | null;
   notes: string | null;
+  slug: string | null;
   sponsor: { id: string; name: string } | null;
 };
 
@@ -19,7 +20,7 @@ export default async function UlaznicePage() {
 
   const { data: raw } = await adminClient
     .from("sponsor_contacts")
-    .select("id, name, company, role, email, phone, ticket_type, notes, sponsor_id, sponsors(id, name)")
+    .select("id, name, company, role, email, phone, ticket_type, notes, slug, sponsor_id, sponsors(id, name)")
     .eq("type", "ticket")
     .order("name");
 
@@ -32,20 +33,25 @@ export default async function UlaznicePage() {
     phone: c.phone ?? null,
     ticket_type: c.ticket_type ?? null,
     notes: c.notes ?? null,
+    slug: c.slug ?? null,
     sponsor: Array.isArray(c.sponsors) ? (c.sponsors[0] ?? null) : (c.sponsors ?? null),
   }));
 
   const vipCount = contacts.filter((c) => c.ticket_type === "vip").length;
   const standardCount = contacts.filter((c) => c.ticket_type !== "vip").length;
+  const missingSlugCount = contacts.filter((c) => !c.slug).length;
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900">Ulaznice</h1>
           <p className="text-gray-500 mt-1">Sve osobe za ulaznice</p>
         </div>
-        <UlazniceActions />
+        <div className="flex gap-2 flex-wrap">
+          <GenerateSlugsButton missingCount={missingSlugCount} />
+          <UlazniceActions />
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -99,6 +105,7 @@ export default async function UlaznicePage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Tip</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Partner</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Komentar</th>
+                  <th className="text-center px-4 py-3 font-medium text-gray-600">QR</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -114,36 +121,20 @@ export default async function UlaznicePage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {c.company ? (
-                        <div className="flex items-center gap-1.5">
-                          <Building2 size={13} className="text-gray-400 flex-shrink-0" />
-                          {c.company}
-                        </div>
-                      ) : <span className="text-gray-300">—</span>}
+                      {c.company ? <div className="flex items-center gap-1.5"><Building2 size={13} className="text-gray-400 flex-shrink-0" />{c.company}</div> : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {c.role ? (
-                        <div className="flex items-center gap-1.5">
-                          <Briefcase size={13} className="text-gray-400 flex-shrink-0" />
-                          {c.role}
-                        </div>
-                      ) : <span className="text-gray-300">—</span>}
+                      {c.role ? <div className="flex items-center gap-1.5"><Briefcase size={13} className="text-gray-400 flex-shrink-0" />{c.role}</div> : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       {c.email ? (
                         <a href={`mailto:${c.email}`} className="flex items-center gap-1.5 text-brand-600 hover:text-brand-700 transition-colors">
-                          <Mail size={13} className="flex-shrink-0" />
-                          {c.email}
+                          <Mail size={13} className="flex-shrink-0" />{c.email}
                         </a>
                       ) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {c.phone ? (
-                        <div className="flex items-center gap-1.5">
-                          <Phone size={13} className="text-gray-400 flex-shrink-0" />
-                          {c.phone}
-                        </div>
-                      ) : <span className="text-gray-300">—</span>}
+                      {c.phone ? <div className="flex items-center gap-1.5"><Phone size={13} className="text-gray-400 flex-shrink-0" />{c.phone}</div> : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       {c.ticket_type === "vip" ? (
@@ -154,13 +145,14 @@ export default async function UlaznicePage() {
                     </td>
                     <td className="px-4 py-3">
                       {c.sponsor ? (
-                        <a href={`/admin/sponsors/${c.sponsor.id}`} className="text-gray-700 hover:text-brand-600 transition-colors font-medium">
-                          {c.sponsor.name}
-                        </a>
-                      ) : <span className="text-gray-400 text-xs">Ručno dodano</span>}
+                        <a href={`/admin/sponsors/${c.sponsor.id}`} className="text-gray-700 hover:text-brand-600 transition-colors font-medium">{c.sponsor.name}</a>
+                      ) : <span className="text-gray-400 text-xs">Ručno</span>}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[160px]">
+                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[140px]">
                       {c.notes ? <span className="line-clamp-2">{c.notes}</span> : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <QRButton slug={c.slug} name={c.name} />
                     </td>
                     <td className="px-4 py-3">
                       <DeleteTicketButton id={c.id} />
