@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { PROJECT_COOKIE, resolveProjectId, PROJECTS } from "@/lib/supabase/projects";
 
@@ -30,10 +31,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   try {
     const adminClient = await createAdminClient();
-    const [adminsRes, settingsRes, notifRes] = await Promise.all([
+    const [adminsRes, settingsRes] = await Promise.all([
       adminClient.from("project_admins").select("email"),
       adminClient.from("project_settings").select("key, value"),
-      adminClient.from("notifications").select("id", { count: "exact", head: true }).eq("read", false),
     ]);
     if (adminsRes.data && adminsRes.data.length > 0) {
       adminEmails = adminsRes.data.map((r) => r.email);
@@ -44,7 +44,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       "2026": settingsRes.data?.find((s) => s.key === "conference_date_2026")?.value ?? PROJECTS["2026"].conferenceDate,
       "2025": settingsRes.data?.find((s) => s.key === "conference_date_2025")?.value ?? PROJECTS["2025"].conferenceDate,
     };
-    unreadCount = notifRes.count ?? 0;
+
+    // Unread = ukupno notifikacija - one koje je ovaj korisnik pročitao (notification_reads)
+    const projectClient = createAdminClientForProject(activeProject);
+    const [{ count: totalCount }, { count: readCount }] = await Promise.all([
+      projectClient.from("notifications").select("*", { count: "exact", head: true }),
+      projectClient.from("notification_reads").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+    ]);
+    unreadCount = Math.max(0, (totalCount ?? 0) - (readCount ?? 0));
   } catch {
     // Tables not yet created — use hardcoded fallbacks
   }
