@@ -359,7 +359,10 @@ export default function PortalContactsSection({
       </div>
 
       <div className="border-t border-gray-100 pt-5">
-        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm"><Ticket size={15} className="text-gray-400" />Osobe za ulaznice</h3>
+        <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2 text-sm"><Ticket size={15} className="text-gray-400" />Osobe za ulaznice</h3>
+        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+          U svojim benefitima možete vidjeti koliko VIP ulaznica je uključeno u vaš paket. Možete dodavati i mijenjati osobe za ulaznice najkasnije do 10.10.2026. Ako dodate više osoba nego što imate u svom paketu benefita, poslat ćemo vam ponudu za dodatne ulaznice po želji uz 30% popusta.
+        </p>
         <div className="divide-y divide-gray-100">
           {ticketContacts.length === 0 && <p className="text-xs text-gray-400 px-3 py-2">Nema dodanih osoba za ulaznice</p>}
           {ticketContacts.map((c) => <ContactRow key={c.id} contact={c} onDelete={handleDelete} />)}
