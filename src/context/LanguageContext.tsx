@@ -30,3 +30,5 @@ export function LangProvider({ children }: { children: ReactNode }) {
 export function useLang() {
   return useContext(LangContext);
 }
+
+export { LangProvider as LanguageProvider };
