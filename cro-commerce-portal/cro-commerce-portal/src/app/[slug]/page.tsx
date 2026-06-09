@@ -5,37 +5,35 @@ import QRCode from "qrcode";
 import { nameToSlug } from "@/lib/slugUtils";
 import { Ticket, Building2, Briefcase, Mail, Calendar, MapPin } from "lucide-react";
 
-// Public page — no auth required. Uses service role to bypass RLS.
+// Koristi anon ključ + RLS policy "tickets_public_read" — ne treba service role
 function getPublicClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL_2026 ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? PROJECTS["2026"].url;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY_2026 ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL_2026 ?? PROJECTS["2026"].url;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_2026 ?? PROJECTS["2026"].anonKey;
   return createClient(url, key);
 }
 
 export default async function TicketPage({ params }: { params: { slug: string } }) {
   const supabase = getPublicClient();
 
-  // 1. Pokušaj lookup po stored slug koloni
+  const SELECT = "id, name, company, role, email, ticket_type";
+
+  // 1. Lookup po stored slug koloni
   let contact: any = null;
-  try {
-    const { data } = await supabase
-      .from("sponsor_contacts")
-      .select("id, name, company, role, email, ticket_type, slug")
-      .eq("slug", params.slug)
-      .eq("type", "ticket")
-      .maybeSingle();
-    contact = data;
-  } catch {}
+  const { data: bySlug } = await supabase
+    .from("sponsor_contacts")
+    .select(SELECT)
+    .eq("slug", params.slug)
+    .eq("type", "ticket")
+    .maybeSingle();
+  contact = bySlug;
 
-  // 2. Fallback: ako slug kolona ne postoji ili nema podudaranja,
-  //    izračunaj slug iz svih imena i pronađi prvi koji odgovara
+  // 2. Fallback: izračunaj slug iz svih ticketa i pronađi podudaranje
   if (!contact) {
-    const { data: allTickets } = await supabase
+    const { data: all } = await supabase
       .from("sponsor_contacts")
-      .select("id, name, company, role, email, ticket_type")
+      .select(SELECT)
       .eq("type", "ticket");
-
-    contact = (allTickets ?? []).find(
+    contact = (all ?? []).find(
       (c: any) => nameToSlug(c.name ?? "") === params.slug
     ) ?? null;
   }
@@ -53,7 +51,6 @@ export default async function TicketPage({ params }: { params: { slug: string } 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-      {/* Ticket card */}
       <div className="w-full max-w-sm">
         {/* Top accent */}
         <div className={`h-2 rounded-t-2xl ${isVip ? "bg-gradient-to-r from-amber-400 to-amber-600" : "bg-gradient-to-r from-orange-500 to-orange-600"}`} />
@@ -141,17 +138,13 @@ export default async function TicketPage({ params }: { params: { slug: string } 
         </div>
 
         <p className="text-center text-xs text-gray-600 mt-4">
-          Powered by{" "}
-          <span className="font-semibold text-orange-400">Ecommerce d.o.o.</span>
+          Powered by <span className="font-semibold text-orange-400">Ecommerce d.o.o.</span>
         </p>
       </div>
     </div>
   );
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  return {
-    title: `Ulaznica · CRO Commerce 2026`,
-    robots: "noindex",
-  };
+export async function generateMetadata() {
+  return { title: "Ulaznica · CRO Commerce 2026", robots: "noindex" };
 }
