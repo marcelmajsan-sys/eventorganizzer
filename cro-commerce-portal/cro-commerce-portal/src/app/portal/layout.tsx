@@ -29,7 +29,7 @@ export default async function PortalLayout({ children }: { children: React.React
     if (u) { user = u; break; }
   }
 
-  if (!user) redirect("/login");
+  if (!user) redirect("/");
 
   const activeAdmin = createAdminClientForProject(projectId);
 
@@ -49,8 +49,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
   if (!activeAuthUser) {
     // Korisnik nema račun u aktivnom projektu — odjavi i vrati na login
-    await makeAnonClient(projectId).auth.signOut();
-    redirect("/login?error=no_access");
+    redirect("/api/auth/signout?redirect=%2F%3Ferror%3Dno_access");
   }
 
   // Provjeri sponsor_users s ispravnim UUID-om aktivnog projekta
@@ -61,8 +60,7 @@ export default async function PortalLayout({ children }: { children: React.React
     .maybeSingle();
 
   if (!sponsorUser) {
-    await makeAnonClient(projectId).auth.signOut();
-    redirect("/login?error=no_access");
+    redirect("/api/auth/signout?redirect=%2F%3Ferror%3Dno_access");
   }
 
   const sponsorsRaw = sponsorUser.sponsors as unknown;

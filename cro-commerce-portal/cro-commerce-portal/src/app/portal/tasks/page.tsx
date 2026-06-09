@@ -12,7 +12,7 @@ const statusConfig = {
 export default async function PortalTasksPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/");
 
   const adminClient = await createAdminClient();
   const { data: sponsorUser } = await adminClient
@@ -21,7 +21,7 @@ export default async function PortalTasksPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!sponsorUser) redirect("/login");
+  if (!sponsorUser) redirect("/");
 
   const { data: tasks } = await adminClient
     .from("tasks")

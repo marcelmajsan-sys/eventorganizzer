@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { PROJECT_COOKIE, resolveProjectId, PROJECTS } from "@/lib/supabase/projects";
 
@@ -15,7 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) redirect("/admin");
 
   const cookieStore = await cookies();
   const activeProject = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
@@ -30,12 +29,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let unreadCount = 0;
 
   try {
-    const adminClient = createAdminClientForProject(activeProject);
-    const [adminsRes, settingsRes, allNotifsRes, readsRes] = await Promise.all([
+    const adminClient = await createAdminClient();
+    const [adminsRes, settingsRes, notifRes] = await Promise.all([
       adminClient.from("project_admins").select("email"),
       adminClient.from("project_settings").select("key, value"),
-      adminClient.from("notifications").select("id"),
-      adminClient.from("notification_reads").select("notification_id").eq("user_id", user.id),
+      adminClient.from("notifications").select("id", { count: "exact", head: true }).eq("read", false),
     ]);
     if (adminsRes.data && adminsRes.data.length > 0) {
       adminEmails = adminsRes.data.map((r) => r.email);
@@ -46,8 +44,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       "2026": settingsRes.data?.find((s) => s.key === "conference_date_2026")?.value ?? PROJECTS["2026"].conferenceDate,
       "2025": settingsRes.data?.find((s) => s.key === "conference_date_2025")?.value ?? PROJECTS["2025"].conferenceDate,
     };
-    const readIds = new Set((readsRes.data ?? []).map((r: any) => r.notification_id));
-    unreadCount = (allNotifsRes.data ?? []).filter((n: any) => !readIds.has(n.id)).length;
+    unreadCount = notifRes.count ?? 0;
   } catch {
     // Tables not yet created — use hardcoded fallbacks
   }

@@ -5,7 +5,7 @@ import PortalPartnerTabs from "@/components/portal/PortalPartnerTabs";
 export default async function PortalSponsorPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/");
 
   const adminClient = await createAdminClient();
 
@@ -15,7 +15,7 @@ export default async function PortalSponsorPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!sponsorUser) redirect("/login");
+  if (!sponsorUser) redirect("/");
 
   const [
     { data: sponsor },
@@ -29,7 +29,7 @@ export default async function PortalSponsorPage() {
     adminClient.from("sponsor_benefits").select("benefit_name, description").eq("sponsor_id", sponsorUser.sponsor_id).order("benefit_name"),
   ]);
 
-  if (!sponsor) redirect("/login");
+  if (!sponsor) redirect("/");
 
   const su = sponsorUser as Record<string, unknown>;
   const contractAcceptedAt = (su.contract_accepted_at as string | null) ?? null;

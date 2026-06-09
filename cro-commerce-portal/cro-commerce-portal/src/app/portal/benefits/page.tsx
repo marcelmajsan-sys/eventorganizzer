@@ -22,7 +22,7 @@ export default async function PortalBenefitsPage({
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/");
 
   const adminClient = await createAdminClient();
   const { data: sponsorUser } = await adminClient
@@ -31,7 +31,7 @@ export default async function PortalBenefitsPage({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!sponsorUser) redirect("/login");
+  if (!sponsorUser) redirect("/");
 
   // Try with new columns (migration_018); fall back without them if not yet migrated
   let { data: benefits, error: benefitErr } = await adminClient

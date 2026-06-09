@@ -41,7 +41,7 @@ export async function sendDeadlineReminder(
           </div>` : ""}
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/portal" 
             style="display: inline-block; background: #ea580c; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-            Otvorite partnerski portal →
+            Otvorite sponzorski portal →
           </a>
           <p style="font-size: 14px; color: #9ca3af; margin: 32px 0 0;">
             Za pitanja nas kontaktirajte na <a href="mailto:${ADMIN_EMAIL}" style="color: #ea580c;">${ADMIN_EMAIL}</a>
@@ -69,14 +69,14 @@ export async function sendOverdueAdminAlert(
         </div>
         <div style="padding: 32px; background: white; border: 1px solid #e5e7eb; border-top: none;">
           <table style="width: 100%; border-collapse: collapse;">
-            <tr><td style="padding: 8px; color: #6b7280; font-size: 14px;">Partner:</td><td style="padding: 8px; font-weight: 600;">${sponsorName}</td></tr>
+            <tr><td style="padding: 8px; color: #6b7280; font-size: 14px;">Sponzor:</td><td style="padding: 8px; font-weight: 600;">${sponsorName}</td></tr>
             <tr style="background: #f9fafb;"><td style="padding: 8px; color: #6b7280; font-size: 14px;">Benefit:</td><td style="padding: 8px; font-weight: 600;">${benefitName}</td></tr>
             <tr><td style="padding: 8px; color: #6b7280; font-size: 14px;">Rok bio:</td><td style="padding: 8px;">${new Date(deadline).toLocaleDateString("hr-HR")}</td></tr>
             <tr style="background: #fef2f2;"><td style="padding: 8px; color: #6b7280; font-size: 14px;">Kašnjenje:</td><td style="padding: 8px; font-weight: 600; color: #dc2626;">${daysOverdue} dana</td></tr>
           </table>
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/sponsors" 
             style="display: inline-block; margin-top: 24px; background: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-            Upravljaj partnerima →
+            Upravljaj sponzorima →
           </a>
         </div>
       </div>
@@ -127,7 +127,7 @@ export async function sendWelcomeEmail(
               <li>Pratiti program konferencije</li>
             </ul>
           </div>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/partner"
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}"
             style="display: inline-block; background: #ea580c; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
             Otvorite partnerski portal &rarr;
           </a>

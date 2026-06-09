@@ -5,7 +5,6 @@ import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { PROJECTS, PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
 import PortalSidebar from "@/components/portal/PortalSidebar";
-import PortalLangProvider from "@/components/portal/PortalLangProvider";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -30,7 +29,7 @@ export default async function PortalLayout({ children }: { children: React.React
     if (u) { user = u; break; }
   }
 
-  if (!user) redirect("/login");
+  if (!user) redirect("/");
 
   const activeAdmin = createAdminClientForProject(projectId);
 
@@ -49,9 +48,8 @@ export default async function PortalLayout({ children }: { children: React.React
   );
 
   if (!activeAuthUser) {
-    // Korisnik nema račun u aktivnom projektu — odjavi putem API route-a
-    // (signOut u Server Component layoutu ne može pisati cookies, pa koristimo Route Handler)
-    redirect("/api/auth/signout?redirect=%2Flogin%3Ferror%3Dno_access");
+    // Korisnik nema račun u aktivnom projektu — odjavi i vrati na login
+    redirect("/api/auth/signout?redirect=%2F%3Ferror%3Dno_access");
   }
 
   // Provjeri sponsor_users s ispravnim UUID-om aktivnog projekta
@@ -62,8 +60,7 @@ export default async function PortalLayout({ children }: { children: React.React
     .maybeSingle();
 
   if (!sponsorUser) {
-    // Korisnik nema unos u sponsor_users — odjavi putem API route-a
-    redirect("/api/auth/signout?redirect=%2Flogin%3Ferror%3Dno_access");
+    redirect("/api/auth/signout?redirect=%2F%3Ferror%3Dno_access");
   }
 
   const sponsorsRaw = sponsorUser.sponsors as unknown;
@@ -90,20 +87,18 @@ export default async function PortalLayout({ children }: { children: React.React
   } catch {}
 
   return (
-    <PortalLangProvider>
-      <div className="flex h-screen bg-gray-50 overflow-hidden">
-        <PortalSidebar
-          sponsor={sponsor}
-          userEmail={user.email ?? ""}
-          activeProjectId={projectId}
-          otherProjectId={otherProjectAvailable ? otherProjectId : undefined}
-        />
-        <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
-          <div className="p-4 md:p-8 max-w-[1200px] mx-auto">
-            {children}
-          </div>
-        </main>
-      </div>
-    </PortalLangProvider>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <PortalSidebar
+        sponsor={sponsor}
+        userEmail={user.email ?? ""}
+        activeProjectId={projectId}
+        otherProjectId={otherProjectAvailable ? otherProjectId : undefined}
+      />
+      <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
+        <div className="p-4 md:p-8 max-w-[1200px] mx-auto">
+          {children}
+        </div>
+      </main>
+    </div>
   );
 }

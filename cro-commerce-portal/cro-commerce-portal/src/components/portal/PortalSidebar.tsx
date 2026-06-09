@@ -43,7 +43,7 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
   async function handleSignOut() {
     setSigningOut(true);
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/");
   }
 
   async function handleSwitch() {

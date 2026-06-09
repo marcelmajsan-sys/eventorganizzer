@@ -10,7 +10,7 @@ import type { ProjectId } from "@/lib/supabase/projects";
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
-  const redirectTo = request.nextUrl.searchParams.get("redirect") ?? "/login";
+  const redirectTo = request.nextUrl.searchParams.get("redirect") ?? "/";
 
   // Odjavi iz oba projekta kako bi se cookies sigurno obrisali
   for (const pid of ["2026", "2025"] as ProjectId[]) {

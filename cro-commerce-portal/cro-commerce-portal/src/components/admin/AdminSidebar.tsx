@@ -53,7 +53,7 @@ export default function AdminSidebar({ userEmail, activeProject, conferenceDate,
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/admin");
   }
 
   return (

@@ -41,7 +41,7 @@ export default function ProjectSwitcher({ activeProject, conferenceDates }: Prop
     const dest = await switchProject(id);
     // Full page reload resets the createBrowserClient singleton so uploads
     // always go to the correct project after switch.
-    window.location.href = dest === "dashboard" ? "/admin/dashboard" : "/login";
+    window.location.href = dest === "dashboard" ? "/admin/dashboard" : "/admin";
   }
 
   return (

@@ -28,7 +28,7 @@ function CallbackInner() {
     const code = searchParams.get("code");
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        router.replace(error ? "/login?error=no_access" : next);
+        router.replace(error ? "/?error=no_access" : next);
       });
       return;
     }
@@ -44,7 +44,7 @@ function CallbackInner() {
         supabase.auth
           .setSession({ access_token: accessToken, refresh_token: refreshToken })
           .then(({ data: { session }, error }) => {
-            router.replace(!error && session ? next : "/login?error=no_access");
+            router.replace(!error && session ? next : "/?error=no_access");
           });
         return;
       }

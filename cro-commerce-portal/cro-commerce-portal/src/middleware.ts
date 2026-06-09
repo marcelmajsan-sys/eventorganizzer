@@ -35,22 +35,37 @@ export async function middleware(request: NextRequest) {
   });
 
   // 1200ms timeout — if Supabase is slow (cold start after pause), pass through.
-  // Real auth enforcement happens in admin/layout.tsx and portal/layout.tsx.
+  // Real auth enforcement happens in (protected)/layout.tsx and portal/layout.tsx.
   const session = await getSessionWithTimeout(supabase, 1200);
   const user = session?.user ?? null;
 
   const pathname = request.nextUrl.pathname;
 
-  if (pathname.startsWith("/admin")) {
-    if (!user) return NextResponse.redirect(new URL("/login", request.url));
+  // /admin (exact) = admin login page — always accessible
+  // /admin/* = protected area — redirect to /admin login if not authenticated
+  if (pathname.startsWith("/admin") && pathname !== "/admin") {
+    if (!user) return NextResponse.redirect(new URL("/admin", request.url));
   }
 
+  // /portal/* — redirect to partner login (/) if not authenticated
   if (pathname.startsWith("/portal")) {
-    if (!user) return NextResponse.redirect(new URL("/login", request.url));
+    if (!user) return NextResponse.redirect(new URL("/", request.url));
   }
 
-  if (pathname === "/login" && user) {
+  // Redirect authenticated users away from login pages
+  if (pathname === "/admin" && user) {
     return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+  }
+  if (pathname === "/" && user) {
+    return NextResponse.redirect(new URL("/portal", request.url));
+  }
+
+  // Legacy redirects for old URLs
+  if (pathname === "/login") {
+    return NextResponse.redirect(new URL("/admin", request.url));
+  }
+  if (pathname === "/partner") {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return supabaseResponse;

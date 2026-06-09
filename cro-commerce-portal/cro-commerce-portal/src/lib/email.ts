@@ -127,7 +127,7 @@ export async function sendWelcomeEmail(
               <li>Pratiti program konferencije</li>
             </ul>
           </div>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/partner"
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}"
             style="display: inline-block; background: #ea580c; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
             Otvorite partnerski portal &rarr;
           </a>

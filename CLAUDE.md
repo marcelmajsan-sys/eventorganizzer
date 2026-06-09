@@ -9,7 +9,7 @@ Admin portal za upravljanje CRO Commerce konferencijom:
 - **Multi-projekt**: CRO Commerce 2026 i 2025 (prebacivanje bez ponovnog logina)
 - **Sponzorski portal** na `/portal` i `/partner` (HR/EN i18n, editable kontakti)
 
-Deployano na: https://eventorganizzer.vercel.app
+Deployano na: https://partners.ecommerce.hr
 
 > **Dvije kopije koda**: `src/` (root, Vercel) i `cro-commerce-portal/cro-commerce-portal/src/` (lokalni dev). Nakon promjene u lokalnom dev direktoriju, kopiraj u root `src/` prije commita.
 
@@ -47,13 +47,17 @@ npm run dev   # → http://localhost:3000
 | `/portal/*` | Sponzorski portal |
 
 **Ključne server actions** (`src/app/actions/`):
-- `switchProject.ts` — token exchange za admin i partner projekt switch
+- `switchProject.ts` — token exchange za admin i partner projekt switch; `NEXT_PUBLIC_APP_URL` fallback je `https://partners.ecommerce.hr`
 - `userManagement.ts` — CRUD admin korisnika u svim bazama
 - `partnerManagement.ts` — CRUD partner korisnika + `updatePrimaryContact`; `createPartnerUser` šalje welcome email i logira u `email_logs`
 - `notifications.ts` — markRead/Unread/All, delete, `recordPartnerLogin`
-- `contactActions.ts` — `deleteContact()` + `deleteDuplicateContacts()` (koristi `createAdminClientForProject`)
+- `benefitActions.ts` — `updateBenefitStatus(benefitId, newStatus)`: update statusa benefita, revalidira `/admin/sponsors/[id]` i `/admin/benefits`
+- `contactActions.ts` — `deleteContact(id)`: nullificira `contact_person_id` FK na benefitima prije brisanja; FK error za kontakte vezane uz portal korisnika. `deleteDuplicateContacts()`: briše duplikate po emailu (partner > ticket > contact prioritet), batch 50
 - `sponsorBulkUpdate.ts` — bulk update paketa/plaćanja/statusa
 - `findPartnerProject.ts` — pronađi u kojoj bazi postoji email
+
+**Ključne API rute** (`src/app/api/`):
+- `api/auth/signout` — GET `/api/auth/signout?redirect=...`: odjavljuje iz **oba projekta** (2025 i 2026) i redirecta; Route Handler može pisati cookies za razliku od Server Component layouta — koristiti ovdje umjesto `supabase.auth.signOut()` u layoutima
 
 **Ključne portal komponente** (`src/components/portal/`):
 - `PortalSidebar.tsx` — nav + projekt switcher + jezik toggle + `<PortalHelpModal />`
@@ -112,9 +116,9 @@ Ostale tablice su na zasebnim Supabase instancama.
 ### Tko ima pristup čemu
 - **`middleware.ts`** — samo provjera je li korisnik prijavljen (`getSession()`, bez DB calla, timeout 1200ms)
 - **`admin/layout.tsx`** — provjerava `project_admins` tablicu → nije admin → redirect `/portal`
-- **`portal/layout.tsx`** — ako admin → `/admin/dashboard`; ako nema u `sponsor_users` → sign out + `/login?error=no_access`
+- **`portal/layout.tsx`** — ako admin → `/admin/dashboard`; ako nema u `sponsor_users` → redirect na `/api/auth/signout?redirect=/partner?error=no_access` (Route Handler briše cookies)
 - **`login/page.tsx`** — admin login → `/admin/dashboard`
-- **`partner/page.tsx`** — partner login; poziva `findPartnerProject(email)` za točan projekt; bilježi `recordPartnerLogin`
+- **`partner/page.tsx`** — partner login s HR/EN jezičnim togglem; poziva `findPartnerProject(email)` za točan projekt; nakon prijave redirect na `/portal/benefits`; **ne bilježi `recordPartnerLogin`**
 
 ### Projekt switch
 Cookie `cro_active_project` (`'2026'` | `'2025'`). Token exchange flow:
@@ -136,8 +140,9 @@ Jedino sigurno rješenje: Postgres trigger s `SECURITY DEFINER`.
 Iznimka: `recordPartnerLogin` koristi `createAdminClientForProject` direktno.
 
 ### Partner login flow
-`recordPartnerLogin(userId, email, projectId)` — prima `userId` iz `signInWithPassword` response.
-Awaita se u `partner/page.tsx` PRIJE `router.push` (fire-and-forget može biti prekinut navigacijom).
+`partner/page.tsx` ne poziva `recordPartnerLogin` — prijava ide direktno na `/portal/benefits`.
+Stranica ima HR/EN language toggle (lokalno, bez i18n konteksta); error poruke prate odabrani jezik (`errorKey` state).
+`recordPartnerLogin` i dalje postoji u `notifications.ts` i može se pozvati iz drugog mjesta ako zatreba.
 
 ---
 
@@ -160,7 +165,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 
 RESEND_API_KEY=re_...
-NEXT_PUBLIC_APP_URL=https://eventorganizzer.vercel.app
+NEXT_PUBLIC_APP_URL=https://partners.ecommerce.hr
 ADMIN_EMAIL=tim@ecommerce.hr
 CRON_SECRET=...
 ```
@@ -178,7 +183,7 @@ git add . && git commit -m "Opis" && git push origin main
 
 **Vercel config**: Root directory `/`, Build command `next build`, Node 18+, `.npmrc`: `legacy-peer-deps=true`
 
-**Supabase config** (u oba projekta): Authentication → URL Configuration → Redirect URLs dodati `https://eventorganizzer.vercel.app/auth/callback`
+**Supabase config** (u oba projekta): Authentication → URL Configuration → Redirect URLs dodati `https://partners.ecommerce.hr/auth/callback`
 
 ---
 
@@ -191,7 +196,7 @@ git add . && git commit -m "Opis" && git push origin main
 - **Server action error pattern**: ne bacati exception → koristiti `return { error: message }`
 - **`iznos` i `partial_amount`**: graceful degradation — retry bez kolone ako ne postoji
 - **UUID-ovi korisnika su različiti** između 2025 i 2026 projekata (zasebne Supabase instance)
-- **`NEXT_PUBLIC_APP_URL`** mora biti `https://eventorganizzer.vercel.app` — za `redirectTo` u magic link generaciji
+- **`NEXT_PUBLIC_APP_URL`** mora biti `https://partners.ecommerce.hr` — za `redirectTo` u magic link generaciji; fallback u `switchProject.ts` je također `https://partners.ecommerce.hr`
 - **Spread na `Set`** (`[...new Set(...)]`) zahtijeva `downlevelIteration` → koristiti `forEach` + ručni array
 - **`getProjectAdminClient()` helper** u `actions/notifications.ts`: čita `PROJECT_COOKIE`, vraća `createAdminClientForProject(projectId)`
 - **Dashboard**: Naplaćeno = `sum(iznos za paid) + sum(partial_amount za partial)`; Neplaćeno = ostalo + `sum(iznos − partial_amount za partial)`; Profitabilnost = prihodi − budgetAll
@@ -209,3 +214,7 @@ git add . && git commit -m "Opis" && git push origin main
 Popis svih SQL migracija: vidi [`MIGRATIONS.md`](./MIGRATIONS.md)
 
 Kako pokrenuti: Supabase Dashboard → SQL Editor → New query → kopiraj migraciju → Run (ponovi za oba projekta).
+
+### Utility SQL skripte (nisu migracije)
+
+- **`supabase/cleanup_duplicate_contacts.sql`** — ručno čišćenje duplih kontakata (isti email). Dvostupanjski: KORAK 1 samo prikaže što će se zadržati/obrisati (`ROW_NUMBER()` preview); KORAK 2 je zakomentiran — odkomentirati tek nakon provjere. Prioritet zadržavanja: ima `sponsor_id` → dulje ime → više popunjenih polja → stariji `created_at`.
