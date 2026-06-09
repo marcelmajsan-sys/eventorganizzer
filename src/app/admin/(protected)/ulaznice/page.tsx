@@ -18,11 +18,21 @@ type TicketContact = {
 export default async function UlaznicePage() {
   const adminClient = await createAdminClient();
 
-  const { data: raw } = await adminClient
+  let { data: raw, error: rawErr } = await adminClient
     .from("sponsor_contacts")
     .select("id, name, company, role, email, phone, ticket_type, notes, slug, sponsor_id, sponsors(id, name)")
     .eq("type", "ticket")
     .order("name");
+
+  // Graceful degradation: ako slug kolona još ne postoji (migration_028 nije pokrenut)
+  if (rawErr?.message?.includes("slug")) {
+    const { data: rawNoSlug } = await adminClient
+      .from("sponsor_contacts")
+      .select("id, name, company, role, email, phone, ticket_type, notes, sponsor_id, sponsors(id, name)")
+      .eq("type", "ticket")
+      .order("name");
+    raw = (rawNoSlug ?? []).map((c: any) => ({ ...c, slug: null }));
+  }
 
   const contacts: TicketContact[] = (raw ?? []).map((c: any) => ({
     id: c.id,
