@@ -107,6 +107,30 @@ export async function generateMissingSlugs(): Promise<{ updated: number; error: 
   return { updated, error: null };
 }
 
+export async function createSponsorTicket(
+  sponsorId: string,
+  data: TicketFormData
+): Promise<{ error: string | null }> {
+  const supabase = await getClient();
+  const slug = await makeUniqueSlug(supabase, data.name.trim());
+
+  const { error } = await supabase.from("sponsor_contacts").insert({
+    name: data.name.trim(),
+    email: data.email.trim() || null,
+    company: data.company.trim() || null,
+    role: data.role || null,
+    ticket_type: data.ticket_type,
+    notes: data.notes.trim() || null,
+    type: "ticket",
+    sponsor_id: sponsorId,
+    slug,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath("/portal/benefits");
+  return { error: null };
+}
+
 export async function deleteTicket(id: string): Promise<{ error: string | null }> {
   const supabase = await getClient();
   const { error } = await supabase.from("sponsor_contacts").delete().eq("id", id);
