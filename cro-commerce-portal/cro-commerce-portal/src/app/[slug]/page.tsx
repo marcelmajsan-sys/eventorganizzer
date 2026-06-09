@@ -1,150 +1,147 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-import { PROJECTS } from "@/lib/supabase/projects";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import QRCode from "qrcode";
 import { nameToSlug } from "@/lib/slugUtils";
-import { Ticket, Building2, Briefcase, Mail, Calendar, MapPin } from "lucide-react";
 
-// Koristi anon ključ + RLS policy "tickets_public_read" — ne treba service role
-function getPublicClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL_2026 ?? PROJECTS["2026"].url;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_2026 ?? PROJECTS["2026"].anonKey;
-  return createClient(url, key);
-}
+const SELECT = "id, name, company, role, email, ticket_type, slug";
 
-export default async function TicketPage({ params }: { params: { slug: string } }) {
-  const supabase = getPublicClient();
+async function findContact(slug: string) {
+  const supabase = createAdminClientForProject("2026");
 
-  const SELECT = "id, name, company, role, email, ticket_type";
-
-  // 1. Lookup po stored slug koloni
-  let contact: any = null;
+  // 1. Lookup po stored slug
   const { data: bySlug } = await supabase
     .from("sponsor_contacts")
     .select(SELECT)
-    .eq("slug", params.slug)
+    .eq("slug", slug)
     .eq("type", "ticket")
     .maybeSingle();
-  contact = bySlug;
+  if (bySlug) return bySlug;
 
-  // 2. Fallback: izračunaj slug iz svih ticketa i pronađi podudaranje
-  if (!contact) {
-    const { data: all } = await supabase
-      .from("sponsor_contacts")
-      .select(SELECT)
-      .eq("type", "ticket");
-    contact = (all ?? []).find(
-      (c: any) => nameToSlug(c.name ?? "") === params.slug
-    ) ?? null;
-  }
+  // 2. Fallback: izračunaj iz svih imena
+  const { data: all } = await supabase
+    .from("sponsor_contacts")
+    .select(SELECT)
+    .eq("type", "ticket");
+  return (all ?? []).find((c: any) => nameToSlug(c.name ?? "") === slug) ?? null;
+}
 
+export default async function TicketPage({ params }: { params: { slug: string } }) {
+  const contact = await findContact(params.slug);
   if (!contact) notFound();
 
   const ticketUrl = `https://partners.ecommerce.hr/${params.slug}`;
   const qrDataUrl = await QRCode.toDataURL(ticketUrl, {
-    width: 200,
+    width: 180,
     margin: 1,
-    color: { dark: "#1f2937", light: "#ffffff" },
+    color: { dark: "#111827", light: "#ffffff" },
   });
 
   const isVip = contact.ticket_type === "vip";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* Top accent */}
-        <div className={`h-2 rounded-t-2xl ${isVip ? "bg-gradient-to-r from-amber-400 to-amber-600" : "bg-gradient-to-r from-orange-500 to-orange-600"}`} />
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-sans">
+      {/* Ticket card */}
+      <div
+        className="w-full bg-white shadow-2xl rounded-sm overflow-hidden"
+        style={{ maxWidth: 720 }}
+      >
+        {/* Top colour bar */}
+        <div
+          className="h-1.5 w-full"
+          style={{ background: "linear-gradient(90deg, #111827 60%, #ea580c 100%)" }}
+        />
 
-        <div className="bg-white rounded-b-2xl shadow-2xl overflow-hidden">
-          {/* Header */}
-          <div className={`px-6 pt-6 pb-5 ${isVip ? "bg-gradient-to-br from-amber-50 to-orange-50" : "bg-gradient-to-br from-orange-50 to-white"}`}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">CRO Commerce</p>
-                <p className="text-sm font-bold text-gray-700">2026 · Zagreb</p>
-              </div>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
-                isVip
-                  ? "bg-amber-100 text-amber-800 border border-amber-200"
-                  : "bg-gray-100 text-gray-700 border border-gray-200"
-              }`}>
-                <Ticket size={12} />
-                {isVip ? "VIP" : "STANDARD"}
-              </span>
-            </div>
+        <div className="flex">
+          {/* Left dark accent stripe */}
+          <div className="w-3 flex-shrink-0" style={{ background: "#111827" }} />
 
-            <h1 className="text-2xl font-bold text-gray-900 leading-tight">{contact.name}</h1>
+          {/* Main content */}
+          <div className="flex-1 flex flex-col">
+            {/* Upper section */}
+            <div className="flex items-stretch">
+              {/* Left — event info */}
+              <div className="flex-1 px-8 py-7 border-r border-dashed border-gray-300">
+                <p className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-1">
+                  Ulaznica · Ticket
+                </p>
+                <h1
+                  className="font-black text-gray-900 leading-none tracking-tight"
+                  style={{ fontSize: "clamp(1.6rem, 4vw, 2.2rem)" }}
+                >
+                  CRO COMMERCE 2026
+                </h1>
+                <p
+                  className="font-bold text-gray-700 mt-1"
+                  style={{ fontSize: "clamp(1.1rem, 2.5vw, 1.4rem)" }}
+                >
+                  13.10.2026.
+                </p>
+                <p className="text-gray-500 mt-1 text-sm font-medium">
+                  Registracija i kava: 8:30
+                </p>
 
-            <div className="mt-3 space-y-1.5">
-              {contact.company && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Building2 size={14} className="text-gray-400 flex-shrink-0" />
-                  {contact.company}
-                </div>
-              )}
-              {contact.role && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Briefcase size={14} className="text-gray-400 flex-shrink-0" />
-                  {contact.role}
-                </div>
-              )}
-              {contact.email && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Mail size={14} className="text-gray-400 flex-shrink-0" />
-                  {contact.email}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Dashed divider */}
-          <div className="relative flex items-center px-4 py-2">
-            <div className="absolute -left-3 w-6 h-6 rounded-full bg-gray-900" />
-            <div className="absolute -right-3 w-6 h-6 rounded-full bg-gray-900" />
-            <div className="w-full border-t-2 border-dashed border-gray-200" />
-          </div>
-
-          {/* Event info + QR */}
-          <div className="px-6 pb-6">
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar size={14} className="text-orange-500 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-gray-800">13. listopada 2026.</p>
-                    <p className="text-xs text-gray-500">Utorak</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <MapPin size={14} className="text-orange-500 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-gray-800">Zagreb</p>
-                    <p className="text-xs text-gray-500">Hrvatska</p>
-                  </div>
-                </div>
+                {isVip && (
+                  <span className="mt-3 inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 tracking-wide">
+                    VIP
+                  </span>
+                )}
               </div>
 
-              {/* QR code */}
-              <div className="flex-shrink-0">
-                <div className={`p-2 rounded-xl border-2 ${isVip ? "border-amber-200" : "border-gray-200"}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={qrDataUrl} alt="QR kod ulaznice" width={100} height={100} />
+              {/* Right — QR + owner */}
+              <div className="flex flex-col items-center justify-center px-7 py-6 gap-3" style={{ minWidth: 180 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={qrDataUrl}
+                  alt="QR kod ulaznice"
+                  width={130}
+                  height={130}
+                  className="block"
+                  style={{ imageRendering: "pixelated" }}
+                />
+                <div className="text-center">
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">Vlasnik ulaznice</p>
+                  <p className="font-bold text-gray-900 text-sm mt-0.5 leading-tight">
+                    {contact.name}
+                  </p>
+                  {contact.company && (
+                    <p className="text-xs text-gray-500 mt-0.5">{contact.company}</p>
+                  )}
                 </div>
               </div>
             </div>
 
-            <p className="text-center text-xs text-gray-400 mt-4 font-mono">{params.slug}</p>
+            {/* Bottom disclaimer */}
+            <div
+              className="px-8 py-4 border-t border-gray-200 text-xs text-gray-500 leading-relaxed"
+              style={{ background: "#fafafa" }}
+            >
+              <p>
+                Ulaznica vrijedi za cijelu konferenciju, glasi na ime i prezime i nije prenosiva.
+                Ulaznicu je potrebno zamijeniti za akreditaciju na registracijskom pultu konferencije.{" "}
+                <span className="text-gray-400">
+                  The ticket is valid for all conference days, it&apos;s under your name and it&apos;s not
+                  transferable. The ticket needs to be exchanged for a Conference pass at the
+                  registration desk.
+                </span>
+              </p>
+            </div>
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-600 mt-4">
-          Powered by <span className="font-semibold text-orange-400">Ecommerce d.o.o.</span>
-        </p>
+        {/* Bottom colour bar */}
+        <div className="h-1 w-full" style={{ background: "#111827" }} />
       </div>
+
+      <p className="mt-5 text-xs text-gray-400">
+        partners.ecommerce.hr &nbsp;·&nbsp; CRO Commerce 2026
+      </p>
     </div>
   );
 }
 
 export async function generateMetadata() {
-  return { title: "Ulaznica · CRO Commerce 2026", robots: "noindex" };
+  return {
+    title: "Ulaznica · CRO Commerce 2026",
+    robots: "noindex",
+  };
 }
