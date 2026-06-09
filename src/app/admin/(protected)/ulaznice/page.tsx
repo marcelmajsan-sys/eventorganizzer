@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { Ticket, Building2, Mail, Phone, User, Briefcase } from "lucide-react";
-// Phone i Briefcase se koriste unutar redaka tablice
-import UlazniceActions, { DeleteTicketButton, QRButton, GenerateSlugsButton } from "@/components/admin/UlazniceActions";
+import UlazniceActions, { DeleteTicketButton, QRButton } from "@/components/admin/UlazniceActions";
+import { generateMissingSlugs } from "@/app/actions/ticketActions";
 
 type TicketContact = {
   id: string;
@@ -17,6 +17,9 @@ type TicketContact = {
 };
 
 export default async function UlaznicePage() {
+  // Auto-generiraj slugove za ulaznice koje ih nemaju
+  await generateMissingSlugs();
+
   const adminClient = await createAdminClient();
 
   let { data: raw, error: rawErr } = await adminClient
@@ -60,7 +63,6 @@ export default async function UlaznicePage() {
           <p className="text-gray-500 mt-1">Sve osobe za ulaznice</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <GenerateSlugsButton missingCount={missingSlugCount} />
           <UlazniceActions />
         </div>
       </div>

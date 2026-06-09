@@ -24,7 +24,7 @@ export default async function PortalSponsorPage() {
     { data: benefits },
   ] = await Promise.all([
     adminClient.from("sponsors").select("*").eq("id", sponsorUser.sponsor_id).single(),
-    adminClient.from("sponsor_contacts").select("*").eq("sponsor_id", sponsorUser.sponsor_id).order("created_at"),
+    adminClient.from("sponsor_contacts").select("id, name, email, phone, role, type, ticket_type, slug").eq("sponsor_id", sponsorUser.sponsor_id).order("created_at"),
     adminClient.from("files").select("*").eq("sponsor_id", sponsorUser.sponsor_id).order("uploaded_at", { ascending: false }),
     adminClient.from("sponsor_benefits").select("benefit_name, description").eq("sponsor_id", sponsorUser.sponsor_id).order("benefit_name"),
   ]);
