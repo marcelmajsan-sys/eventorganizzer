@@ -29,7 +29,7 @@ const CATEGORIES: CategoryDef[] = [
   {
     labelKey: "cat.tickets",
     rows: [
-      { labelKey: "row.vipTickets", values: ["cell.vip2", "cell.vip3", "cell.vip5", "cell.vip6"] },
+      { labelKey: "row.vipTickets", values: ["cell.vip2", "cell.vip3", "cell.vip5", "cell.vip10"] },
     ],
   },
   {
