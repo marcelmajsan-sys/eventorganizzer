@@ -3,6 +3,7 @@
 import { useState, useRef, useTransition } from "react";
 import { Plus, Upload, X, Loader2, CheckCircle2, AlertCircle, Trash2, QrCode, Download, ExternalLink, RefreshCw } from "lucide-react";
 import { createTicket, bulkCreateTickets, deleteTicket, generateMissingSlugs, type TicketFormData } from "@/app/actions/ticketActions";
+import { nameToSlug } from "@/lib/slugUtils";
 import * as XLSX from "xlsx";
 
 const KATEGORIJE = ["Webshop", "Service Provider", "Speaker", "Ostalo"] as const;
@@ -136,13 +137,14 @@ export function QRModal({ slug, name, onClose }: { slug: string; name: string; o
 
 export function QRButton({ slug, name }: { slug: string | null; name: string }) {
   const [open, setOpen] = useState(false);
-  if (!slug) return <span className="text-gray-300 text-xs">—</span>;
+  // Koristi stored slug ako postoji, inače izračunaj iz imena
+  const displaySlug = slug ?? nameToSlug(name);
   return (
     <>
       <button onClick={() => setOpen(true)} className="text-gray-400 hover:text-brand-600 transition-colors" title="Prikaži QR kod">
         <QrCode size={16} />
       </button>
-      {open && <QRModal slug={slug} name={name} onClose={() => setOpen(false)} />}
+      {open && <QRModal slug={displaySlug} name={name} onClose={() => setOpen(false)} />}
     </>
   );
 }

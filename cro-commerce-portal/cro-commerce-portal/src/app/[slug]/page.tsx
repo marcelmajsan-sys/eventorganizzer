@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { PROJECTS } from "@/lib/supabase/projects";
 import QRCode from "qrcode";
+import { nameToSlug } from "@/lib/slugUtils";
 import { Ticket, Building2, Briefcase, Mail, Calendar, MapPin } from "lucide-react";
 
 // Public page — no auth required. Uses service role to bypass RLS.
@@ -14,12 +15,30 @@ function getPublicClient() {
 export default async function TicketPage({ params }: { params: { slug: string } }) {
   const supabase = getPublicClient();
 
-  const { data: contact } = await supabase
-    .from("sponsor_contacts")
-    .select("id, name, company, role, email, ticket_type, slug")
-    .eq("slug", params.slug)
-    .eq("type", "ticket")
-    .maybeSingle();
+  // 1. Pokušaj lookup po stored slug koloni
+  let contact: any = null;
+  try {
+    const { data } = await supabase
+      .from("sponsor_contacts")
+      .select("id, name, company, role, email, ticket_type, slug")
+      .eq("slug", params.slug)
+      .eq("type", "ticket")
+      .maybeSingle();
+    contact = data;
+  } catch {}
+
+  // 2. Fallback: ako slug kolona ne postoji ili nema podudaranja,
+  //    izračunaj slug iz svih imena i pronađi prvi koji odgovara
+  if (!contact) {
+    const { data: allTickets } = await supabase
+      .from("sponsor_contacts")
+      .select("id, name, company, role, email, ticket_type")
+      .eq("type", "ticket");
+
+    contact = (allTickets ?? []).find(
+      (c: any) => nameToSlug(c.name ?? "") === params.slug
+    ) ?? null;
+  }
 
   if (!contact) notFound();
 
