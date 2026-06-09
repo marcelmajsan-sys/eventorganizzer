@@ -113,11 +113,13 @@ export default async function TicketPage({ params }: { params: { slug: string } 
                   Registracija i kava: 8:30
                 </p>
 
-                {isVip && (
-                  <span className="mt-3 inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 tracking-wide">
-                    VIP
-                  </span>
-                )}
+                <span className={`mt-3 inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold tracking-wide border ${
+                  isVip
+                    ? "bg-amber-100 text-amber-800 border-amber-200"
+                    : "bg-gray-100 text-gray-700 border-gray-300"
+                }`}>
+                  {isVip ? "VIP" : "STANDARD"}
+                </span>
 
                 {/* Contact details */}
                 <div className="mt-5 space-y-1">
@@ -165,10 +167,10 @@ export default async function TicketPage({ params }: { params: { slug: string } 
             {/* Bottom disclaimer */}
             <div className="px-8 py-4 border-t border-gray-200 text-xs text-gray-500 leading-relaxed" style={{ background: "#fafafa" }}>
               <p>
-                Ulaznica vrijedi za cijelu konferenciju, glasi na ime i prezime i nije prenosiva.
+                Ulaznica vrijedi za cijeli dan (uključujući party), glasi na ime i prezime i nije prenosiva.
                 Ulaznicu je potrebno zamijeniti za akreditaciju na registracijskom pultu konferencije.{" "}
                 <span className="text-gray-400">
-                  The ticket is valid for all conference days, it&apos;s under your name and it&apos;s not transferable.
+                  The ticket is valid for all day (including party), it&apos;s under your name and it&apos;s not transferable.
                   The ticket needs to be exchanged for a Conference pass at the registration desk.
                 </span>
               </p>
@@ -181,7 +183,7 @@ export default async function TicketPage({ params }: { params: { slug: string } 
       </div>
 
       <p className="mt-5 text-xs text-gray-400">
-        partners.ecommerce.hr &nbsp;·&nbsp; CRO Commerce 2026
+        conference.ecommerce.hr &nbsp;·&nbsp; CRO Commerce 2026
       </p>
     </div>
   );
