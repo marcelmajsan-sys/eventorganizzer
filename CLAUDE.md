@@ -45,6 +45,7 @@ npm run dev   # → http://localhost:3000
 | `/login` | Admin login |
 | `/partner` | Partner login |
 | `/portal/*` | Sponzorski portal |
+| `/[slug]` | Javna stranica ulaznice (QR link, server component, `sponsor_contacts.slug`) |
 
 **Ključne server actions** (`src/app/actions/`):
 - `switchProject.ts` — token exchange za admin i partner projekt switch; `NEXT_PUBLIC_APP_URL` fallback je `https://partners.ecommerce.hr`
@@ -55,6 +56,7 @@ npm run dev   # → http://localhost:3000
 - `contactActions.ts` — `deleteContact(id)`: nullificira `contact_person_id` FK na benefitima prije brisanja; FK error za kontakte vezane uz portal korisnika. `deleteDuplicateContacts()`: briše duplikate po emailu (partner > ticket > contact prioritet), batch 50
 - `sponsorBulkUpdate.ts` — bulk update paketa/plaćanja/statusa
 - `findPartnerProject.ts` — pronađi u kojoj bazi postoji email
+- `ticketActions.ts` — `createTicket(data)` (admin, `sponsor_id: null`), `createSponsorTicket(sponsorId, data)` (partner portal, veže uz sponzora), `bulkCreateTickets`, `deleteTicket`, `generateMissingSlugs`; svi generiraju jedinstveni QR slug via `makeUniqueSlug`
 
 **Ključne API rute** (`src/app/api/`):
 - `api/auth/signout` — GET `/api/auth/signout?redirect=...`: odjavljuje iz **oba projekta** (2025 i 2026) i redirecta; Route Handler može pisati cookies za razliku od Server Component layouta — koristiti ovdje umjesto `supabase.auth.signOut()` u layoutima
@@ -62,7 +64,9 @@ npm run dev   # → http://localhost:3000
 **Ključne portal komponente** (`src/components/portal/`):
 - `PortalSidebar.tsx` — nav + projekt switcher + jezik toggle + `<PortalHelpModal />`
 - `PortalHelpModal.tsx` — step-by-step wizard modal s uputama; `steps?` prop za buduću Supabase integraciju; svaki korak ima `preview` ReactNode koji prikazuje relevantan UI element; prijevodi u `lib/i18n/portal.ts` pod `help.*` ključevima
-- `PortalBenefitsView.tsx`, `PortalPartnerTabs.tsx`, `PortalContactsSection.tsx`, `PortalCollaborationOptions.tsx`, `PortalProgramView.tsx`, `PortalPageHeader.tsx`, `PortalLangProvider.tsx`
+- `PortalBenefitsView.tsx`, `PortalPartnerTabs.tsx`, `PortalProgramView.tsx`, `PortalPageHeader.tsx`, `PortalLangProvider.tsx`
+- `PortalContactsSection.tsx` — uređivanje primarnog kontakta, kontakt osoba i osoba za ulaznice; `AddTicketModal` otvara puni form (Ime, Email, Tvrtka, Kategorija, Tip ulaznice, Komentar) i poziva `createSponsorTicket`
+- `PortalCollaborationOptions.tsx` — hardkodirani `PACKAGES` i `CATEGORIES` array za usporedbu paketa; broj ulaznica: Brončani 2, Srebrni 3, Zlatni 5, Glavni 10; dodavanje novog broja zahtijeva i18n entry (`cell.vipN` u HR i EN) + update `CATEGORIES`
 
 ---
 
@@ -206,6 +210,7 @@ git add . && git commit -m "Opis" && git push origin main
 - **EditBenefitDialog/Modal** — primarni kontakt: fetchuje sve kontakte sponzora (bez type filtera) + primarni; matching ime (case-insensitive) → fallback email; ★ oznaka + pre-select
 - **Inbox brisanje** vidljivo samo za `marcel@ecommerce.hr`; `deleteAllNotifications` koristi `.neq("id", "00000000-...")` jer Supabase zahtijeva WHERE uvjet za DELETE
 - **CSS animacije** u `globals.css`: `animate-enter` (slideUp 0.35s), `animate-fade-in` (fadeIn 0.2s), `animate-slide-up` (slideUp 0.25s) — koristiti za modalne prozore i page transitions
+- **Ulaznica (`/[slug]`)**: mobile-responzivan layout (`flex-col sm:flex-row`), lokacija: Mozaik Event Centar, Slavonska Avenija 6/2, Zagreb; QR sekcija na mobilnom je horizontalni red (QR lijevo, vlasnik desno)
 
 ---
 
