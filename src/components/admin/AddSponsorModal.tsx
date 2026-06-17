@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
-import { PACKAGE_BENEFITS } from "@/lib/utils";
 import type { PackageType } from "@/types";
 
 const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
@@ -47,7 +46,7 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
 
     try {
       // Insert sponsor
-      const { data: sponsor, error: sponsorError } = await supabase
+      const { error: sponsorError } = await supabase
         .from("sponsors")
         .insert({
           ...form,
@@ -55,28 +54,9 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
           iznos: form.iznos !== "" ? parseFloat(form.iznos) : null,
           partial_amount: form.payment_status === "partial" && form.partial_amount !== ""
             ? parseFloat(form.partial_amount) : null,
-        })
-        .select()
-        .single();
+        });
 
       if (sponsorError) throw sponsorError;
-
-      // Auto-create benefits for the package
-      const benefits = PACKAGE_BENEFITS[form.package_type] ?? [];
-      const conferenceDate = new Date("2026-06-10");
-
-      const benefitsToInsert = benefits.map((benefit, i) => {
-        const deadline = new Date(conferenceDate);
-        deadline.setMonth(deadline.getMonth() - (3 - i));
-        return {
-          sponsor_id: sponsor.id,
-          benefit_name: benefit,
-          deadline: deadline.toISOString(),
-          status: "not_started",
-        };
-      });
-
-      await supabase.from("sponsor_benefits").insert(benefitsToInsert);
 
       setOpen(false);
       setForm({ name: "", package_type: defaultPkg, contact_email: "", contact_name: "", payment_status: "pending", lead_status: "", notes: "", iznos: "", partial_amount: "" });
