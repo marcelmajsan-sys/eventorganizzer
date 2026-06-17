@@ -37,6 +37,7 @@ Sve migracije su u `supabase/` folderu. Pokrenuti u Supabase Dashboard → SQL E
 | `migration_034_partial_amount` | `partial_amount NUMERIC(10,2) DEFAULT NULL` na `sponsors` tablici |
 | `migration_035_partner_login_notification_fn` | SECURITY DEFINER funkcija `record_partner_login_notification()` za INSERT u `notifications` zaobilazeći RLS — pokrenuti u **OBJE** baze |
 | `migration_037_sponsor_comments` | Tablica `sponsor_comments` — komentari admina po sponzoru (id, sponsor_id, comment, admin_email, created_at) |
+| `migration_038_security_lints` | Supabase linter fixes: pin `search_path` na 9 rutina (0011), REVOKE EXECUTE od `anon`/`PUBLIC` na SECURITY DEFINER funkcijama (0028/0029), drop širokog `"authenticated read"` storage policy-ja (0025) |
 
 ## Napomene
 
@@ -44,6 +45,7 @@ Sve migracije su u `supabase/` folderu. Pokrenuti u Supabase Dashboard → SQL E
 - **migration_020** je obavezan za inbox query koji uključuje `task_id`
 - **migration_024**: bez nje cijeli update sponzora tiho faila — obavezno pokrenuti
 - **migration_034**: `partial_amount` se prikazuje samo kad `payment_status = 'partial'`
+- **migration_038**: rješava Supabase security lint upozorenja; NE dira authenticated EXECUTE na RLS helperima (`is_admin`, `is_project_admin`, `is_sponsor`, `get_my_sponsor_id`) jer ih pozivaju RLS policyji — njihov 0029 warning ostaje namjerno. `auth_leaked_password_protection` se rješava samo Dashboardom (Authentication → Policies). Pokrenuti u **OBJE** baze
 
 ## Seed podaci za 2025
 
@@ -60,11 +62,10 @@ Bucket `sponsor-files` mora biti kreiran kao **Public** u Supabase Dashboard + R
 CREATE POLICY "authenticated upload" ON storage.objects
   FOR INSERT TO authenticated WITH CHECK (bucket_id = 'sponsor-files');
 
-CREATE POLICY "authenticated read" ON storage.objects
-  FOR SELECT TO authenticated USING (bucket_id = 'sponsor-files');
-
 CREATE POLICY "authenticated delete" ON storage.objects
   FOR DELETE TO authenticated USING (bucket_id = 'sponsor-files');
 ```
+
+> **Napomena (migration_038)**: `"authenticated read"` SELECT policy je **uklonjen** zbog lint upozorenja 0025 (public bucket allows listing). Public bucket → download preko public URL-a radi i bez njega; app ne koristi storage `.list()` (popis dolazi iz `files` tablice). Ne dodavati ga natrag.
 
 **Putanje**: `{sponsor_id}/{timestamp}_{filename}` (sponzor) | `{sponsor_id}/benefits/{benefit_id}/{timestamp}_{filename}` (benefit)
