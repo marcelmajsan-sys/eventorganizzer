@@ -143,6 +143,14 @@ Cookie `cro_active_project` (`'2026'` | `'2025'`). Token exchange flow:
 Jedino sigurno rješenje: Postgres trigger s `SECURITY DEFINER`.
 Iznimka: `recordPartnerLogin` koristi `createAdminClientForProject` direktno.
 
+### Security lintovi (Supabase) — `migration_038`
+`migration_038_security_lints.sql` rješava Supabase database linter upozorenja (pokrenuti u **obje** baze):
+- **`search_path`** pinnan na svim SECURITY DEFINER rutinama (`SET search_path = public, pg_temp`) — dinamički preko `pg_proc` (radi za bilo koju signaturu/tip).
+- **EXECUTE grantovi**: REVOKE od `anon`/`PUBLIC` na SECURITY DEFINER funkcijama; trigger funkcije i RPC-jevi koje zove samo backend revoke-ani i od `authenticated` (+GRANT `service_role`).
+- **RLS helperi** (`is_admin`, `is_project_admin`, `get_my_sponsor_id`, `is_sponsor`) **ZADRŽAVAJU** `authenticated` EXECUTE jer ih pozivaju RLS policyji — njihovo `authenticated_security_definer` (lint 0029) upozorenje **ostaje namjerno** (vraćaju samo info o pozivatelju, nema curenja podataka). Ne revoke-ati.
+- **Storage**: široki `"authenticated read"` SELECT policy na `storage.objects` **obrisan** (lint 0025); `sponsor-files` je public bucket → download radi preko public URL-a, app ne koristi `.list()`. Ne vraćati policy natrag.
+- **Leaked Password Protection** se NE rješava SQL-om — uključiti u Dashboardu (Authentication → Policies) u oba projekta.
+
 ### Partner login flow
 `partner/page.tsx` ne poziva `recordPartnerLogin` — prijava ide direktno na `/portal/benefits`.
 Stranica ima HR/EN language toggle (lokalno, bez i18n konteksta); error poruke prate odabrani jezik (`errorKey` state).
@@ -211,6 +219,7 @@ git add . && git commit -m "Opis" && git push origin main
 - **Inbox brisanje** vidljivo samo za `marcel@ecommerce.hr`; `deleteAllNotifications` koristi `.neq("id", "00000000-...")` jer Supabase zahtijeva WHERE uvjet za DELETE
 - **CSS animacije** u `globals.css`: `animate-enter` (slideUp 0.35s), `animate-fade-in` (fadeIn 0.2s), `animate-slide-up` (slideUp 0.25s) — koristiti za modalne prozore i page transitions
 - **Ulaznica (`/[slug]`)**: mobile-responzivan layout (`flex-col sm:flex-row`), lokacija: Mozaik Event Centar, Slavonska Avenija 6/2, Zagreb; QR sekcija na mobilnom je horizontalni red (QR lijevo, vlasnik desno)
+- **`AddSponsorModal`** više **NE** auto-kreira benefite po paketu pri dodavanju sponzora — inserta samo `sponsors` red; benefiti se dodaju zasebno (`AddBenefitModal` / grupni edit)
 
 ---
 
