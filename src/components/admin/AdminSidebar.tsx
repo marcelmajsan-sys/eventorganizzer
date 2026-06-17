@@ -15,7 +15,6 @@ import ProjectSwitcher from "@/components/admin/ProjectSwitcher";
 
 const navItems = [
   { href: "/admin/dashboard",       label: "Nadzorna ploča", icon: LayoutDashboard },
-  { href: "/admin/inbox",           label: "Inbox",           icon: Bell },
   { href: "/admin/sponsors",        label: "Partneri",        icon: Users },
   { href: "/admin/benefits",        label: "Benefiti",        icon: Gift },
   { href: "/admin/contacts",        label: "Kontakti",        icon: Phone },
@@ -27,6 +26,7 @@ const navItems = [
   { href: "/admin/email-predlosci", label: "Email predlošci", icon: Mail },
   { href: "/admin/automatizacija",  label: "Automatizacija",  icon: Zap },
   { href: "/admin/settings",        label: "Postavke",        icon: Settings },
+  { href: "/admin/inbox",           label: "Obavijesti",      icon: Bell },
 ];
 
 interface Props {
