@@ -84,7 +84,7 @@ eventorganizzer/
 │   │   │   ├── AddContactModal.tsx           ← Dodaj kontakt s tipom, sponzorom, napomenom
 │   │   │   ├── ContactDetailActions.tsx      ← Uredi/briši kontakt — s dropdown za sponzora i tipom
 │   │   │   ├── ContactsView.tsx              ← Lista svih kontakata s filterima
-│   │   │   ├── AddSponsorModal.tsx           ← Sadrži iznos polje (opcionalno, NUMERIC)
+│   │   │   ├── AddSponsorModal.tsx           ← Sadrži iznos polje (opcionalno, NUMERIC); NE auto-kreira benefite
 │   │   │   ├── AddTaskModal.tsx
 │   │   │   ├── EditSponsorForm.tsx           ← Sadrži lead_status select + iznos polje; graceful degradation za iznos kolonu
 │   │   │   ├── EditBenefitModal.tsx          ← Opis, kontakt osoba, dokumenti benefita (s fallbackom)
@@ -312,7 +312,9 @@ migration_021_task_notification_trigger    ← Postgres trigger: notifikacija pr
 migration_022_fix_contact_notification_type ← Popravak triggera: samo 'ticket' tip → "Nova osoba za ulaznice"; ostali → "Dodan novi kontakt"
 migration_023_extend_contact_type_check    ← CHECK constraint proširen: dozvoljava contact|ticket|partner|visitor|speaker|service_provider|brand_ambassador
 migration_024_sponsor_amount               ← iznos NUMERIC(10,2) kolona na sponsors tablici
+migration_038_security_lints               ← Supabase security lint fixes: search_path pinning, REVOKE EXECUTE od anon/PUBLIC, drop storage "authenticated read" policy
 ```
+> Potpuni popis migracija (025–038): vidi `MIGRATIONS.md` u rootu repozitorija.
 
 > **Napomena za migration_015**: Ako se pojavi greška "policy already exists", pokreni DROP IF EXISTS za sve politike pa ih recreiraj.
 
@@ -441,6 +443,7 @@ git push origin main
 - **Multi-select bulk edit** (`SponsorsTableWithSelect`) — checkbox stupac; klik na redak ili checkbox odabire sponzora; checkbox u zaglavlju odabire/poništava sve; bulk action bar (sticky, plava pozadina) pojavljuje se kad je odabran ≥1 sponzor s dropdownima za Paket/Plaćanje/Status i gumbom "Primijeni"; server action `bulkUpdateSponsors` radi `.update().in("id", ids)` — `revalidatePath` osvježava stranicu
 - **Iznos stupac** u tablici sponzora — prikazuje `iznos` formatiran kao EUR (0 € za null vrijednosti, sivom bojom)
 - **Iznos polje** u AddSponsorModal i EditSponsorForm — opcionalni numerički unos; EditSponsorForm ima graceful degradation (retry bez iznos ako kolona ne postoji u DB)
+- **AddSponsorModal** inserta samo `sponsors` red — **ne** auto-kreira benefite po paketu (benefiti se dodaju zasebno preko AddBenefitModal / grupnog edita)
 
 ### Benefiti
 - Kliktabilne stat kartice — filtriranje po statusu via `?status=X` URL param
@@ -576,6 +579,7 @@ git push origin main
 - **Brisanje benefita**: Trash2 ikona u svakom redu sponzora (ne samo na accordion headeru) briše specifičan `sponsor_benefits` zapis po `id` — ne sve zapise s istim `benefit_name`
 - **Spread operater na `Set`** (`[...new Set(...)]`) zahtijeva `downlevelIteration` ili `target: es2015+` — umjesto toga koristiti `forEach` + ručno deduplicirani array
 - **Notifikacije — koristiti Postgres trigere, NE JS klijent**: `createServerClient` iz `@supabase/ssr` s service role keyem ne bypassira RLS pouzdano za INSERT u `notifications`. Jedino sigurno rješenje je Postgres trigger s `SECURITY DEFINER` (kao migration_019 za kontakte i migration_021 za zadatke). Ne pokušavati insertati u `notifications` direktno iz server actiona.
+- **Supabase security lintovi (`migration_038`)**: pinnan `search_path` na SECURITY DEFINER rutinama; REVOKE EXECUTE od `anon`/`PUBLIC`; trigger/RPC funkcije revoke-ane i od `authenticated`. **RLS helperi** (`is_admin`, `is_project_admin`, `get_my_sponsor_id`, `is_sponsor`) ZADRŽAVAJU `authenticated` EXECUTE jer ih pozivaju RLS policyji — njihov `authenticated_security_definer` (0029) warning ostaje **namjerno**, NE revoke-ati (srušilo bi RLS). Storage `"authenticated read"` policy obrisan (public bucket → public URL radi, app ne koristi `.list()`). **Leaked Password Protection** se uključuje samo u Dashboardu (Authentication → Policies), ne SQL-om.
 - **`notifications` tablica**: `sponsor_id` je nullable (od migration_020), `task_id` je nullable UUID FK na `tasks`. Inbox query uključuje `task_id` u SELECT — ako kolona ne postoji u DB-u, cijeli query faila i inbox je prazan. Obavezno pokrenuti migration_020.
 - **`sponsor_contacts.type` CHECK constraint** (migration_006) originalno ima samo `contact` i `ticket`. Migration_023 proširuje na sve UI tipove. Bez te migracije, spremanje kontakta s tipom partner/visitor/speaker/itd. tiho faila.
 - **`ContactDetailActions` graceful degradation**: ako notes kolona ne postoji (migration_011 nije pokrenut), retry update bez `notes` polja — ne prikazuje grešku korisniku.
