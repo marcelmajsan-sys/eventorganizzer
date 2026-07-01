@@ -16,8 +16,7 @@ interface Props {
   users: UserRow[];
 }
 
-export default function UserManagementSection({ users: initialUsers }: Props) {
-  const [users, setUsers] = useState(initialUsers);
+export default function UserManagementSection({ users }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,14 +38,17 @@ export default function UserManagementSection({ users: initialUsers }: Props) {
     setLoading(true);
     setError(null);
     try {
-      await createUserInAllProjects(addForm.name, addForm.email, addForm.password);
-      setUsers((prev) => [...prev, { email: addForm.email.toLowerCase(), name: addForm.name, id2026: null, id2025: null }].sort((a, b) => a.email.localeCompare(b.email)));
+      const result = await createUserInAllProjects(addForm.name, addForm.email, addForm.password);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
       setAddForm({ name: "", email: "", password: "" });
       setShowAdd(false);
       flash("Korisnik je kreiran u svim bazama.");
       router.refresh();
     } catch (e: any) {
-      setError(e.message);
+      setError(e?.message ?? "Neočekivana greška pri kreiranju korisnika.");
     } finally {
       setLoading(false);
     }
@@ -65,13 +67,16 @@ export default function UserManagementSection({ users: initialUsers }: Props) {
     setLoading(true);
     setError(null);
     try {
-      await updateUserInAllProjects(editUser.id2026, editUser.id2025, editForm.name, editForm.email, editForm.password || undefined);
-      setUsers((prev) => prev.map((u) => u.email === editUser.email ? { ...u, name: editForm.name, email: editForm.email } : u));
+      const result = await updateUserInAllProjects(editUser.id2026, editUser.id2025, editForm.name, editForm.email, editForm.password || undefined);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
       setEditUser(null);
       flash("Korisnik je ažuriran.");
       router.refresh();
     } catch (e: any) {
-      setError(e.message);
+      setError(e?.message ?? "Neočekivana greška pri ažuriranju.");
     } finally {
       setLoading(false);
     }
@@ -82,11 +87,15 @@ export default function UserManagementSection({ users: initialUsers }: Props) {
     setLoading(true);
     setError(null);
     try {
-      await deleteUserFromAllProjects(user.email);
-      setUsers((prev) => prev.filter((u) => u.email !== user.email));
+      const result = await deleteUserFromAllProjects(user.email);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
       flash("Korisnik je obrisan.");
+      router.refresh();
     } catch (e: any) {
-      setError(e.message);
+      setError(e?.message ?? "Neočekivana greška pri brisanju.");
     } finally {
       setLoading(false);
     }
