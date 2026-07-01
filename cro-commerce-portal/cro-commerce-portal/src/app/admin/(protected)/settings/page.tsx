@@ -22,7 +22,7 @@ export default async function SettingsPage() {
     settingsRes.data?.find((s) => s.key === `conference_date_${projectId}`)?.value ??
     project.conferenceDate;
 
-  let users: { email: string; name: string | null; id2026: string | null; id2025: string | null }[] = [];
+  let users: { email: string; name: string | null; phone: string | null; id2026: string | null; id2025: string | null }[] = [];
   try { users = await listUsersWithMeta(); } catch {}
 
   // Partneri — queryja oba projekta i deduplikuje po emailu

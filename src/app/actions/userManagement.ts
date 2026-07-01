@@ -15,10 +15,12 @@ type ActionResult = { error: string | null };
 export async function createUserInAllProjects(
   name: string,
   email: string,
-  password: string
+  password: string,
+  phone?: string
 ): Promise<ActionResult> {
   const normalizedEmail = email.toLowerCase().trim();
   const normalizedName = name.trim();
+  const normalizedPhone = phone?.trim() ?? "";
   const errors: string[] = [];
 
   for (const projectId of ALL_PROJECTS) {
@@ -26,7 +28,7 @@ export async function createUserInAllProjects(
     const { error } = await adminClient.auth.admin.createUser({
       email: normalizedEmail,
       password,
-      user_metadata: { name: normalizedName },
+      user_metadata: { name: normalizedName, phone: normalizedPhone },
       email_confirm: true,
     });
     if (
@@ -61,11 +63,12 @@ export async function updateUserInAllProjects(
   userId2025: string | null,
   name: string,
   email: string,
+  phone?: string,
   password?: string
 ): Promise<ActionResult> {
   const updates: Record<string, any> = {
     email: email.toLowerCase().trim(),
-    user_metadata: { name: name.trim() },
+    user_metadata: { name: name.trim(), phone: phone?.trim() ?? "" },
   };
   if (password) updates.password = password;
 
@@ -110,7 +113,7 @@ export async function deleteUserFromAllProjects(email: string): Promise<ActionRe
   return { error: errors.length > 0 ? errors.join("; ") : null };
 }
 
-export async function listUsersWithMeta(): Promise<{ email: string; name: string | null; id2026: string | null; id2025: string | null }[]> {
+export async function listUsersWithMeta(): Promise<{ email: string; name: string | null; phone: string | null; id2026: string | null; id2025: string | null }[]> {
   const cookieStore = await cookies();
   const activeProject = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
 
@@ -146,6 +149,13 @@ export async function listUsersWithMeta(): Promise<{ email: string; name: string
     const u2026 = users2026.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
     const u2025 = users2025.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
     const name = (u2026?.user_metadata?.name ?? u2025?.user_metadata?.name) as string | null ?? null;
-    return { email, name, id2026: (u2026?.id as string | null) ?? null, id2025: (u2025?.id as string | null) ?? null };
+    const phone = (u2026?.user_metadata?.phone ?? u2025?.user_metadata?.phone) as string | null ?? null;
+    return {
+      email,
+      name,
+      phone: phone || null,
+      id2026: (u2026?.id as string | null) ?? null,
+      id2025: (u2025?.id as string | null) ?? null,
+    };
   });
 }

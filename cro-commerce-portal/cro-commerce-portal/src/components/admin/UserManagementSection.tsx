@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Plus, Pencil, Trash2, X, Save, Loader2, Eye, EyeOff } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, X, Save, Loader2, Eye, EyeOff, Phone } from "lucide-react";
 import { createUserInAllProjects, updateUserInAllProjects, deleteUserFromAllProjects } from "@/app/actions/userManagement";
 import { useRouter } from "next/navigation";
 
 interface UserRow {
   email: string;
   name: string | null;
+  phone: string | null;
   id2026: string | null;
   id2025: string | null;
 }
@@ -25,8 +26,8 @@ export default function UserManagementSection({ users }: Props) {
   const [showPwd, setShowPwd] = useState(false);
   const router = useRouter();
 
-  const [addForm, setAddForm] = useState({ name: "", email: "", password: "" });
-  const [editForm, setEditForm] = useState({ name: "", email: "", password: "" });
+  const [addForm, setAddForm] = useState({ name: "", email: "", password: "", phone: "" });
+  const [editForm, setEditForm] = useState({ name: "", email: "", password: "", phone: "" });
 
   function flash(msg: string) {
     setSuccess(msg);
@@ -38,12 +39,12 @@ export default function UserManagementSection({ users }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const result = await createUserInAllProjects(addForm.name, addForm.email, addForm.password);
+      const result = await createUserInAllProjects(addForm.name, addForm.email, addForm.password, addForm.phone);
       if (result?.error) {
         setError(result.error);
         return;
       }
-      setAddForm({ name: "", email: "", password: "" });
+      setAddForm({ name: "", email: "", password: "", phone: "" });
       setShowAdd(false);
       flash("Korisnik je kreiran u svim bazama.");
       router.refresh();
@@ -56,7 +57,7 @@ export default function UserManagementSection({ users }: Props) {
 
   function openEdit(user: UserRow) {
     setEditUser(user);
-    setEditForm({ name: user.name ?? "", email: user.email, password: "" });
+    setEditForm({ name: user.name ?? "", email: user.email, password: "", phone: user.phone ?? "" });
     setShowPwd(false);
     setError(null);
   }
@@ -67,7 +68,7 @@ export default function UserManagementSection({ users }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const result = await updateUserInAllProjects(editUser.id2026, editUser.id2025, editForm.name, editForm.email, editForm.password || undefined);
+      const result = await updateUserInAllProjects(editUser.id2026, editUser.id2025, editForm.name, editForm.email, editForm.phone, editForm.password || undefined);
       if (result?.error) {
         setError(result.error);
         return;
@@ -127,6 +128,12 @@ export default function UserManagementSection({ users }: Props) {
             <div>
               {user.name && <p className="text-sm font-medium text-gray-800">{user.name}</p>}
               <p className="text-xs text-gray-500">{user.email}</p>
+              {user.phone && (
+                <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                  <Phone size={10} />
+                  {user.phone}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => openEdit(user)} className="text-gray-400 hover:text-brand-600 transition-colors">
@@ -157,6 +164,10 @@ export default function UserManagementSection({ users }: Props) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Email *</label>
                 <input type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} className="input-field" placeholder="marko@ecommerce.hr" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Broj telefona</label>
+                <input type="tel" value={addForm.phone} onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })} className="input-field" placeholder="+385 91 234 5678" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Lozinka *</label>
@@ -195,6 +206,10 @@ export default function UserManagementSection({ users }: Props) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="input-field" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Broj telefona</label>
+                <input type="tel" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="input-field" placeholder="+385 91 234 5678" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nova lozinka <span className="text-gray-400 font-normal">(ostavi prazno za bez promjene)</span></label>
