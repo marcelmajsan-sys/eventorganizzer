@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { PROJECT_COOKIE, resolveProjectId, PROJECTS } from "@/lib/supabase/projects";
@@ -30,10 +30,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let unreadCount = 0;
 
   try {
-    const adminClient = await createAdminClient();
-    const [adminsRes, settingsRes] = await Promise.all([
-      adminClient.from("project_admins").select("email"),
-      adminClient.from("project_settings").select("key, value"),
+    // Direktan service-role klijent (bypassira RLS pouzdano) — createAdminClient()
+    // preko @supabase/ssr prati user session i degradira u authenticated role,
+    // pa RLS na project_admins blokira SELECT i novi admini se ne vide.
+    const projectClient = createAdminClientForProject(activeProject);
+    const [adminsRes, settingsRes, totalRes, readRes] = await Promise.all([
+      projectClient.from("project_admins").select("email"),
+      projectClient.from("project_settings").select("key, value"),
+      projectClient.from("notifications").select("*", { count: "exact", head: true }),
+      projectClient.from("notification_reads").select("*", { count: "exact", head: true }).eq("user_id", user.id),
     ]);
     if (adminsRes.data && adminsRes.data.length > 0) {
       adminEmails = adminsRes.data.map((r) => r.email);
@@ -44,19 +49,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       "2026": settingsRes.data?.find((s) => s.key === "conference_date_2026")?.value ?? PROJECTS["2026"].conferenceDate,
       "2025": settingsRes.data?.find((s) => s.key === "conference_date_2025")?.value ?? PROJECTS["2025"].conferenceDate,
     };
-
-    // Unread = ukupno notifikacija - one koje je ovaj korisnik pročitao (notification_reads)
-    const projectClient = createAdminClientForProject(activeProject);
-    const [{ count: totalCount }, { count: readCount }] = await Promise.all([
-      projectClient.from("notifications").select("*", { count: "exact", head: true }),
-      projectClient.from("notification_reads").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-    ]);
-    unreadCount = Math.max(0, (totalCount ?? 0) - (readCount ?? 0));
+    unreadCount = Math.max(0, (totalRes.count ?? 0) - (readRes.count ?? 0));
   } catch {
     // Tables not yet created — use hardcoded fallbacks
   }
 
-  if (!adminEmails.includes(user.email ?? "")) redirect("/portal");
+  const userEmailLower = (user.email ?? "").toLowerCase();
+  const isAdmin = adminEmails.some((e) => e.toLowerCase() === userEmailLower);
+  if (!isAdmin) redirect("/portal");
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
