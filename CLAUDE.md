@@ -36,6 +36,7 @@ npm run dev   # → http://localhost:3000
 | `/admin/benefits` | Svi benefiti (filter `?status=`) |
 | `/admin/contacts` | Svi kontakti (koristi `createAdminClient`) |
 | `/admin/contacts/[id]` | Detaljna stranica kontakta |
+| `/admin/ulaznice` | Sve ulaznice — sekcije "Ulaznice partnera" (unosi iz portala, `sponsor_id` postavljen) i "Ručno dodane"; "Preuzmi .xlsx" export u zaglavlju |
 | `/admin/program` | Program konferencije |
 | `/admin/troskovi` | Troškovi eventa |
 | `/admin/tasks` / `/admin/tasks/[id]` | Kanban + detaljna stranica |
@@ -56,7 +57,7 @@ npm run dev   # → http://localhost:3000
 - `contactActions.ts` — `deleteContact(id)`: nullificira `contact_person_id` FK na benefitima prije brisanja; FK error za kontakte vezane uz portal korisnika. `deleteDuplicateContacts()`: briše duplikate po emailu (partner > ticket > contact prioritet), batch 50
 - `sponsorBulkUpdate.ts` — bulk update paketa/plaćanja/statusa
 - `findPartnerProject.ts` — pronađi u kojoj bazi postoji email
-- `ticketActions.ts` — `createTicket(data)` (admin, `sponsor_id: null`), `createSponsorTicket(sponsorId, data)` (partner portal, veže uz sponzora), `bulkCreateTickets`, `deleteTicket`, `generateMissingSlugs`; svi generiraju jedinstveni QR slug via `makeUniqueSlug`
+- `ticketActions.ts` — `createTicket(data)` (admin, `sponsor_id: null`), `createSponsorTicket(sponsorId, data)` (partner portal, veže uz sponzora), `bulkCreateTickets` (postoji, ali bulk upload UI je uklonjen), `deleteTicket`, `generateMissingSlugs`; svi generiraju jedinstveni QR slug via `makeUniqueSlug`
 
 **Ključne API rute** (`src/app/api/`):
 - `api/auth/signout` — GET `/api/auth/signout?redirect=...`: odjavljuje iz **oba projekta** (2025 i 2026) i redirecta; Route Handler može pisati cookies za razliku od Server Component layouta — koristiti ovdje umjesto `supabase.auth.signOut()` u layoutima
@@ -220,6 +221,8 @@ git add . && git commit -m "Opis" && git push origin main
 - **CSS animacije** u `globals.css`: `animate-enter` (slideUp 0.35s), `animate-fade-in` (fadeIn 0.2s), `animate-slide-up` (slideUp 0.25s) — koristiti za modalne prozore i page transitions
 - **Ulaznica (`/[slug]`)**: mobile-responzivan layout (`flex-col sm:flex-row`), lokacija: Mozaik Event Centar, Slavonska Avenija 6/2, Zagreb; QR sekcija na mobilnom je horizontalni red (QR lijevo, vlasnik desno)
 - **`AddSponsorModal`** više **NE** auto-kreira benefite po paketu pri dodavanju sponzora — inserta samo `sponsors` red; benefiti se dodaju zasebno (`AddBenefitModal` / grupni edit)
+- **`/admin/ulaznice`** (`UlazniceActions.tsx`): `ExportXlsxButton` radi client-side XLSX export (`xlsx` paket, `json_to_sheet` + `writeFile`); export kolone (Ime i prezime, Email, Telefon, Tvrtka, Kategorija tvrtke, Tip ulaznice, Komentar, Partner, QR link) — bulk upload UI i `BulkModal` su **uklonjeni**; ulaznice s `sponsor_id` su partnerski unosi iz portala, bez njega ručni admin unosi
+- **Dijeljeni dokumenti za više partnera**: jedan storage objekt (npr. `sponsor-files/shared/...`) + po jedan `files` red po sponzoru (`benefit_id: null`, isti `storage_url`) — tako su dimenzije standa podijeljene svim partnerima po paketu (veliki stand → Srebrni/Zlatni/Glavni; regular stand → Brončani); brisanje `files` reda ne briše storage objekt
 
 ---
 

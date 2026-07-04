@@ -38,6 +38,7 @@ eventorganizzer/
 │   │   │   ├── tasks/            ← Kanban zadaci
 │   │   │   │   └── [id]/         ← Detaljna stranica zadatka
 │   │   │   ├── calendar/         ← Rokovnik (zadaci po rokovima)
+│   │   │   ├── ulaznice/         ← Ulaznice (sekcije: partnerske / ručne) + XLSX export
 │   │   │   └── settings/         ← Datum konferencije + upravljanje korisnicima + partneri
 │   │   ├── actions/
 │   │   │   ├── switchProject.ts      ← Admin projekt switch (token exchange) + portal projekt switch
@@ -484,6 +485,18 @@ git push origin main
 - Dvije sekcije: **Kontakt osobe** i **Osobe za ulaznice**
 - Inline dodavanje, uređivanje i brisanje
 - **Mail ikona** na hover — šalje Supabase pozivnicu za sponzorski portal + upisuje `sponsor_users`
+
+### Ulaznice (`/admin/ulaznice`)
+- Dvije sekcije: **"Ulaznice partnera"** (unosi iz portala, `sponsor_contacts` s `type='ticket'` i `sponsor_id` postavljenim; sortirano po partneru) i **"Ručno dodane"** (`sponsor_id IS NULL`)
+- **"Preuzmi .xlsx"** gumb u zaglavlju (`ExportXlsxButton` u `UlazniceActions.tsx`) — client-side export svih ulaznica (`xlsx` paket); kolone: Ime i prezime, Email, Telefon, Tvrtka, Kategorija tvrtke, Tip ulaznice, Komentar, Partner, QR link
+- Bulk upload UI (**`BulkModal`**) je **uklonjen** — `bulkCreateTickets` server action i dalje postoji u `ticketActions.ts`
+- Stat kartice: Ukupno / Od partnera / VIP / Standard; QR gumb po retku otvara `QRModal` (javna stranica `/[slug]`)
+- Partneri dodaju ulaznice kroz portal (`AddTicketModal` u `PortalContactsSection.tsx` → `createSponsorTicket`)
+
+### Dijeljeni dokumenti za više partnera
+- Jedan storage objekt (npr. `sponsor-files/shared/cro-commerce-regular-stand-dimensions.png`) + po jedan `files` red po sponzoru (`benefit_id: null`, isti `storage_url`) — dokument se pojavljuje u sekciji Dokumenti svih tih partnera bez kopiranja datoteke
+- Primjeri: dimenzije velikog standa → svi Srebrni/Zlatni/Glavni; regular stand → svi Brončani
+- Brisanje `files` reda ne briše storage objekt (ostali partneri ga i dalje vide)
 
 ### Sponzorski portal (`/portal`)
 - Login na `/partner` — namjenska stranica s "Prijava za sponzore" dizajnom
