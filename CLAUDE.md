@@ -36,7 +36,7 @@ npm run dev   # → http://localhost:3000
 | `/admin/benefits` | Svi benefiti (filter `?status=`) |
 | `/admin/contacts` | Svi kontakti (koristi `createAdminClient`) |
 | `/admin/contacts/[id]` | Detaljna stranica kontakta |
-| `/admin/ulaznice` | Sve ulaznice — sekcije "Ulaznice partnera" (unosi iz portala, `sponsor_id` postavljen) i "Ručno dodane"; "Preuzmi .xlsx" export u zaglavlju |
+| `/admin/ulaznice` | Sve ulaznice — sekcije "Ulaznice partnera" (`source='portal'`) i "Ručno dodane" (`source='admin'`, mogu imati partnera); "Preuzmi .xlsx" export u zaglavlju |
 | `/admin/program` | Program konferencije |
 | `/admin/troskovi` | Troškovi eventa |
 | `/admin/tasks` / `/admin/tasks/[id]` | Kanban + detaljna stranica |
@@ -79,7 +79,7 @@ npm run dev   # → http://localhost:3000
 |---------|------|
 | `sponsors` | Naziv, paket, `contact_name/email/phone`, `lead_status`, `iznos`, `partial_amount`, payment_status |
 | `sponsor_benefits` | Benefiti — rokovi, statusi, `reminder_email`, `assigned_to`, `description`, `contact_person_id` |
-| `sponsor_contacts` | Kontakt osobe i osobe za ulaznice po sponzoru |
+| `sponsor_contacts` | Kontakt osobe i osobe za ulaznice po sponzoru; `source` kolona (`'admin'`\|`'portal'`, migration_039) bilježi tko je unio red |
 | `sponsor_users` | Mapiranje `user_id → sponsor_id` (za portal) |
 | `files` | Upload — `sponsor_id` i/ili `benefit_id` |
 | `tasks` | Kanban zadaci |
@@ -221,7 +221,7 @@ git add . && git commit -m "Opis" && git push origin main
 - **CSS animacije** u `globals.css`: `animate-enter` (slideUp 0.35s), `animate-fade-in` (fadeIn 0.2s), `animate-slide-up` (slideUp 0.25s) — koristiti za modalne prozore i page transitions
 - **Ulaznica (`/[slug]`)**: mobile-responzivan layout (`flex-col sm:flex-row`), lokacija: Mozaik Event Centar, Slavonska Avenija 6/2, Zagreb; QR sekcija na mobilnom je horizontalni red (QR lijevo, vlasnik desno)
 - **`AddSponsorModal`** više **NE** auto-kreira benefite po paketu pri dodavanju sponzora — inserta samo `sponsors` red; benefiti se dodaju zasebno (`AddBenefitModal` / grupni edit)
-- **`/admin/ulaznice`** (`UlazniceActions.tsx`): `ExportXlsxButton` radi client-side XLSX export (`xlsx` paket, `json_to_sheet` + `writeFile`); export kolone (Ime i prezime, Email, Telefon, Tvrtka, Kategorija tvrtke, Tip ulaznice, Komentar, Partner, QR link) — bulk upload UI i `BulkModal` su **uklonjeni**; ulaznice s `sponsor_id` su partnerski unosi iz portala, bez njega ručni admin unosi
+- **`/admin/ulaznice`** (`UlazniceActions.tsx`): `ExportXlsxButton` radi client-side XLSX export (`xlsx` paket, `json_to_sheet` + `writeFile`); export kolone (Ime i prezime, Email, Telefon, Tvrtka, Kategorija tvrtke, Tip ulaznice, Komentar, Partner, QR link) — bulk upload UI i `BulkModal` su **uklonjeni**; sekcije se dijele po `sponsor_contacts.source` (`'portal'` = partner unio kroz portal, `'admin'` = ručno u adminu, neovisno o `sponsor_id`); svi insert pointi postavljaju `source` (`ticketActions.ts`, `AddContactModal`, `ContactsSection` → `'admin'`; `createSponsorTicket`, `PortalContactsSection` → `'portal'`) uz graceful retry bez kolone dok migration_039 nije pokrenut (tada fallback podjela po `sponsor_id`)
 - **Dijeljeni dokumenti za više partnera**: jedan storage objekt (npr. `sponsor-files/shared/...`) + po jedan `files` red po sponzoru (`benefit_id: null`, isti `storage_url`) — tako su dimenzije standa podijeljene svim partnerima po paketu (veliki stand → Srebrni/Zlatni/Glavni; regular stand → Brončani); brisanje `files` reda ne briše storage objekt
 
 ---

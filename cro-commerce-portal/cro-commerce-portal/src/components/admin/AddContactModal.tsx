@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
 
 const CONTACT_TYPES = [
+  { value: "contact",           label: "Kontakt" },
+  { value: "ticket",            label: "Ulaznica" },
   { value: "partner",           label: "Partner" },
   { value: "visitor",           label: "Visitor" },
   { value: "speaker",           label: "Speaker" },
@@ -24,7 +26,7 @@ interface Props {
 
 const empty = {
   name: "", email: "", phone: "", company: "", role: "", notes: "",
-  type: "partner", sponsor_id: "",
+  type: "contact", sponsor_id: "",
 };
 
 export default function AddContactModal({ sponsors = [] }: Props) {
@@ -44,7 +46,7 @@ export default function AddContactModal({ sponsors = [] }: Props) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const { error: err } = await supabase.from("sponsor_contacts").insert({
+    const record = {
       name:       form.name     || null,
       email:      form.email    || null,
       phone:      form.phone    || null,
@@ -53,7 +55,12 @@ export default function AddContactModal({ sponsors = [] }: Props) {
       notes:      form.notes    || null,
       type:       form.type,
       sponsor_id: form.sponsor_id || null,
-    });
+    };
+    let { error: err } = await supabase.from("sponsor_contacts").insert({ ...record, source: "admin" });
+    // Graceful degradation: retry bez source ako kolona ne postoji (migration_039)
+    if (err?.message?.includes("source")) {
+      ({ error: err } = await supabase.from("sponsor_contacts").insert(record));
+    }
     setLoading(false);
     if (err) { setError(err.message); return; }
     setForm(empty);
@@ -104,9 +111,9 @@ export default function AddContactModal({ sponsors = [] }: Props) {
 
           {/* Sponsor */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponzor / partner</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Partner</label>
             <select value={form.sponsor_id} onChange={f("sponsor_id")} className="input-field">
-              <option value="">— Bez sponzora —</option>
+              <option value="">— Bez partnera —</option>
               {sponsors.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}

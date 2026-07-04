@@ -277,19 +277,24 @@ function AddContactForm({
       }
     }
 
-    const { data, error: err } = await supabase
+    const record = {
+      sponsor_id: sponsorId,
+      name: form.name,
+      email: form.email || null,
+      phone: form.phone || null,
+      role: form.role || null,
+      type,
+      ...(slug ? { slug } : {}),
+    };
+    let { data, error: err } = await supabase
       .from("sponsor_contacts")
-      .insert({
-        sponsor_id: sponsorId,
-        name: form.name,
-        email: form.email || null,
-        phone: form.phone || null,
-        role: form.role || null,
-        type,
-        ...(slug ? { slug } : {}),
-      })
+      .insert({ ...record, source: "portal" })
       .select()
       .single();
+    // Graceful degradation: retry bez source ako kolona ne postoji (migration_039)
+    if (err?.message?.includes("source")) {
+      ({ data, error: err } = await supabase.from("sponsor_contacts").insert(record).select().single());
+    }
     setSaving(false);
     if (err) { setError(err.message); return; }
     if (data) onAdded(data as Contact);

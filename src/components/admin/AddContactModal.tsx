@@ -46,7 +46,7 @@ export default function AddContactModal({ sponsors = [] }: Props) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const { error: err } = await supabase.from("sponsor_contacts").insert({
+    const record = {
       name:       form.name     || null,
       email:      form.email    || null,
       phone:      form.phone    || null,
@@ -55,7 +55,12 @@ export default function AddContactModal({ sponsors = [] }: Props) {
       notes:      form.notes    || null,
       type:       form.type,
       sponsor_id: form.sponsor_id || null,
-    });
+    };
+    let { error: err } = await supabase.from("sponsor_contacts").insert({ ...record, source: "admin" });
+    // Graceful degradation: retry bez source ako kolona ne postoji (migration_039)
+    if (err?.message?.includes("source")) {
+      ({ error: err } = await supabase.from("sponsor_contacts").insert(record));
+    }
     setLoading(false);
     if (err) { setError(err.message); return; }
     setForm(empty);

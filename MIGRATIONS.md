@@ -38,6 +38,7 @@ Sve migracije su u `supabase/` folderu. Pokrenuti u Supabase Dashboard → SQL E
 | `migration_035_partner_login_notification_fn` | SECURITY DEFINER funkcija `record_partner_login_notification()` za INSERT u `notifications` zaobilazeći RLS — pokrenuti u **OBJE** baze |
 | `migration_037_sponsor_comments` | Tablica `sponsor_comments` — komentari admina po sponzoru (id, sponsor_id, comment, admin_email, created_at) |
 | `migration_038_security_lints` | Supabase linter fixes: pin `search_path` na 9 rutina (0011), REVOKE EXECUTE od `anon`/`PUBLIC` na SECURITY DEFINER funkcijama (0028/0029), drop širokog `"authenticated read"` storage policy-ja (0025) |
+| `migration_039_ticket_source` | Kolona `source` (`'admin'`\|`'portal'`, default `'admin'`) na `sponsor_contacts` — tko je unio kontakt/ulaznicu; backfill: postojeće ulaznice sa `sponsor_id` → `'portal'` |
 
 ## Napomene
 
@@ -45,6 +46,7 @@ Sve migracije su u `supabase/` folderu. Pokrenuti u Supabase Dashboard → SQL E
 - **migration_020** je obavezan za inbox query koji uključuje `task_id`
 - **migration_024**: bez nje cijeli update sponzora tiho faila — obavezno pokrenuti
 - **migration_034**: `partial_amount` se prikazuje samo kad `payment_status = 'partial'`
+- **migration_039**: backfill UPDATE pokrenuti samo jednom (ponovno pokretanje pregazi ručne ispravke `source` vrijednosti); bez migracije sekcije na `/admin/ulaznice` padaju natrag na staru podjelu po `sponsor_id`
 - **migration_038**: rješava Supabase security lint upozorenja; NE dira authenticated EXECUTE na RLS helperima (`is_admin`, `is_project_admin`, `is_sponsor`, `get_my_sponsor_id`) jer ih pozivaju RLS policyji — njihov 0029 warning ostaje namjerno. `auth_leaked_password_protection` se rješava samo Dashboardom (Authentication → Policies). Pokrenuti u **OBJE** baze
 
 ## Seed podaci za 2025

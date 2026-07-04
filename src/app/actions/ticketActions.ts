@@ -36,7 +36,7 @@ export async function createTicket(data: TicketFormData): Promise<{ error: strin
   const supabase = await getClient();
   const slug = await makeUniqueSlug(supabase, data.name.trim());
 
-  const { error } = await supabase.from("sponsor_contacts").insert({
+  const record = {
     name: data.name.trim(),
     email: data.email.trim() || null,
     company: data.company.trim() || null,
@@ -46,7 +46,12 @@ export async function createTicket(data: TicketFormData): Promise<{ error: strin
     type: "ticket",
     sponsor_id: null,
     slug,
-  });
+  };
+  let { error } = await supabase.from("sponsor_contacts").insert({ ...record, source: "admin" });
+  // Graceful degradation: retry bez source ako kolona ne postoji (migration_039)
+  if (error?.message?.includes("source")) {
+    ({ error } = await supabase.from("sponsor_contacts").insert(record));
+  }
 
   if (error) return { error: error.message };
   revalidatePath("/admin/ulaznice");
@@ -75,7 +80,14 @@ export async function bulkCreateTickets(
     });
   }
 
-  const { error, data } = await supabase.from("sponsor_contacts").insert(records).select("id");
+  let { error, data } = await supabase
+    .from("sponsor_contacts")
+    .insert(records.map((r) => ({ ...r, source: "admin" })))
+    .select("id");
+  // Graceful degradation: retry bez source ako kolona ne postoji (migration_039)
+  if (error?.message?.includes("source")) {
+    ({ error, data } = await supabase.from("sponsor_contacts").insert(records).select("id"));
+  }
   if (error) return { inserted: 0, error: error.message };
   revalidatePath("/admin/ulaznice");
   return { inserted: data?.length ?? 0, error: null };
@@ -114,7 +126,7 @@ export async function createSponsorTicket(
   const supabase = await getClient();
   const slug = await makeUniqueSlug(supabase, data.name.trim());
 
-  const { error } = await supabase.from("sponsor_contacts").insert({
+  const record = {
     name: data.name.trim(),
     email: data.email.trim() || null,
     company: data.company.trim() || null,
@@ -124,7 +136,12 @@ export async function createSponsorTicket(
     type: "ticket",
     sponsor_id: sponsorId,
     slug,
-  });
+  };
+  let { error } = await supabase.from("sponsor_contacts").insert({ ...record, source: "portal" });
+  // Graceful degradation: retry bez source ako kolona ne postoji (migration_039)
+  if (error?.message?.includes("source")) {
+    ({ error } = await supabase.from("sponsor_contacts").insert(record));
+  }
 
   if (error) return { error: error.message };
   revalidatePath("/portal/benefits");

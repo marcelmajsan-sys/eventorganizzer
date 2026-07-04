@@ -310,10 +310,18 @@ function AddContactForm({
       phone: form.phone || null,
       role: form.role || null,
       type,
+      source: "admin",
     };
     if (isTicket) insertData.ticket_type = form.ticket_type;
 
     let { data, error: err } = await supabase.from("sponsor_contacts").insert(insertData).select().single();
+    // Graceful degradation: retry bez source ako kolona ne postoji (migration_039)
+    if (err && err.message.includes("source")) {
+      const { source: _source, ...noSource } = insertData;
+      const fallback = await supabase.from("sponsor_contacts").insert(noSource).select().single();
+      data = fallback.data;
+      err = fallback.error;
+    }
     // Graceful degradation: retry without ticket_type if column doesn't exist yet
     if (err && isTicket && err.message.includes("ticket_type")) {
       const fallback = await supabase.from("sponsor_contacts").insert({

@@ -18,6 +18,7 @@ type TicketContact = {
   ticket_type: "vip" | "standard" | null;
   notes: string | null;
   slug: string | null;
+  source: "admin" | "portal" | null;
   sponsor: { id: string; name: string } | null;
 };
 
@@ -89,7 +90,7 @@ function TicketsTable({ contacts, showPartner }: { contacts: TicketContact[]; sh
                 <td className="px-4 py-3">
                   {c.sponsor ? (
                     <a href={`/admin/sponsors/${c.sponsor.id}`} className="text-gray-700 hover:text-brand-600 transition-colors font-medium text-sm">{c.sponsor.name}</a>
-                  ) : <span className="text-gray-400 text-xs">Ručno</span>}
+                  ) : <span className="text-gray-300">—</span>}
                 </td>
               )}
               <td className="px-4 py-3">
@@ -111,9 +112,20 @@ export default async function UlaznicePage() {
 
   let { data: raw, error: rawErr } = await adminClient
     .from("sponsor_contacts")
-    .select("id, name, company, role, email, phone, ticket_type, notes, slug, sponsor_id, sponsors(id, name)")
+    .select("id, name, company, role, email, phone, ticket_type, notes, slug, source, sponsor_id, sponsors(id, name)")
     .eq("type", "ticket")
     .order("name");
+
+  // Graceful degradation: ako source kolona još ne postoji (migration_039 nije pokrenut)
+  if (rawErr?.message?.includes("source")) {
+    const { data: rawNoSource, error: noSourceErr } = await adminClient
+      .from("sponsor_contacts")
+      .select("id, name, company, role, email, phone, ticket_type, notes, slug, sponsor_id, sponsors(id, name)")
+      .eq("type", "ticket")
+      .order("name");
+    raw = (rawNoSource ?? []).map((c: any) => ({ ...c, source: null }));
+    rawErr = noSourceErr;
+  }
 
   // Graceful degradation: ako slug kolona još ne postoji (migration_028 nije pokrenut)
   if (rawErr?.message?.includes("slug")) {
@@ -122,7 +134,7 @@ export default async function UlaznicePage() {
       .select("id, name, company, role, email, phone, ticket_type, notes, sponsor_id, sponsors(id, name)")
       .eq("type", "ticket")
       .order("name");
-    raw = (rawNoSlug ?? []).map((c: any) => ({ ...c, slug: null }));
+    raw = (rawNoSlug ?? []).map((c: any) => ({ ...c, slug: null, source: null }));
   }
 
   const contacts: TicketContact[] = (raw ?? []).map((c: any) => ({
@@ -135,14 +147,21 @@ export default async function UlaznicePage() {
     ticket_type: c.ticket_type ?? null,
     notes: c.notes ?? null,
     slug: c.slug ?? null,
+    source: c.source ?? null,
     sponsor: Array.isArray(c.sponsors) ? (c.sponsors[0] ?? null) : (c.sponsors ?? null),
   }));
 
-  // Ulaznice koje su partneri unijeli kroz portal (vezane uz sponzora) vs. ručno dodane u adminu
+  // Ulaznice koje su partneri unijeli kroz portal (source='portal') vs. ručno dodane u adminu.
+  // Fallback prije migration_039 (source je null): po sponsor_id kao prije.
+  const isPortalTicket = (c: TicketContact) => (c.source ? c.source === "portal" : c.sponsor !== null);
   const partnerTickets = contacts
-    .filter((c) => c.sponsor !== null)
-    .sort((a, b) => (a.sponsor!.name.localeCompare(b.sponsor!.name, "hr") || a.name.localeCompare(b.name, "hr")));
-  const manualTickets = contacts.filter((c) => c.sponsor === null);
+    .filter(isPortalTicket)
+    .sort(
+      (a, b) =>
+        (a.sponsor?.name ?? "").localeCompare(b.sponsor?.name ?? "", "hr") ||
+        a.name.localeCompare(b.name, "hr")
+    );
+  const manualTickets = contacts.filter((c) => !isPortalTicket(c));
 
   const vipCount = contacts.filter((c) => c.ticket_type === "vip").length;
   const standardCount = contacts.filter((c) => c.ticket_type !== "vip").length;
@@ -232,7 +251,7 @@ export default async function UlaznicePage() {
             <p>Nema ručno dodanih ulaznica</p>
           </div>
         ) : (
-          <TicketsTable contacts={manualTickets} showPartner={false} />
+          <TicketsTable contacts={manualTickets} showPartner />
         )}
       </div>
     </div>

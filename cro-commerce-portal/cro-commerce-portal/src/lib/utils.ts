@@ -36,6 +36,7 @@ export function paymentStatusLabel(status: PaymentStatus): string {
     pending: "Na čekanju",
     partial: "Djelomično plaćeno",
     overdue: "Kasni",
+    compensation: "Kompenzacija",
   };
   return labels[status];
 }
@@ -46,6 +47,7 @@ export function paymentStatusColor(status: PaymentStatus): string {
     pending: "text-yellow-700 bg-yellow-100",
     partial: "text-sky-700 bg-sky-100",
     overdue: "text-red-700 bg-red-100",
+    compensation: "text-violet-700 bg-violet-100",
   };
   return colors[status];
 }
