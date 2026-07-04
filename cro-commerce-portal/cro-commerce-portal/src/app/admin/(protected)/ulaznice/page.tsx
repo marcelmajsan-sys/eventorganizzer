@@ -174,7 +174,11 @@ export default async function UlaznicePage() {
           <p className="text-gray-500 mt-1">Sve osobe za ulaznice</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <ExportXlsxButton rows={toExportRows(contacts)} filename="ulaznice.xlsx" />
+          <ExportXlsxButton
+            partnerRows={toExportRows(partnerTickets)}
+            manualRows={toExportRows(manualTickets)}
+            filename="ulaznice.xlsx"
+          />
           <UlazniceActions />
         </div>
       </div>

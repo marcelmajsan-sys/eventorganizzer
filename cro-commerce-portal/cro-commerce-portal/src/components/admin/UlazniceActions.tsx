@@ -182,28 +182,48 @@ export type ExportTicketRow = {
   sponsorName: string | null;
 };
 
-export function ExportXlsxButton({ rows, filename }: { rows: ExportTicketRow[]; filename: string }) {
-  if (rows.length === 0) return null;
+const EXPORT_COL_WIDTHS = [
+  { wch: 24 }, { wch: 28 }, { wch: 16 }, { wch: 22 }, { wch: 18 },
+  { wch: 12 }, { wch: 30 }, { wch: 22 }, { wch: 44 },
+];
+
+function ticketsToSheet(rows: ExportTicketRow[]) {
+  const data = rows.map((r) => ({
+    "Ime i prezime": r.name,
+    "Email": r.email ?? "",
+    "Telefon": r.phone ?? "",
+    "Tvrtka": r.company ?? "",
+    "Kategorija tvrtke": r.role ?? "",
+    "Tip ulaznice": r.ticket_type === "vip" ? "VIP" : "Standard",
+    "Komentar": r.notes ?? "",
+    "Partner": r.sponsorName ?? "Ručno",
+    "QR link": r.slug ? `${APP_URL}/${r.slug}` : "",
+  }));
+  const ws = XLSX.utils.json_to_sheet(data, {
+    header: [
+      "Ime i prezime", "Email", "Telefon", "Tvrtka", "Kategorija tvrtke",
+      "Tip ulaznice", "Komentar", "Partner", "QR link",
+    ],
+  });
+  ws["!cols"] = EXPORT_COL_WIDTHS;
+  return ws;
+}
+
+export function ExportXlsxButton({
+  partnerRows,
+  manualRows,
+  filename,
+}: {
+  partnerRows: ExportTicketRow[];
+  manualRows: ExportTicketRow[];
+  filename: string;
+}) {
+  if (partnerRows.length === 0 && manualRows.length === 0) return null;
 
   function handleExport() {
-    const data = rows.map((r) => ({
-      "Ime i prezime": r.name,
-      "Email": r.email ?? "",
-      "Telefon": r.phone ?? "",
-      "Tvrtka": r.company ?? "",
-      "Kategorija tvrtke": r.role ?? "",
-      "Tip ulaznice": r.ticket_type === "vip" ? "VIP" : "Standard",
-      "Komentar": r.notes ?? "",
-      "Partner": r.sponsorName ?? "Ručno",
-      "QR link": r.slug ? `${APP_URL}/${r.slug}` : "",
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    ws["!cols"] = [
-      { wch: 24 }, { wch: 28 }, { wch: 16 }, { wch: 22 }, { wch: 18 },
-      { wch: 12 }, { wch: 30 }, { wch: 22 }, { wch: 44 },
-    ];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Ulaznice");
+    XLSX.utils.book_append_sheet(wb, ticketsToSheet(partnerRows), "Ulaznice partnera");
+    XLSX.utils.book_append_sheet(wb, ticketsToSheet(manualRows), "Ručno dodane");
     XLSX.writeFile(wb, filename);
   }
 
