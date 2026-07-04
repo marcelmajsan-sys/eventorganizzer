@@ -29,7 +29,7 @@ const CATEGORIES: CategoryDef[] = [
   {
     labelKey: "cat.tickets",
     rows: [
-      { labelKey: "row.vipTickets", values: ["cell.vip2", "cell.vip3", "cell.vip4", "cell.vip6"] },
+      { labelKey: "row.vipTickets", values: ["cell.vip2", "cell.vip3", "cell.vip5", "cell.vip10"] },
     ],
   },
   {
@@ -62,7 +62,7 @@ const CATEGORIES: CategoryDef[] = [
     labelKey: "cat.stage",
     rows: [
       { labelKey: "row.videoMain",      values: [false, false, true,  true]              },
-      { labelKey: "row.presentSecond",  values: [false, true,  false, false]             },
+      { labelKey: "row.presentSecond",  values: [false, true,  false, true]              },
       { labelKey: "row.presentMain",    values: [false, false, true,  "cell.keynote"]    },
       { labelKey: "row.premiumMember",  values: [false, false, false, true]              },
       { labelKey: "row.poweredBy",      values: [false, false, false, true]              },

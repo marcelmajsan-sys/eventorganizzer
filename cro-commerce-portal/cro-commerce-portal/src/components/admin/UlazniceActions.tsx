@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
-import { Plus, Upload, X, Loader2, CheckCircle2, AlertCircle, Trash2, QrCode, Download, ExternalLink, RefreshCw } from "lucide-react";
-import { createTicket, bulkCreateTickets, deleteTicket, generateMissingSlugs, type TicketFormData } from "@/app/actions/ticketActions";
+import { useState, useTransition } from "react";
+import { Plus, X, Loader2, Trash2, QrCode, Download, ExternalLink, RefreshCw } from "lucide-react";
+import { createTicket, deleteTicket, generateMissingSlugs, type TicketFormData } from "@/app/actions/ticketActions";
 import { nameToSlug } from "@/lib/slugUtils";
 import * as XLSX from "xlsx";
 
@@ -149,145 +149,6 @@ export function QRButton({ slug, name }: { slug: string | null; name: string }) 
   );
 }
 
-// ── Bulk upload modal ─────────────────────────────────────────────────────────
-
-type ParsedRow = TicketFormData & { _valid: boolean; _error?: string };
-
-function parseXlsx(file: File): Promise<ParsedRow[]> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const wb = XLSX.read(e.target!.result, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
-        const parsed: ParsedRow[] = rows.map((row) => {
-          const name = String(row["Ime i prezime"] ?? row["ime i prezime"] ?? row["name"] ?? "").trim();
-          const email = String(row["Email"] ?? row["email"] ?? "").trim();
-          const company = String(row["Tvrtka"] ?? row["tvrtka"] ?? row["company"] ?? "").trim();
-          const roleRaw = String(row["Kategorija tvrtke"] ?? row["kategorija"] ?? row["role"] ?? "").trim();
-          const role = KATEGORIJE.includes(roleRaw as any) ? roleRaw : roleRaw ? "Ostalo" : "";
-          const tipRaw = String(row["Tip ulaznice"] ?? row["tip"] ?? row["ticket_type"] ?? "standard").trim().toLowerCase();
-          const ticket_type: "vip" | "standard" = tipRaw === "vip" ? "vip" : "standard";
-          const notes = String(row["Komentar"] ?? row["komentar"] ?? row["notes"] ?? "").trim();
-          const valid = name.length > 0;
-          return { name, email, company, role, ticket_type, notes, _valid: valid, _error: valid ? undefined : "Ime je obavezno" };
-        });
-        resolve(parsed);
-      } catch (err: any) { reject(new Error("Ne mogu pročitati datoteku: " + err.message)); }
-    };
-    reader.onerror = () => reject(new Error("Greška pri čitanju datoteke"));
-    reader.readAsArrayBuffer(file);
-  });
-}
-
-function BulkModal({ onClose }: { onClose: () => void }) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [rows, setRows] = useState<ParsedRow[]>([]);
-  const [parseError, setParseError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ inserted: number; error: string | null } | null>(null);
-
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setParseError(null); setRows([]);
-    try { setRows(await parseXlsx(file)); } catch (err: any) { setParseError(err.message); }
-  }
-
-  function handleImport() {
-    const valid = rows.filter((r) => r._valid);
-    if (valid.length === 0) return;
-    startTransition(async () => { setResult(await bulkCreateTickets(valid)); });
-  }
-
-  const validCount = rows.filter((r) => r._valid).length;
-  const invalidCount = rows.length - validCount;
-
-  if (result) return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 px-4 bg-black/40">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-8 text-center animate-enter">
-        {result.error
-          ? <><AlertCircle size={40} className="text-red-500 mx-auto mb-3" /><p className="font-semibold">{result.error}</p></>
-          : <><CheckCircle2 size={40} className="text-emerald-500 mx-auto mb-3" /><p className="font-semibold">Uvezeno {result.inserted} ulaznica</p></>}
-        <button onClick={onClose} className="btn-primary mt-6 w-full justify-center">Zatvori</button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 px-4 bg-black/40 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl animate-enter mb-8">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">Bulk upload ulaznica (.xlsx)</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
-        </div>
-        <div className="p-6 space-y-5">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
-            <p className="font-medium mb-1">Očekivane kolone u .xlsx datoteci:</p>
-            <p className="text-blue-600 font-mono text-xs">Ime i prezime | Email | Tvrtka | Kategorija tvrtke | Tip ulaznice | Komentar</p>
-            <p className="mt-1.5 text-xs text-blue-500">Kategorija: Webshop / Service Provider / Speaker / Ostalo · Tip: VIP / Standard</p>
-          </div>
-          <div>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} />
-            <button onClick={() => fileRef.current?.click()} className="btn-secondary w-full justify-center">
-              <Upload size={15} /> Odaberi .xlsx datoteku
-            </button>
-          </div>
-          {parseError && <p className="text-sm text-red-600">{parseError}</p>}
-          {rows.length > 0 && (
-            <>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">{rows.length} redaka</span>
-                <span className="flex gap-3">
-                  {validCount > 0 && <span className="text-emerald-600 font-medium">{validCount} validnih</span>}
-                  {invalidCount > 0 && <span className="text-red-500 font-medium">{invalidCount} s greškom</span>}
-                </span>
-              </div>
-              <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      {["Ime i prezime","Email","Tvrtka","Kategorija","Tip","Status"].map(h => (
-                        <th key={h} className="text-left px-3 py-2 font-medium text-gray-600">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {rows.map((r, i) => (
-                      <tr key={i} className={r._valid ? "" : "bg-red-50"}>
-                        <td className="px-3 py-2 font-medium">{r.name || <span className="text-red-400 italic">prazno</span>}</td>
-                        <td className="px-3 py-2 text-gray-600">{r.email || "—"}</td>
-                        <td className="px-3 py-2 text-gray-600">{r.company || "—"}</td>
-                        <td className="px-3 py-2 text-gray-600">{r.role || "—"}</td>
-                        <td className="px-3 py-2">
-                          <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${r.ticket_type === "vip" ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-600"}`}>
-                            {r.ticket_type === "vip" ? "VIP" : "Standard"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2">{r._valid ? <span className="text-emerald-600">✓</span> : <span className="text-red-500">{r._error}</span>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex gap-3 pt-1">
-                <button onClick={onClose} className="btn-secondary flex-1 justify-center">Odustani</button>
-                <button onClick={handleImport} disabled={isPending || validCount === 0} className="btn-primary flex-1 justify-center">
-                  {isPending ? <><Loader2 size={14} className="animate-spin" /> Uvoz...</> : `Uvezi ${validCount} ulaznica`}
-                </button>
-              </div>
-            </>
-          )}
-          {rows.length === 0 && !parseError && (
-            <div className="flex gap-3"><button onClick={onClose} className="btn-secondary flex-1 justify-center">Odustani</button></div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Delete button ─────────────────────────────────────────────────────────────
 
 export function DeleteTicketButton({ id }: { id: string }) {
@@ -305,6 +166,52 @@ export function DeleteTicketButton({ id }: { id: string }) {
   );
 
   return <button onClick={() => setConfirming(true)} className="text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={15} /></button>;
+}
+
+// ── Export XLSX button ────────────────────────────────────────────────────────
+
+export type ExportTicketRow = {
+  name: string;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  role: string | null;
+  ticket_type: "vip" | "standard" | null;
+  notes: string | null;
+  slug: string | null;
+  sponsorName: string | null;
+};
+
+export function ExportXlsxButton({ rows, filename }: { rows: ExportTicketRow[]; filename: string }) {
+  if (rows.length === 0) return null;
+
+  function handleExport() {
+    const data = rows.map((r) => ({
+      "Ime i prezime": r.name,
+      "Email": r.email ?? "",
+      "Telefon": r.phone ?? "",
+      "Tvrtka": r.company ?? "",
+      "Kategorija tvrtke": r.role ?? "",
+      "Tip ulaznice": r.ticket_type === "vip" ? "VIP" : "Standard",
+      "Komentar": r.notes ?? "",
+      "Partner": r.sponsorName ?? "Ručno",
+      "QR link": r.slug ? `${APP_URL}/${r.slug}` : "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws["!cols"] = [
+      { wch: 24 }, { wch: 28 }, { wch: 16 }, { wch: 22 }, { wch: 18 },
+      { wch: 12 }, { wch: 30 }, { wch: 22 }, { wch: 44 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ulaznice");
+    XLSX.writeFile(wb, filename);
+  }
+
+  return (
+    <button onClick={handleExport} className="btn-secondary" title="Preuzmi sve podatke o ulaznicama kao .xlsx">
+      <Download size={15} /> Preuzmi .xlsx
+    </button>
+  );
 }
 
 // ── Generate missing slugs button ─────────────────────────────────────────────
@@ -331,20 +238,14 @@ export function GenerateSlugsButton({ missingCount }: { missingCount: number }) 
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export default function UlazniceActions() {
-  const [modal, setModal] = useState<"add" | "bulk" | null>(null);
+  const [modal, setModal] = useState<"add" | null>(null);
 
   return (
     <>
-      <div className="flex gap-2">
-        <button onClick={() => setModal("bulk")} className="btn-secondary">
-          <Upload size={15} /> Bulk upload (.xlsx)
-        </button>
-        <button onClick={() => setModal("add")} className="btn-primary">
-          <Plus size={15} /> Dodaj ulaznicu
-        </button>
-      </div>
+      <button onClick={() => setModal("add")} className="btn-primary">
+        <Plus size={15} /> Dodaj ulaznicu
+      </button>
       {modal === "add" && <AddModal onClose={() => setModal(null)} />}
-      {modal === "bulk" && <BulkModal onClose={() => setModal(null)} />}
     </>
   );
 }

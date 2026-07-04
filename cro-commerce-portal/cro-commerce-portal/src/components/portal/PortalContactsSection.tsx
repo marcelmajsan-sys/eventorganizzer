@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket, User, QrCode, ExternalLink } from "lucide-react";
 import { updatePrimaryContact } from "@/app/actions/partnerManagement";
+import { createSponsorTicket, type TicketFormData } from "@/app/actions/ticketActions";
 import { nameToSlug } from "@/lib/slugUtils";
+
+const KATEGORIJE = ["Webshop", "Service Provider", "Speaker", "Ostalo"] as const;
+const EMPTY_TICKET: TicketFormData = { name: "", email: "", company: "", role: "", ticket_type: "standard", notes: "" };
 
 type ContactType = "contact" | "ticket";
 
@@ -148,6 +152,88 @@ function ContactRow({
         ) : (
           <button onClick={() => setConfirming(true)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
         )}
+      </div>
+    </div>
+  );
+}
+
+function AddTicketModal({ sponsorId, onClose }: { sponsorId: string; onClose: () => void }) {
+  const [form, setForm] = useState<TicketFormData>(EMPTY_TICKET);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  function set(key: keyof TicketFormData, value: string) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim()) { setError("Ime i prezime je obavezno."); return; }
+    setSaving(true); setError(null);
+    const res = await createSponsorTicket(sponsorId, form);
+    setSaving(false);
+    if (res.error) { setError(res.error); return; }
+    router.refresh();
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 px-4 bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg animate-enter">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">Dodaj ulaznicu</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ime i prezime *</label>
+              <input className="input-field" value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Marko Horvat" required autoFocus />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input className="input-field" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="marko@firma.hr" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tvrtka</label>
+              <input className="input-field" value={form.company} onChange={(e) => set("company", e.target.value)} placeholder="Firma d.o.o." />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Kategorija tvrtke</label>
+              <select className="input-field" value={form.role} onChange={(e) => set("role", e.target.value)}>
+                <option value="">— odaberi —</option>
+                {KATEGORIJE.map((k) => <option key={k} value={k}>{k}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tip ulaznice</label>
+              <div className="flex gap-2 mt-1">
+                {(["standard", "vip"] as const).map((t) => (
+                  <button key={t} type="button" onClick={() => set("ticket_type", t)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      form.ticket_type === t
+                        ? t === "vip" ? "bg-amber-100 border-amber-300 text-amber-800" : "bg-gray-100 border-gray-300 text-gray-700"
+                        : "border-gray-200 text-gray-400 hover:border-gray-300"
+                    }`}>
+                    {t === "vip" ? "VIP" : "Standard"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Komentar</label>
+              <textarea className="input-field resize-none" rows={2} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Napomena..." />
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Odustani</button>
+            <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center">
+              {saving ? <><Loader2 size={14} className="animate-spin" /> Sprema...</> : "Dodaj ulaznicu"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -334,6 +420,7 @@ export default function PortalContactsSection({
   contacts: Contact[];
 }) {
   const [contacts, setContacts] = useState(initial);
+  const [ticketModal, setTicketModal] = useState(false);
   useEffect(() => { setContacts(initial); }, [initial]);
 
   const mainContacts = contacts.filter((c) => c.type === "contact");
@@ -359,12 +446,19 @@ export default function PortalContactsSection({
       </div>
 
       <div className="border-t border-gray-100 pt-5">
-        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm"><Ticket size={15} className="text-gray-400" />Osobe za ulaznice</h3>
+        <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2 text-sm"><Ticket size={15} className="text-gray-400" />Osobe za ulaznice</h3>
+        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+          U svojim benefitima možete vidjeti koliko VIP ulaznica je uključeno u vaš paket. Možete dodavati i mijenjati osobe za ulaznice najkasnije do 10.10.2026. Ako dodate više osoba nego što imate u svom paketu benefita, poslat ćemo vam ponudu za dodatne ulaznice po želji uz 30% popusta.
+        </p>
         <div className="divide-y divide-gray-100">
           {ticketContacts.length === 0 && <p className="text-xs text-gray-400 px-3 py-2">Nema dodanih osoba za ulaznice</p>}
           {ticketContacts.map((c) => <ContactRow key={c.id} contact={c} onDelete={handleDelete} />)}
         </div>
-        <AddContactForm sponsorId={sponsorId} type="ticket" onAdded={handleAdded} />
+        <button onClick={() => setTicketModal(true)} className="flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-medium mt-1 px-3">
+          <Plus size={13} />
+          Dodaj osobu za ulaznice
+        </button>
+        {ticketModal && <AddTicketModal sponsorId={sponsorId} onClose={() => setTicketModal(false)} />}
       </div>
     </div>
   );
