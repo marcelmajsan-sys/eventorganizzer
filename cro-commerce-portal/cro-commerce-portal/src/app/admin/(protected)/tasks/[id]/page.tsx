@@ -108,7 +108,7 @@ export default async function TaskDetailPage({ params }: Props) {
               <Tag size={16} className="text-brand-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-0.5">Sponzor</p>
+              <p className="text-xs text-gray-400 mb-0.5">Partner</p>
               <Link
                 href={`/admin/sponsors/${task.sponsors.id}`}
                 className="font-medium text-brand-600 hover:text-brand-700 hover:underline transition-colors"

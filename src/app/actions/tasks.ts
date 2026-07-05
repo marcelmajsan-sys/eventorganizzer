@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/authGuards";
 
 export async function createTask(data: {
   title: string;
@@ -10,6 +11,9 @@ export async function createTask(data: {
   due_date: string;
   assigned_to: string;
 }) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error, data: null };
+
   const adminClient = await createAdminClient();
 
   const payload: Record<string, any> = {

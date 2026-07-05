@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Pencil, X, Loader2, Save, Trash2 } from "lucide-react";
+import { Pencil, X, Loader2, Save, Trash2, ChevronDown } from "lucide-react";
+import { getAdminEmails } from "@/app/actions/getAdminEmails";
 
 interface Task {
   id: string;
@@ -17,6 +18,7 @@ interface Task {
 export default function TaskDetailActions({ task }: { task: Task }) {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [form, setForm] = useState({
     title: task.title,
     description: task.description ?? "",
@@ -27,10 +29,16 @@ export default function TaskDetailActions({ task }: { task: Task }) {
   const router = useRouter();
   const supabase = createClient();
 
+  useEffect(() => {
+    if (editing && adminEmails.length === 0) {
+      getAdminEmails().then(setAdminEmails);
+    }
+  }, [editing]);
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await supabase.from("tasks").update({
+    const { error } = await supabase.from("tasks").update({
       title: form.title,
       description: form.description || null,
       status: form.status,
@@ -38,13 +46,21 @@ export default function TaskDetailActions({ task }: { task: Task }) {
       assigned_to: form.assigned_to || null,
     }).eq("id", task.id);
     setLoading(false);
+    if (error) {
+      alert(`Greška pri spremanju zadatka: ${error.message}`);
+      return;
+    }
     setEditing(false);
     router.refresh();
   }
 
   async function handleDelete() {
     if (!confirm(`Obriši zadatak "${task.title}"?`)) return;
-    await supabase.from("tasks").delete().eq("id", task.id);
+    const { error } = await supabase.from("tasks").delete().eq("id", task.id);
+    if (error) {
+      alert(`Greška pri brisanju zadatka: ${error.message}`);
+      return;
+    }
     router.push("/admin/tasks");
   }
 
@@ -94,8 +110,24 @@ export default function TaskDetailActions({ task }: { task: Task }) {
               <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="input-field" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Dodijeljeno</label>
-              <input type="text" value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value })} className="input-field" placeholder="Marcel, Dino..." />
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba</label>
+              {adminEmails.length > 0 ? (
+                <div className="relative">
+                  <select
+                    value={form.assigned_to}
+                    onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                    className="input-field appearance-none pr-8"
+                  >
+                    <option value="">— Nije dodijeljena —</option>
+                    {adminEmails.map((email) => (
+                      <option key={email} value={email}>{email}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+              ) : (
+                <input type="text" value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value })} className="input-field" placeholder="korisnik@ecommerce.hr" />
+              )}
             </div>
           </div>
           <div className="flex gap-3 pt-2">

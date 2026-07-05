@@ -40,6 +40,19 @@ const HR = {
   "contacts.phonePlaceholder": "+385 91 ...",
   "contacts.yes": "Da",
   "contacts.no": "Ne",
+  "contacts.name": "Ime i prezime",
+  "contacts.company": "Tvrtka",
+  "contacts.companyCategory": "Kategorija tvrtke",
+  "contacts.comment": "Komentar",
+  "contacts.commentPlaceholder": "Napomena...",
+  "contacts.selectOption": "— odaberi —",
+  "contacts.nameRequired": "Ime i prezime je obavezno.",
+  "contacts.saving": "Sprema...",
+  "contacts.addTicketTitle": "Dodaj ulaznicu",
+  "contacts.ticketLink": "Ulaznica",
+  "contacts.openTicket": "Otvori ulaznicu",
+  "contacts.noQrLink": "QR link još nije generiran",
+  "contacts.vipInfo": "U svojim benefitima možete vidjeti koliko VIP ulaznica je uključeno u vaš paket. Možete dodavati i mijenjati osobe za ulaznice najkasnije do 10.10.2026. Ako dodate više osoba nego što imate u svom paketu benefita, poslat ćemo vam ponudu za dodatne ulaznice po želji uz 30% popusta.",
 
   // Collaboration options
   "options.title": "Usporedba paketa sponzorstva",
@@ -129,6 +142,10 @@ const HR = {
   "partner.title": "Moj partner",
   "partner.subtitle": "Informacije o vašem partnerstvu",
 
+  // Video page
+  "video.title": "CRO COMMERCE 2025 - Feel The Vibes",
+  "video.watch": "Pogledaj snimke programa",
+
   // Help modal
   "help.btn": "Upute",
   "help.title": "Dobrodošli u Partner Portal",
@@ -187,6 +204,19 @@ const EN: typeof HR = {
   "contacts.phonePlaceholder": "+385 91 ...",
   "contacts.yes": "Yes",
   "contacts.no": "No",
+  "contacts.name": "Full Name",
+  "contacts.company": "Company",
+  "contacts.companyCategory": "Company category",
+  "contacts.comment": "Comment",
+  "contacts.commentPlaceholder": "Note...",
+  "contacts.selectOption": "— select —",
+  "contacts.nameRequired": "Full name is required.",
+  "contacts.saving": "Saving...",
+  "contacts.addTicketTitle": "Add ticket",
+  "contacts.ticketLink": "Ticket",
+  "contacts.openTicket": "Open ticket",
+  "contacts.noQrLink": "QR link not generated yet",
+  "contacts.vipInfo": "In your benefits you can see how many VIP tickets are included in your package. You can add and change ticket holders until 10 October 2026 at the latest. If you add more people than your benefits package includes, we will send you an offer for additional tickets at a 30% discount.",
 
   // Collaboration options
   "options.title": "Sponsorship Package Comparison",
@@ -275,6 +305,10 @@ const EN: typeof HR = {
   // Partner page
   "partner.title": "My Partnership",
   "partner.subtitle": "Information about your partnership",
+
+  // Video page
+  "video.title": "CRO COMMERCE 2025 - Feel The Vibes",
+  "video.watch": "Watch program recordings",
 
   // Help modal
   "help.btn": "Help",

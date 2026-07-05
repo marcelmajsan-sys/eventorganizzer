@@ -11,8 +11,14 @@ import {
 } from "lucide-react";
 import {
   packageColor, paymentStatusColor, paymentStatusLabel,
-  benefitStatusColor, benefitStatusLabel, leadStatusColor, leadStatusLabel, formatDate, daysUntil
+  benefitStatusColor, benefitStatusLabel, leadStatusColor, leadStatusLabel, formatDate, daysUntil, isBenefitOverdue
 } from "@/lib/utils";
+
+/** HR množina za "dan": 1 dan, 2-4 dana, 5+ dana (uz 11-14 iznimku). */
+function danLabel(n: number): string {
+  const abs = Math.abs(n);
+  return abs % 10 === 1 && abs % 100 !== 11 ? "dan" : "dana";
+}
 import type { PackageType, PaymentStatus, BenefitStatus, LeadStatus } from "@/types";
 import BenefitStatusSelect from "@/components/admin/BenefitStatusSelect";
 import FileUploadSection from "@/components/admin/FileUploadSection";
@@ -299,7 +305,7 @@ export default async function SponsorDetailPage({ params }: Props) {
             <div className="space-y-3">
               {benefits?.map((benefit) => {
                 const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
-                const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
+                const isOverdue = isBenefitOverdue(benefit.status, benefit.deadline);
                 const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
 
                 return (
@@ -328,12 +334,12 @@ export default async function SponsorDetailPage({ params }: Props) {
                             )}
                             {isOverdue && days !== null && (
                               <span className="text-xs text-red-600 font-medium">
-                                Kasni {Math.abs(days)} dana
+                                Kasni {Math.abs(days)} {danLabel(days)}
                               </span>
                             )}
                             {isUrgent && days !== null && (
                               <span className="text-xs text-orange-600 font-medium">
-                                Za {days} dana
+                                Za {days} {danLabel(days)}
                               </span>
                             )}
                           </div>

@@ -4,17 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Save, Trash2 } from "lucide-react";
+import { CONTACT_TYPE_LABELS } from "@/lib/utils";
 import { deleteContact } from "@/app/actions/contactActions";
 
-const CONTACT_TYPES = [
-  { value: "contact",          label: "Kontakt" },
-  { value: "ticket",           label: "Ulaznica" },
-  { value: "partner",          label: "Partner" },
-  { value: "visitor",          label: "Visitor" },
-  { value: "speaker",          label: "Speaker" },
-  { value: "service_provider", label: "Service Provider" },
-  { value: "brand_ambassador", label: "Brand Ambassador" },
-];
+const CONTACT_TYPES = Object.entries(CONTACT_TYPE_LABELS).map(([value, label]) => ({ value, label }));
 
 interface Contact {
   id: string;

@@ -24,7 +24,11 @@ export default function ProjectSettingsForm({ conferenceDate, projectLabel }: Pr
     setDateSaving(true);
     setError(null);
     try {
-      await updateConferenceDate(date);
+      const result = await updateConferenceDate(date);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
       flash("Datum konferencije je ažuriran.");
     } catch (e: any) {
       setError(e.message);

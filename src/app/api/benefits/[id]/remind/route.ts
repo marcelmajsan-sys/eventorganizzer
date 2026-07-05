@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/server";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { requireAdmin } from "@/lib/authGuards";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_missing_key");
 const FROM_EMAIL = "CRO Commerce <noreply@ecommerce.hr>";
 
 function applyVars(text: string, vars: Record<string, string>) {
@@ -18,10 +18,14 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { template_id, recipient_email, project_id } = await req.json();
-    const supabase = project_id === "2025" || project_id === "2026"
-      ? createAdminClientForProject(project_id)
-      : await createAdminClient();
+    const auth = await requireAdmin();
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: 401 });
+    }
+
+    const { template_id, recipient_email } = await req.json();
+    // project_id iz cookieja (auth.projectId) — ne vjerujemo bodyju
+    const supabase = createAdminClientForProject(auth.projectId);
 
     // Dohvati benefit + partnera
     const { data: benefit } = await supabase
@@ -93,15 +97,19 @@ export async function POST(
     const to = recipient_email || benefit.reminder_email || benefit.assigned_to;
     if (!to) return NextResponse.json({ error: "Nije definiran primatelj emaila." }, { status: 400 });
 
-    await resend.emails.send({ from: FROM_EMAIL, to, subject, html: bodyHtml });
+    const { error: sendError } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html: bodyHtml });
 
-    // Logiraj slanje
+    // Logiraj slanje — status "sent" samo ako je slanje stvarno uspjelo
     await supabase.from("email_logs").insert({
       benefit_id: params.id,
       recipient: to,
       subject,
-      status: "sent",
+      status: sendError ? "failed" : "sent",
     });
+
+    if (sendError) {
+      return NextResponse.json({ error: sendError.message }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {

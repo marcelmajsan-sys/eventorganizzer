@@ -3,12 +3,7 @@
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId, type ProjectId } from "@/lib/supabase/projects";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
-
-const FALLBACK_ADMIN_EMAILS = [
-  "marcel@ecommerce.hr",
-  "udruga@ecommerce.hr",
-  "laura@ecommerce.hr",
-];
+import { FALLBACK_ADMIN_EMAILS } from "@/lib/authGuards";
 
 export async function switchProject(projectId: ProjectId): Promise<"dashboard" | "login"> {
   const cookieStore = await cookies();
@@ -32,7 +27,7 @@ export async function switchProject(projectId: ProjectId): Promise<"dashboard" |
     .eq("email", user.email)
     .maybeSingle();
 
-  const hasAccess = adminRow !== null || FALLBACK_ADMIN_EMAILS.includes(user.email);
+  const hasAccess = adminRow !== null || FALLBACK_ADMIN_EMAILS.includes(user.email.toLowerCase());
   if (!hasAccess) return "login";
 
   // Token exchange: generate magic link in target project and set session server-side
@@ -43,6 +38,9 @@ export async function switchProject(projectId: ProjectId): Promise<"dashboard" |
     options: { redirectTo: `${appUrl}/auth/callback` },
   });
 
+  // Cookie se postavlja SAMO nakon uspješnog setSession — inače bi korisnik
+  // završio na projektu za koji nema važeću sesiju (redirect petlja na login).
+  let sessionSet = false;
   if (!linkError && linkData?.properties?.action_link) {
     try {
       const resp = await fetch(linkData.properties.action_link, { redirect: "manual" });
@@ -59,13 +57,19 @@ export async function switchProject(projectId: ProjectId): Promise<"dashboard" |
               setAll: (cs) => cs.forEach(({ name, value, options }) => cookieStore.set(name, value, options)),
             },
           });
-          await targetClient.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          const { error: sessionError } = await targetClient.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          sessionSet = !sessionError;
         }
       }
     } catch {
-      // Token exchange failed — proceed anyway (same-instance fallback)
+      // Token exchange failed — sessionSet ostaje false
     }
   }
+
+  if (!sessionSet) return "login";
 
   cookieStore.set(PROJECT_COOKIE, projectId, {
     path: "/",

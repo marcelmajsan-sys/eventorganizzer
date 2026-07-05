@@ -20,6 +20,15 @@ const empty = {
   name: "", subject: "", body: "", button_text: "", button_url: "", is_active: true,
 };
 
+/** HR množina: 1 predložak / 2-4 predloška / 5+ predložaka */
+function templateCountLabel(n: number) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} predložak`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} predloška`;
+  return `${n} predložaka`;
+}
+
 function EmailPreview({ subject, body, buttonText, buttonUrl }: {
   subject: string; body: string; buttonText: string; buttonUrl: string;
 }) {
@@ -100,7 +109,7 @@ function TemplateModal({ initial, onClose, onSaved }: ModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: "calc(100vh - 2rem)" }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col animate-enter" style={{ maxHeight: "calc(100vh - 2rem)" }}>
         {/* Header — fiksan */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 flex-shrink-0">
           <h2 className="font-display text-xl font-bold text-gray-900">
@@ -202,13 +211,21 @@ export default function EmailTemplatesView({ templates: initial }: { templates: 
 
   async function handleDelete(t: Template) {
     if (!confirm(`Obriši predložak "${t.name}"?`)) return;
-    await supabase.from("email_templates").delete().eq("id", t.id);
+    const { error } = await supabase.from("email_templates").delete().eq("id", t.id);
+    if (error) {
+      alert(`Greška pri brisanju predloška: ${error.message}`);
+      return;
+    }
     router.refresh();
     setTemplates(prev => prev.filter(x => x.id !== t.id));
   }
 
   async function handleToggle(t: Template) {
-    await supabase.from("email_templates").update({ is_active: !t.is_active }).eq("id", t.id);
+    const { error } = await supabase.from("email_templates").update({ is_active: !t.is_active }).eq("id", t.id);
+    if (error) {
+      alert(`Greška pri promjeni statusa predloška: ${error.message}`);
+      return;
+    }
     setTemplates(prev => prev.map(x => x.id === t.id ? { ...x, is_active: !x.is_active } : x));
   }
 
@@ -222,7 +239,7 @@ export default function EmailTemplatesView({ templates: initial }: { templates: 
       <div className="page-header flex items-start justify-between">
         <div>
           <h1 className="page-title">Email predlošci</h1>
-          <p className="page-subtitle">{templates.length} predložak{templates.length === 1 ? "" : templates.length < 5 ? "a" : "a"} ukupno</p>
+          <p className="page-subtitle">{templateCountLabel(templates.length)} ukupno</p>
         </div>
         <button onClick={() => setModal("new")} className="btn-primary">
           <Plus size={16} /> Novi predložak

@@ -42,9 +42,8 @@ function formatEur(n: number): string {
 
 // ---------------------------------------------------------------------------
 // Benefits per package
-// NOTE: all JS strings below use „ (low-9 open quote) and ” (right
-//       close quote) instead of literal typographic characters, to avoid any
-//       risk of the bundler mis-parsing the string delimiter.
+// NOTE: koristiti obične navodnike (\") u string literalima — tipografski
+//       navodnici mogu srušiti parser (vidi CLAUDE.md).
 // ---------------------------------------------------------------------------
 
 function getBenefits(packageType: string): string[] {
@@ -85,8 +84,7 @@ function getBenefits(packageType: string): string[] {
       ];
     case "Glavni":
       return [
-        // „ = „   ” = "   – = –
-        "Naziv „Powered by” na Konferenciji – ekskluzivno pozicioniranje brenda Partnera kao glavnog pokrovitelja CRO COMMERCE 2026.",
+        "Naziv \"Powered by\" na Konferenciji - ekskluzivno pozicioniranje brenda Partnera kao glavnog pokrovitelja CRO COMMERCE 2026.",
         "Isticanje logotipa ili naziva Partnera na svim promotivnim materijalima Konferencije. Promotivni materijali ukljucit ce: photowall, akreditacije (minimalna naklada 400 kom), web stranica konferencije u sekciji Glavni sponzor.",
         "Keynote izlaganje na glavnoj pozornici Konferencije.",
         "Video promocija na glavnoj pozornici konferencije.",

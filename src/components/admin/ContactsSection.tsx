@@ -66,6 +66,7 @@ function ContactRow({
     ticket_type: (contact.ticket_type ?? "standard") as TicketType,
   });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [invited, setInvited] = useState(false);
@@ -95,6 +96,7 @@ function ContactRow({
 
   async function handleSave() {
     setSaving(true);
+    setSaveError("");
     const updateData: Record<string, unknown> = {
       name: form.name,
       email: form.email || null,
@@ -102,20 +104,29 @@ function ContactRow({
       role: form.role || null,
     };
     if (isTicket) updateData.ticket_type = form.ticket_type;
-    const { error } = await supabase.from("sponsor_contacts").update(updateData).eq("id", contact.id);
+    let { error } = await supabase.from("sponsor_contacts").update(updateData).eq("id", contact.id);
     // Graceful degradation: retry without ticket_type if column doesn't exist yet
     if (error && isTicket && error.message.includes("ticket_type")) {
-      await supabase.from("sponsor_contacts").update({
+      ({ error } = await supabase.from("sponsor_contacts").update({
         name: form.name, email: form.email || null, phone: form.phone || null, role: form.role || null,
-      }).eq("id", contact.id);
+      }).eq("id", contact.id));
     }
     setSaving(false);
+    if (error) {
+      setSaveError(error.message);
+      return;
+    }
     setEditing(false);
     router.refresh();
   }
 
   async function handleDelete() {
-    await supabase.from("sponsor_contacts").delete().eq("id", contact.id);
+    const { error } = await supabase.from("sponsor_contacts").delete().eq("id", contact.id);
+    if (error) {
+      setConfirming(false);
+      alert(`Greška pri brisanju: ${error.message}`);
+      return;
+    }
     onDelete(contact.id);
     router.refresh();
   }
@@ -206,6 +217,7 @@ function ContactRow({
             Spremi
           </button>
         </div>
+        {saveError && <p className="text-xs text-red-600">{saveError}</p>}
       </div>
     );
   }

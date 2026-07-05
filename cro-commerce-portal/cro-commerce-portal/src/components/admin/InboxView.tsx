@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bell, Building2, SquareCheckBig, UserPlus, Ticket, LayoutList, MessageSquare, CalendarClock } from "lucide-react";
+import { Bell, Building2, SquareCheckBig, UserPlus, Ticket, LayoutList, LogIn, MessageSquare, CalendarClock } from "lucide-react";
 import { MarkAllReadButton, MarkReadButton, MarkUnreadButton, DeleteNotificationButton, DeleteAllNotificationsButton } from "@/components/admin/InboxActions";
 
-type NotifType = "task" | "contact" | "ticket" | "followup" | "comment";
+type NotifType = "task" | "contact" | "ticket" | "login" | "followup" | "comment";
 type Tab = NotifType | "comments" | "all";
 
 interface SponsorComment {
@@ -73,6 +73,14 @@ const TYPE_META: Record<NotifType, {
     border: "border-l-purple-500",
     badge: "bg-purple-100 text-purple-700",
   },
+  login: {
+    label: "Prijava partnera",
+    Icon: LogIn,
+    iconColor: "text-orange-600",
+    iconBg: "bg-orange-100",
+    border: "border-l-orange-500",
+    badge: "bg-orange-100 text-orange-700",
+  },
   followup: {
     label: "Follow up podsjetnik",
     Icon: CalendarClock,
@@ -96,6 +104,7 @@ const TABS: { id: Tab; label: string; Icon: any }[] = [
   { id: "contact",  label: "Novi kontakt",            Icon: UserPlus },
   { id: "ticket",   label: "Nova osoba za ulaznice",  Icon: Ticket },
   { id: "comment",  label: "Novi komentar",           Icon: MessageSquare },
+  { id: "login",    label: "Prijave partnera",        Icon: LogIn },
   { id: "followup", label: "Follow up podsjetnici",   Icon: CalendarClock },
   { id: "comments", label: "Svi komentari",           Icon: MessageSquare },
   { id: "all",      label: "Sve obavijesti",          Icon: LayoutList },

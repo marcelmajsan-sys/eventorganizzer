@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, Clock, AlertTriangle, XCircle, Calendar, User, FileText, File, Phone, Mail } from "lucide-react";
-import { benefitStatusColor, formatDate, daysUntil } from "@/lib/utils";
+import { benefitStatusColor, formatDate, daysUntil, isBenefitOverdue } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
 import { useLang } from "@/context/LanguageContext";
 
@@ -26,8 +26,6 @@ interface Benefit {
   status: string;
   notes: string | null;
   assigned_to: string | null;
-  assigned_to_name: string | null;
-  assigned_to_phone: string | null;
   description: string | null;
   contact_person: ContactPerson | null;
   files: BenefitFile[];
@@ -43,7 +41,7 @@ const statusIcon: Record<string, React.ReactNode> = {
 export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
   const { t } = useLang();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
-  const isOverdue = benefit.deadline && new Date(benefit.deadline) < new Date() && benefit.status !== "completed" && benefit.status !== "not_started";
+  const isOverdue = isBenefitOverdue(benefit.status, benefit.deadline);
 
   const statusKey = `status.${benefit.status}` as Parameters<typeof t>[0];
   const statusLabel = t(statusKey);
@@ -108,9 +106,6 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
                 <User size={11} className="flex-shrink-0" />
                 {t("benefits.yourContact")}
               </span>
-              {benefit.assigned_to_name && (
-                <span className="text-xs text-gray-700 font-medium">{benefit.assigned_to_name}</span>
-              )}
               <a
                 href={`mailto:${benefit.assigned_to}`}
                 className="flex items-center gap-1 text-xs text-brand-600 hover:underline"
@@ -118,15 +113,6 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
                 <Mail size={11} />
                 {benefit.assigned_to}
               </a>
-              {benefit.assigned_to_phone && (
-                <a
-                  href={`tel:${benefit.assigned_to_phone}`}
-                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
-                >
-                  <Phone size={11} />
-                  {benefit.assigned_to_phone}
-                </a>
-              )}
             </div>
           )}
 

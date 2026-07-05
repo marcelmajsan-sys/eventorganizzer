@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight, CalendarDays, Youtube, Languages } from "lucide-react";
 import PortalHelpModal from "@/components/portal/PortalHelpModal";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { packageColor } from "@/lib/utils";
 import { PROJECTS } from "@/lib/supabase/projects";
 import { switchPortalProject } from "@/app/actions/switchProject";
@@ -23,11 +22,9 @@ interface Props {
 
 export default function PortalSidebar({ sponsor, userEmail, activeProjectId, otherProjectId }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [switching, setSwitching] = useState(false);
-  const supabase = createClient();
   const { t, toggleLang, lang } = useLang();
 
   const activeLabel = PROJECTS[activeProjectId].label;
@@ -40,10 +37,10 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
     { href: "/portal/video",    label: "CRO Commerce 2025 (Video)", icon: Youtube },
   ];
 
-  async function handleSignOut() {
+  function handleSignOut() {
     setSigningOut(true);
-    await supabase.auth.signOut();
-    router.push("/");
+    // Route Handler odjavljuje iz OBA projekta i briše cookies
+    window.location.href = "/api/auth/signout?redirect=/";
   }
 
   async function handleSwitch() {

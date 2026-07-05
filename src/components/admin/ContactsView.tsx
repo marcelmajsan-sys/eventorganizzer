@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, X, ChevronRight, ChevronDown, Trash2, Loader2, FileSpreadsheet } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { CONTACT_TYPE_LABELS } from "@/lib/utils";
+import { deleteContact, deleteContactsBulk } from "@/app/actions/contactActions";
 import AddContactModal from "@/components/admin/AddContactModal";
 
 interface Contact {
@@ -17,16 +18,6 @@ interface Contact {
   company: string | null;
   type: string;
 }
-
-const TYPE_LABELS: Record<string, string> = {
-  contact:          "Kontakt",
-  ticket:           "Ulaznica",
-  partner:          "Partner",
-  visitor:          "Visitor",
-  speaker:          "Speaker",
-  service_provider: "Service Provider",
-  brand_ambassador: "Brand Ambassador",
-};
 
 const TYPE_STYLE: Record<string, string> = {
   contact:          "bg-blue-50 text-blue-700 border-blue-200",
@@ -57,8 +48,8 @@ async function exportToXlsx(rows: Contact[], sponsorMap: Record<string, string>)
     "Email":    c.email ?? "",
     "Telefon":  c.phone ?? "",
     "Funkcija": c.role ?? "",
-    "Sponzor":  c.sponsor_id ? (sponsorMap[c.sponsor_id] ?? "") : "",
-    "Tip":      TYPE_LABELS[c.type] ?? c.type,
+    "Partner":  c.sponsor_id ? (sponsorMap[c.sponsor_id] ?? "") : "",
+    "Tip":      CONTACT_TYPE_LABELS[c.type] ?? c.type,
   }));
 
   const ws = utils.json_to_sheet(data);
@@ -78,8 +69,8 @@ export default function ContactsView({ contacts, sponsors }: Props) {
   const [showAllSponsors, setShowAllSponsors] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const router = useRouter();
-  const supabase = createClient();
 
   const sponsorMap = Object.fromEntries(sponsors.map((s) => [s.id, s.name]));
 
@@ -129,7 +120,12 @@ export default function ContactsView({ contacts, sponsors }: Props) {
 
   async function handleDeleteOne(id: string, name: string) {
     if (!confirm(`Obriši kontakt "${name}"?`)) return;
-    await supabase.from("sponsor_contacts").delete().eq("id", id);
+    setDeleteError("");
+    const { error } = await deleteContact(id);
+    if (error) {
+      setDeleteError(error);
+      return;
+    }
     setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
     router.refresh();
   }
@@ -138,9 +134,14 @@ export default function ContactsView({ contacts, sponsors }: Props) {
     const count = selectedIds.size;
     if (!confirm(`Obriši ${count} odabranih kontakata?`)) return;
     setDeleting(true);
-    await supabase.from("sponsor_contacts").delete().in("id", Array.from(selectedIds));
-    setSelectedIds(new Set());
+    setDeleteError("");
+    const result = await deleteContactsBulk(Array.from(selectedIds));
     setDeleting(false);
+    if (result.error) {
+      setDeleteError(result.error);
+      return;
+    }
+    setSelectedIds(new Set());
     router.refresh();
   }
 
@@ -163,6 +164,15 @@ export default function ContactsView({ contacts, sponsors }: Props) {
           <AddContactModal sponsors={sponsors} />
         </div>
       </div>
+
+      {deleteError && (
+        <div className="flex items-start justify-between gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 mb-4 text-sm text-red-700">
+          <span>{deleteError}</span>
+          <button onClick={() => setDeleteError("")} className="flex-shrink-0 text-red-400 hover:text-red-600 mt-0.5">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Bulk delete bar */}
       {someSelected && (
@@ -187,7 +197,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Pretraži po imenu, emailu, funkciji ili sponzoru..."
+          placeholder="Pretraži po imenu, emailu, funkciji ili partneru..."
           className="input-field pl-9 pr-8"
         />
         {query && (
@@ -224,7 +234,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
                   : `${TYPE_STYLE[t] ?? "bg-gray-100 text-gray-600 border-gray-200"} hover:border-brand-300`
               }`}
             >
-              {TYPE_LABELS[t] ?? t} ({count})
+              {CONTACT_TYPE_LABELS[t] ?? t} ({count})
             </button>
           );
         })}
@@ -305,7 +315,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Telefon</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Funkcija</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Sponzor</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Partner</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Tip</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -364,7 +374,7 @@ export default function ContactsView({ contacts, sponsors }: Props) {
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <span className={`badge ${TYPE_STYLE[c.type] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
-                      {TYPE_LABELS[c.type] ?? c.type}
+                      {CONTACT_TYPE_LABELS[c.type] ?? c.type}
                     </span>
                   </td>
                   <td className="px-4 py-3 w-px whitespace-nowrap">

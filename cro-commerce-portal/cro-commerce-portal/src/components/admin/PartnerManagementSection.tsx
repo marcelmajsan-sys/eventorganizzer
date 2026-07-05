@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Handshake, Plus, Trash2, Loader2, Eye, EyeOff, X, Building2, KeyRound, Check } from "lucide-react";
 import { createPartnerUser, deletePartnerUser, changePartnerPassword } from "@/app/actions/partnerManagement";
 import type { PartnerUser } from "@/app/actions/partnerManagement";
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function PartnerManagementSection({ partners: initial, sponsors }: Props) {
+  const router = useRouter();
   const [partners, setPartners] = useState(initial);
   const [showAdd, setShowAdd] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,27 +40,25 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.sponsor_id) { setError("Odaberi sponzora."); return; }
+    if (!form.sponsor_id) { setError("Odaberi partnera."); return; }
     setLoading(true);
     setError(null);
     try {
       const result = await createPartnerUser(form.email, form.password, form.sponsor_id, form.name);
-      const sponsor = sponsors.find((s) => s.id === form.sponsor_id);
-      setPartners((prev) => [...prev, {
-        id: "new",
-        user_id: "",
-        sponsor_id: form.sponsor_id,
-        sponsor_name: sponsor?.name ?? "—",
-        email: form.email.toLowerCase(),
-        name: form.name || null,
-        projectId: "2026" as const,
-      }]);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      if (result.partner) {
+        setPartners((prev) => [...prev, result.partner!]);
+      }
       setForm({ name: "", email: "", password: "", sponsor_id: "" });
       setShowAdd(false);
       flash(result.emailSent
         ? "Partner kreiran, welcome email poslan."
         : "Partner kreiran (slanje emaila nije uspjelo)."
       );
+      router.refresh();
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -70,9 +70,14 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
     if (!confirm(`Obriši partnera ${partner.email}?`)) return;
     setDeletingId(partner.id);
     try {
-      await deletePartnerUser(partner.id, partner.user_id, partner.projectId);
+      const result = await deletePartnerUser(partner.id, partner.user_id, partner.projectId);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
       setPartners((prev) => prev.filter((p) => p.id !== partner.id));
       flash("Partner obrisan.");
+      router.refresh();
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -85,7 +90,11 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
     setPwdLoading(true);
     setError(null);
     try {
-      await changePartnerPassword(partner.user_id, newPwd, partner.projectId);
+      const result = await changePartnerPassword(partner.user_id, newPwd, partner.projectId);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
       setChangingPwdId(null);
       setNewPwd("");
       flash(`Lozinka za ${partner.email} uspješno promijenjena.`);
@@ -105,7 +114,7 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
             Partneri
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Korisnici s pristupom sponzorskom portalu. Vide samo podatke svog sponzora.
+            Korisnici s pristupom partnerskom portalu. Vide samo podatke svog partnera.
           </p>
         </div>
         <button
@@ -169,14 +178,14 @@ export default function PartnerManagementSection({ partners: initial, sponsors }
               </div>
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Sponzor *</label>
+              <label className="text-xs text-gray-500 mb-1 block">Partner *</label>
               <select
                 required
                 value={form.sponsor_id}
                 onChange={(e) => setForm({ ...form, sponsor_id: e.target.value })}
                 className="input-field text-sm py-1.5"
               >
-                <option value="">Odaberi sponzora...</option>
+                <option value="">Odaberi partnera...</option>
                 {sponsors.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}

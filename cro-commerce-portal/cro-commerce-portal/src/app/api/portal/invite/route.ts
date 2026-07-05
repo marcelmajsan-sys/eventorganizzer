@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { requireAdmin } from "@/lib/authGuards";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdmin();
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: 401 });
+    }
+
     const { email, sponsor_id, sponsor_name, project_id } = await req.json();
 
     if (!email || !sponsor_id) {

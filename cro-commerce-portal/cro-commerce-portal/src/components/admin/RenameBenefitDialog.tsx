@@ -12,11 +12,13 @@ interface Props {
 }
 
 export default function RenameBenefitDialog({ currentName, currentDeadline, onClose }: Props) {
+  // <input type="date"> očekuje "YYYY-MM-DD" — ISO timestamp treba odrezati
+  const initialDeadline = (currentDeadline ?? "").slice(0, 10);
   const [name, setName] = useState(currentName ?? "");
-  const [deadline, setDeadline] = useState(currentDeadline ?? "");
+  const [deadline, setDeadline] = useState(initialDeadline);
 
   useEffect(() => { if (currentName) setName(currentName); }, [currentName]);
-  useEffect(() => { setDeadline(currentDeadline ?? ""); }, [currentDeadline]);
+  useEffect(() => { setDeadline((currentDeadline ?? "").slice(0, 10)); }, [currentDeadline]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -27,7 +29,7 @@ export default function RenameBenefitDialog({ currentName, currentDeadline, onCl
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const nameChanged = name.trim() !== currentName;
-    const deadlineChanged = (deadline || null) !== (currentDeadline || null);
+    const deadlineChanged = (deadline || null) !== (initialDeadline || null);
     if (!nameChanged && !deadlineChanged) { onClose(); return; }
 
     setLoading(true);
@@ -65,7 +67,7 @@ export default function RenameBenefitDialog({ currentName, currentDeadline, onCl
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div>
             <h2 className="font-display text-lg font-bold text-gray-900">Uredi benefit</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Mijenja se za sve sponzore</p>
+            <p className="text-xs text-gray-400 mt-0.5">Mijenja se za sve partnere</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={20} />
@@ -92,7 +94,7 @@ export default function RenameBenefitDialog({ currentName, currentDeadline, onCl
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rok (za sve sponzore)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rok (za sve partnere)</label>
             <input
               type="date"
               value={deadline}

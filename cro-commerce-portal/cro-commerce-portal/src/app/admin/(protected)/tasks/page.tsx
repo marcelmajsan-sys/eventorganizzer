@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import KanbanBoard from "@/components/admin/KanbanBoard";
-import AddTaskModal from "@/components/admin/AddTaskModal";
+import TasksView from "@/components/admin/TasksView";
 
 export default async function TasksPage() {
   const supabase = await createClient();
@@ -12,15 +11,7 @@ export default async function TasksPage() {
 
   return (
     <div className="animate-enter">
-      <div className="page-header flex items-start justify-between">
-        <div>
-          <h1 className="page-title">Zadaci</h1>
-          <p className="page-subtitle">Kanban pregled svih zadataka</p>
-        </div>
-        <AddTaskModal />
-      </div>
-
-      <KanbanBoard initialTasks={tasks ?? []} />
+      <TasksView initialTasks={tasks ?? []} />
     </div>
   );
 }

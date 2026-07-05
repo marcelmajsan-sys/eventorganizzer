@@ -28,7 +28,7 @@ function LoginForm() {
     for (const projectId of ["2026", "2025"] as const) {
       const p = PROJECTS[projectId];
       if (successProject && PROJECTS[successProject].url === p.url) continue;
-      const client = createBrowserClient(p.url, p.anonKey);
+      const client = createBrowserClient(p.url, p.anonKey, { isSingleton: false });
       const { data, error: authError } = await client.auth.signInWithPassword({ email, password });
       if (authError) {
         loginErrors.push(`${projectId}: ${authError.message}`);
@@ -45,7 +45,8 @@ function LoginForm() {
       return;
     }
 
-    setError(`Neispravni podaci za prijavu. (${loginErrors.join(" | ")})`);
+    console.error("Prijava nije uspjela:", loginErrors);
+    setError("Neispravni podaci za prijavu.");
     setLoading(false);
   }
 

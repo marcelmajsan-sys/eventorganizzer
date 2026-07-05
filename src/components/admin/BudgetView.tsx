@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Pencil, Trash2, X, Check, Loader2, TrendingUp, Wallet, CircleDollarSign, ListChecks, Search } from "lucide-react";
+import { formatEur } from "@/lib/utils";
 
 type BudgetStatus = "pending" | "paid" | "cancelled" | "unconfirmed";
 
@@ -36,10 +37,6 @@ function statusStyle(status: BudgetStatus) {
 
 function statusLabel(status: BudgetStatus) {
   return STATUS_OPTIONS.find(s => s.value === status)?.label ?? status;
-}
-
-function formatEur(amount: number) {
-  return new Intl.NumberFormat("hr-HR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(amount);
 }
 
 const emptyForm = {
@@ -77,6 +74,8 @@ export default function BudgetView({ items: initial, projectId }: Props) {
     .filter(i => filter === "all" || i.status === filter)
     .filter(i => !q || i.category.toLowerCase().includes(q) || (i.vendor ?? "").toLowerCase().includes(q));
 
+  const filteredTotal = filtered.reduce((s, i) => s + i.amount, 0);
+
   const totalBudget  = items.filter(i => i.status !== "cancelled").reduce((s, i) => s + i.amount, 0);
   const totalPaid    = items.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
   const totalPending = items.filter(i => i.status === "pending").reduce((s, i) => s + i.amount, 0);
@@ -103,7 +102,7 @@ export default function BudgetView({ items: initial, projectId }: Props) {
   }
 
   async function handleSave() {
-    const amountNum = parseFloat(form.amount.replace(",", ".")) || 0;
+    const amountNum = parseFloat(form.amount) || 0;
     setSaving(true);
     setError("");
     const payload = {
@@ -134,9 +133,13 @@ export default function BudgetView({ items: initial, projectId }: Props) {
   }
 
   async function handleDelete(id: string) {
-    await supabase.from("budget_items").delete().eq("id", id);
-    setItems(prev => prev.filter(i => i.id !== id));
+    const { error: err } = await supabase.from("budget_items").delete().eq("id", id);
     setConfirmDel(null);
+    if (err) {
+      alert(`Greška pri brisanju troška: ${err.message}`);
+      return;
+    }
+    setItems(prev => prev.filter(i => i.id !== id));
   }
 
   const canSave = form.category.trim() && !saving;
@@ -282,11 +285,11 @@ export default function BudgetView({ items: initial, projectId }: Props) {
                 </tr>
               ))}
             </tbody>
-            {filter === "all" && filtered.length > 0 && (
+            {filtered.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 border-gray-200 bg-gray-50">
                   <td colSpan={2} className="px-5 py-3 text-sm font-semibold text-gray-700">Ukupno</td>
-                  <td className="px-3 py-3 text-sm font-bold text-gray-900 text-right tabular-nums">{formatEur(totalBudget)}</td>
+                  <td className="px-3 py-3 text-sm font-bold text-gray-900 text-right tabular-nums">{formatEur(filteredTotal)}</td>
                   <td colSpan={2} />
                 </tr>
               </tfoot>
@@ -327,7 +330,7 @@ export default function BudgetView({ items: initial, projectId }: Props) {
                   value={form.vendor}
                   onChange={e => setForm({ ...form, vendor: e.target.value })}
                   className="input-field text-sm"
-                  placeholder="Ime dobavljača (opcijalno)"
+                  placeholder="Ime dobavljača (opcionalno)"
                 />
               </div>
 
@@ -341,6 +344,7 @@ export default function BudgetView({ items: initial, projectId }: Props) {
                     placeholder="0"
                     type="number"
                     min="0"
+                    step="0.01"
                   />
                 </div>
                 <div>
@@ -363,7 +367,7 @@ export default function BudgetView({ items: initial, projectId }: Props) {
                   value={form.notes}
                   onChange={e => setForm({ ...form, notes: e.target.value })}
                   className="input-field text-sm"
-                  placeholder="Dodatne informacije (opcijalno)"
+                  placeholder="Dodatne informacije (opcionalno)"
                 />
               </div>
 

@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Pencil, Trash2, X, Check, Loader2, TrendingUp, Wallet, CircleDollarSign, ListChecks, Search } from "lucide-react";
+import { formatEur } from "@/lib/utils";
 
-type BudgetStatus = "pending" | "paid" | "cancelled";
+type BudgetStatus = "pending" | "paid" | "cancelled" | "unconfirmed";
 
 interface BudgetItem {
   id: string;
@@ -18,25 +19,24 @@ interface BudgetItem {
 }
 
 const STATUS_OPTIONS: { value: BudgetStatus; label: string }[] = [
-  { value: "pending",   label: "Na čekanju" },
-  { value: "paid",      label: "Plaćeno" },
-  { value: "cancelled", label: "Otkazano" },
+  { value: "unconfirmed", label: "Nepotvrđeno" },
+  { value: "pending",     label: "Na čekanju" },
+  { value: "paid",        label: "Plaćeno" },
+  { value: "cancelled",   label: "Otkazano" },
 ];
 
 function statusStyle(status: BudgetStatus) {
   switch (status) {
-    case "paid":      return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    case "pending":   return "bg-amber-50 text-amber-700 border-amber-200";
-    case "cancelled": return "bg-gray-100 text-gray-400 border-gray-200";
+    case "paid":         return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    case "pending":      return "bg-amber-50 text-amber-700 border-amber-200";
+    case "cancelled":    return "bg-gray-100 text-gray-400 border-gray-200";
+    case "unconfirmed":  return "bg-blue-50 text-blue-600 border-blue-200";
+    default:             return "bg-gray-100 text-gray-500 border-gray-200";
   }
 }
 
 function statusLabel(status: BudgetStatus) {
   return STATUS_OPTIONS.find(s => s.value === status)?.label ?? status;
-}
-
-function formatEur(amount: number) {
-  return new Intl.NumberFormat("hr-HR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(amount);
 }
 
 const emptyForm = {
@@ -74,6 +74,8 @@ export default function BudgetView({ items: initial, projectId }: Props) {
     .filter(i => filter === "all" || i.status === filter)
     .filter(i => !q || i.category.toLowerCase().includes(q) || (i.vendor ?? "").toLowerCase().includes(q));
 
+  const filteredTotal = filtered.reduce((s, i) => s + i.amount, 0);
+
   const totalBudget  = items.filter(i => i.status !== "cancelled").reduce((s, i) => s + i.amount, 0);
   const totalPaid    = items.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
   const totalPending = items.filter(i => i.status === "pending").reduce((s, i) => s + i.amount, 0);
@@ -100,7 +102,7 @@ export default function BudgetView({ items: initial, projectId }: Props) {
   }
 
   async function handleSave() {
-    const amountNum = parseFloat(form.amount.replace(",", ".")) || 0;
+    const amountNum = parseFloat(form.amount) || 0;
     setSaving(true);
     setError("");
     const payload = {
@@ -131,18 +133,23 @@ export default function BudgetView({ items: initial, projectId }: Props) {
   }
 
   async function handleDelete(id: string) {
-    await supabase.from("budget_items").delete().eq("id", id);
-    setItems(prev => prev.filter(i => i.id !== id));
+    const { error: err } = await supabase.from("budget_items").delete().eq("id", id);
     setConfirmDel(null);
+    if (err) {
+      alert(`Greška pri brisanju troška: ${err.message}`);
+      return;
+    }
+    setItems(prev => prev.filter(i => i.id !== id));
   }
 
   const canSave = form.category.trim() && !saving;
 
   const FILTER_TABS: { id: FilterTab; label: string }[] = [
-    { id: "all",       label: "Sve" },
-    { id: "pending",   label: "Na čekanju" },
-    { id: "paid",      label: "Plaćeno" },
-    { id: "cancelled", label: "Otkazano" },
+    { id: "all",          label: "Sve" },
+    { id: "unconfirmed",  label: "Nepotvrđeno" },
+    { id: "pending",      label: "Na čekanju" },
+    { id: "paid",         label: "Plaćeno" },
+    { id: "cancelled",    label: "Otkazano" },
   ];
 
   return (
@@ -278,11 +285,11 @@ export default function BudgetView({ items: initial, projectId }: Props) {
                 </tr>
               ))}
             </tbody>
-            {filter === "all" && filtered.length > 0 && (
+            {filtered.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 border-gray-200 bg-gray-50">
                   <td colSpan={2} className="px-5 py-3 text-sm font-semibold text-gray-700">Ukupno</td>
-                  <td className="px-3 py-3 text-sm font-bold text-gray-900 text-right tabular-nums">{formatEur(totalBudget)}</td>
+                  <td className="px-3 py-3 text-sm font-bold text-gray-900 text-right tabular-nums">{formatEur(filteredTotal)}</td>
                   <td colSpan={2} />
                 </tr>
               </tfoot>
@@ -323,7 +330,7 @@ export default function BudgetView({ items: initial, projectId }: Props) {
                   value={form.vendor}
                   onChange={e => setForm({ ...form, vendor: e.target.value })}
                   className="input-field text-sm"
-                  placeholder="Ime dobavljača (opcijalno)"
+                  placeholder="Ime dobavljača (opcionalno)"
                 />
               </div>
 
@@ -337,6 +344,7 @@ export default function BudgetView({ items: initial, projectId }: Props) {
                     placeholder="0"
                     type="number"
                     min="0"
+                    step="0.01"
                   />
                 </div>
                 <div>
@@ -359,7 +367,7 @@ export default function BudgetView({ items: initial, projectId }: Props) {
                   value={form.notes}
                   onChange={e => setForm({ ...form, notes: e.target.value })}
                   className="input-field text-sm"
-                  placeholder="Dodatne informacije (opcijalno)"
+                  placeholder="Dodatne informacije (opcionalno)"
                 />
               </div>
 

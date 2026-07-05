@@ -1,14 +1,14 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
-import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
+import { requireAdmin } from "@/lib/authGuards";
 
 export async function getAdminEmails(): Promise<string[]> {
   try {
-    const cookieStore = await cookies();
-    const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
-    const supabase = createAdminClientForProject(projectId);
+    const auth = await requireAdmin();
+    if (!auth.ok) return [];
+
+    const supabase = createAdminClientForProject(auth.projectId);
     const { data, error } = await supabase
       .from("project_admins")
       .select("email")

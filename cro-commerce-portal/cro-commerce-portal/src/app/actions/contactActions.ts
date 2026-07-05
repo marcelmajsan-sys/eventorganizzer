@@ -1,14 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
-import { resolveProjectId, PROJECT_COOKIE } from "@/lib/supabase/projects";
-
-async function getAdminClient() {
-  const cookieStore = await cookies();
-  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
-  return createAdminClientForProject(projectId);
-}
+import { requireAdmin } from "@/lib/authGuards";
 
 /**
  * Briše kontakt iz sponsor_contacts tablice koristeći admin klijent.
@@ -16,7 +9,10 @@ async function getAdminClient() {
  * Vraća { error: string | null }
  */
 export async function deleteContact(id: string): Promise<{ error: string | null }> {
-  const supabase = await getAdminClient();
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = createAdminClientForProject(auth.projectId);
 
   // 1. Poništi referencu kontakta na benefitima (contact_person_id → NULL)
   await supabase
@@ -45,22 +41,82 @@ export async function deleteContact(id: string): Promise<{ error: string | null 
 }
 
 /**
- * Briše sve duplikate kontakata (isti email), zadržavajući prioritetni zapis:
+ * Briše više kontakata odjednom — ista logika kao deleteContact po svakom id-u.
+ * Kontakte vezane uz portal korisnika (FK) preskače i prijavljuje u error poruci.
+ */
+export async function deleteContactsBulk(
+  ids: string[]
+): Promise<{ error?: string; deleted?: number }> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+  if (ids.length === 0) return { deleted: 0 };
+
+  const supabase = createAdminClientForProject(auth.projectId);
+
+  let deleted = 0;
+  let skippedFk = 0;
+  const otherErrors: string[] = [];
+
+  for (const id of ids) {
+    // Poništi referencu kontakta na benefitima (contact_person_id → NULL)
+    await supabase
+      .from("sponsor_benefits")
+      .update({ contact_person_id: null })
+      .eq("contact_person_id", id);
+
+    const { error } = await supabase
+      .from("sponsor_contacts")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      if (error.message?.includes("foreign key") || error.code === "23503") {
+        skippedFk++;
+      } else {
+        otherErrors.push(error.message);
+      }
+      continue;
+    }
+    deleted++;
+  }
+
+  const parts: string[] = [];
+  if (skippedFk > 0) {
+    parts.push(
+      `${skippedFk} kontakata je preskočeno jer su povezani s korisničkim računom sponzorskog portala.`
+    );
+  }
+  if (otherErrors.length > 0) {
+    parts.push(otherErrors.join("; "));
+  }
+
+  return parts.length > 0 ? { deleted, error: parts.join(" ") } : { deleted };
+}
+
+/**
+ * Briše sve duplikate kontakata (isti email + isti partner), zadržavajući prioritetni zapis:
  * partner > ticket > contact > ostali; dulje ime ima prednost unutar istog tipa.
+ * Kontakti sa slugom (žive QR stranice) se preskaču.
  * Vraća { deleted: number, error: string | null }
  */
 export async function deleteDuplicateContacts(): Promise<{ deleted: number; error: string | null }> {
-  const supabase = await getAdminClient();
+  const auth = await requireAdmin();
+  if (!auth.ok) return { deleted: 0, error: auth.error };
+
+  const supabase = createAdminClientForProject(auth.projectId);
 
   // Dohvati sve kontakte s emailom
   const { data: contacts, error: fetchError } = await supabase
     .from("sponsor_contacts")
-    .select("id, name, email, type, created_at")
+    .select("id, name, email, type, created_at, sponsor_id, slug")
     .not("email", "is", null)
     .neq("email", "");
 
   if (fetchError) return { deleted: 0, error: fetchError.message };
   if (!contacts || contacts.length === 0) return { deleted: 0, error: null };
+
+  // Preskoči kontakte sa slugom — imaju živu QR stranicu
+  const candidates = contacts.filter((c) => !c.slug);
 
   const TYPE_PRIORITY: Record<string, number> = {
     partner: 1,
@@ -68,17 +124,17 @@ export async function deleteDuplicateContacts(): Promise<{ deleted: number; erro
     contact: 3,
   };
 
-  // Grupiraj po emailu (case-insensitive)
-  const byEmail = new Map<string, typeof contacts>();
-  for (const c of contacts) {
-    const key = c.email!.toLowerCase().trim();
-    if (!byEmail.has(key)) byEmail.set(key, []);
-    byEmail.get(key)!.push(c);
+  // Grupiraj po emailu (case-insensitive) + sponzoru
+  const byKey = new Map<string, typeof candidates>();
+  for (const c of candidates) {
+    const key = `${c.email!.toLowerCase().trim()}|${c.sponsor_id ?? ""}`;
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key)!.push(c);
   }
 
   const toDelete: string[] = [];
 
-  byEmail.forEach((group) => {
+  byKey.forEach((group) => {
     if (group.length <= 1) return;
 
     // Sortiraj: najmanji prioritetni broj = zadrži; unutar istog tipa dulje ime = zadrži

@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { Settings } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/server";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { PROJECT_COOKIE, PROJECTS, resolveProjectId } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
@@ -14,7 +13,7 @@ export default async function SettingsPage() {
   const cookieStore = await cookies();
   const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
   const project = PROJECTS[projectId];
-  const supabase = await createAdminClient();
+  const supabase = createAdminClientForProject(projectId);
 
   const settingsRes = await supabase.from("project_settings").select("key, value");
 

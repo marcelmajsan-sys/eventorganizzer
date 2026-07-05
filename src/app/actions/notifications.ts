@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
+import { requireAdmin, SUPER_ADMIN_EMAIL } from "@/lib/authGuards";
 
 async function getProjectAdminClient() {
   const cookieStore = await cookies();
@@ -56,53 +57,6 @@ export async function recordPartnerLogin(
   }
 }
 
-export async function notifyAdminContactAdded(
-  sponsorId: string,
-  contactName: string,
-  contactType: "contact" | "ticket",
-  projectId: ProjectId = "2026"
-) {
-  const projectsToTry: ProjectId[] = projectId === "2026" ? ["2026", "2025"] : ["2025", "2026"];
-  const typeLabel = contactType === "contact" ? "kontakt osoba" : "osoba za ulaznice";
-
-  console.log(`notifyAdminContactAdded: start sponsorId=${sponsorId} type=${contactType} projectId=${projectId}`);
-
-  for (const pid of projectsToTry) {
-    try {
-      const adminClient = createAdminClientForProject(pid);
-
-      const { data: sponsor, error: sponsorErr } = await adminClient
-        .from("sponsors")
-        .select("name")
-        .eq("id", sponsorId)
-        .single();
-
-      if (sponsorErr || !sponsor) {
-        console.error(`notifyAdminContactAdded [${pid}]: sponsor not found`, sponsorErr?.message);
-        continue;
-      }
-
-      const { error: insertErr } = await adminClient.from("notifications").insert({
-        sponsor_id: sponsorId,
-        title: contactType === "contact" ? "Nova kontakt osoba" : "Nova osoba za ulaznice",
-        message: `${sponsor.name}: dodana ${typeLabel} — ${contactName}`,
-      });
-
-      if (insertErr) {
-        console.error(`notifyAdminContactAdded [${pid}]: insert failed`, insertErr.message);
-        continue;
-      }
-
-      console.log(`notifyAdminContactAdded [${pid}]: success`);
-      return;
-    } catch (e) {
-      console.error(`notifyAdminContactAdded [${pid}]: unexpected error`, e);
-    }
-  }
-
-  console.error(`notifyAdminContactAdded: all projects failed for sponsorId=${sponsorId}`);
-}
-
 async function getCurrentUserId(): Promise<string | null> {
   try {
     const supabase = await createClient();
@@ -113,56 +67,61 @@ async function getCurrentUserId(): Promise<string | null> {
   }
 }
 
-export async function markNotificationRead(id: string) {
+export async function markNotificationRead(id: string): Promise<{ error: string | null }> {
   const userId = await getCurrentUserId();
-  if (!userId) return;
+  if (!userId) return { error: "Niste prijavljeni." };
   const adminClient = await getProjectAdminClient();
   await adminClient
     .from("notification_reads")
     .upsert({ notification_id: id, user_id: userId }, { onConflict: "notification_id,user_id" });
+  return { error: null };
 }
 
-export async function markNotificationUnread(id: string) {
+export async function markNotificationUnread(id: string): Promise<{ error: string | null }> {
   const userId = await getCurrentUserId();
-  if (!userId) return;
+  if (!userId) return { error: "Niste prijavljeni." };
   const adminClient = await getProjectAdminClient();
   await adminClient
     .from("notification_reads")
     .delete()
     .eq("notification_id", id)
     .eq("user_id", userId);
+  return { error: null };
 }
 
-export async function deleteNotification(id: string) {
-  const adminClient = await getProjectAdminClient();
+export async function deleteNotification(id: string): Promise<{ error: string | null }> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
+  const adminClient = createAdminClientForProject(auth.projectId);
   await adminClient.from("notifications").delete().eq("id", id);
+  return { error: null };
 }
 
-export async function deleteAllNotifications() {
-  const adminClient = await getProjectAdminClient();
-  await adminClient.from("notifications").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-}
-
-export async function markAllNotificationsRead() {
-  const userId = await getCurrentUserId();
-  if (!userId) return;
-  const adminClient = await getProjectAdminClient();
-
-  // Dohvati sve notification ID-eve kojih još nema u reads za ovog usera
-  const { data: allNotifs } = await adminClient.from("notifications").select("id");
-  if (!allNotifs || allNotifs.length === 0) return;
-
-  const { data: existing } = await adminClient
-    .from("notification_reads")
-    .select("notification_id")
-    .eq("user_id", userId);
-
-  const existingSet = new Set((existing ?? []).map((r: any) => r.notification_id));
-  const toInsert = allNotifs
-    .filter((n: any) => !existingSet.has(n.id))
-    .map((n: any) => ({ notification_id: n.id, user_id: userId }));
-
-  if (toInsert.length > 0) {
-    await adminClient.from("notification_reads").insert(toInsert);
+export async function deleteAllNotifications(): Promise<{ error: string | null }> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+  if (auth.user.email !== SUPER_ADMIN_EMAIL) {
+    return { error: "Samo glavni administrator može obrisati sve obavijesti." };
   }
+
+  const adminClient = createAdminClientForProject(auth.projectId);
+  await adminClient.from("notifications").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  return { error: null };
+}
+
+export async function markAllNotificationsRead(): Promise<{ error: string | null }> {
+  const userId = await getCurrentUserId();
+  if (!userId) return { error: "Niste prijavljeni." };
+  const adminClient = await getProjectAdminClient();
+
+  const { data: allNotifs } = await adminClient.from("notifications").select("id");
+  if (!allNotifs || allNotifs.length === 0) return { error: null };
+
+  // Upsert umjesto read-then-insert — izbjegava race condition na duplikatima
+  const rows = allNotifs.map((n: any) => ({ notification_id: n.id, user_id: userId }));
+  await adminClient
+    .from("notification_reads")
+    .upsert(rows, { onConflict: "notification_id,user_id" });
+  return { error: null };
 }

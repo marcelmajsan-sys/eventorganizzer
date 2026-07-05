@@ -1,8 +1,9 @@
 "use client";
 
 import { CheckCircle2, Clock, AlertTriangle, XCircle, Calendar, User, FileText, File, Phone, Mail } from "lucide-react";
-import { benefitStatusLabel, benefitStatusColor, formatDate, daysUntil } from "@/lib/utils";
+import { benefitStatusColor, formatDate, daysUntil, isBenefitOverdue } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
+import { useLang } from "@/context/LanguageContext";
 
 interface ContactPerson {
   id: string;
@@ -38,8 +39,12 @@ const statusIcon: Record<string, React.ReactNode> = {
 };
 
 export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
+  const { t } = useLang();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
-  const isOverdue = benefit.deadline && new Date(benefit.deadline) < new Date() && benefit.status !== "completed";
+  const isOverdue = isBenefitOverdue(benefit.status, benefit.deadline);
+
+  const statusKey = `status.${benefit.status}` as Parameters<typeof t>[0];
+  const statusLabel = t(statusKey);
 
   return (
     <div className={`card p-4 ${isOverdue ? "border-red-200" : ""}`}>
@@ -49,7 +54,7 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
           <div className="flex items-start justify-between gap-2">
             <p className="font-medium text-gray-900 text-sm">{benefit.benefit_name}</p>
             <span className={`badge text-xs flex-shrink-0 ${benefitStatusColor(benefit.status as BenefitStatus)}`}>
-              {benefitStatusLabel(benefit.status as BenefitStatus)}
+              {statusLabel}
             </span>
           </div>
 
@@ -59,7 +64,7 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
                 <Calendar size={11} />
                 {formatDate(benefit.deadline)}
                 {days !== null && days > 0 && !isOverdue && ` · ${days}d`}
-                {isOverdue && " · Rok prošao"}
+                {isOverdue && ` · ${t("benefits.deadlinePassed")}`}
               </span>
             )}
           </div>
@@ -95,6 +100,22 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
             </div>
           )}
 
+          {benefit.assigned_to && (
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 items-center">
+              <span className="flex items-center gap-1 text-xs text-gray-400">
+                <User size={11} className="flex-shrink-0" />
+                {t("benefits.yourContact")}
+              </span>
+              <a
+                href={`mailto:${benefit.assigned_to}`}
+                className="flex items-center gap-1 text-xs text-brand-600 hover:underline"
+              >
+                <Mail size={11} />
+                {benefit.assigned_to}
+              </a>
+            </div>
+          )}
+
           {benefit.files.length > 0 && (
             <div className="mt-2 space-y-1">
               {benefit.files.map((f) => (
@@ -118,7 +139,10 @@ export default function PortalBenefitCard({ benefit }: { benefit: Benefit }) {
           {benefit.notes && (
             <p className="flex items-start gap-1 text-xs text-gray-400 mt-2">
               <FileText size={11} className="mt-0.5 flex-shrink-0" />
-              {benefit.notes}
+              <span>
+                <span className="font-medium text-gray-500">{t("benefits.note")}: </span>
+                {benefit.notes}
+              </span>
             </p>
           )}
         </div>

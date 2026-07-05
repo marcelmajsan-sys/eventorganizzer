@@ -43,12 +43,13 @@ npm run dev   # → http://localhost:3000
 | `/admin/calendar` | Rokovnik (zadaci po rokovima) |
 | `/admin/inbox` | Inbox obavijesti |
 | `/admin/settings` | Datum, korisnici, partneri |
-| `/login` | Admin login |
-| `/partner` | Partner login |
+| `/admin` | Admin login (`/login` je samo redirect u middlewareu — stranica ne postoji) |
+| `/` | Partner login (`/partner` je samo redirect u middlewareu — stranica ne postoji) |
 | `/portal/*` | Sponzorski portal |
 | `/[slug]` | Javna stranica ulaznice (QR link, server component, `sponsor_contacts.slug`) |
 
 **Ključne server actions** (`src/app/actions/`):
+- **AUTORIZACIJA (obavezno)**: server actioni su javno pozivljivi POST endpointi, a admin klijenti bypassiraju RLS. Svaki admin action MORA početi s `requireAdmin()` iz `@/lib/authGuards` (vraća `{ok:false, error}` za ne-admine), portal actioni s `requireSponsor(sponsorId)` (provjera `sponsor_users`), a mješoviti s `requireAdminOrSponsor(sponsorId)`. `FALLBACK_ADMIN_EMAILS` i `SUPER_ADMIN_EMAIL` žive SAMO u `authGuards.ts` — ne duplicirati. Iznimka bez guarda: `findPartnerProject` (treba ga login stranica).
 - `switchProject.ts` — token exchange za admin i partner projekt switch; `NEXT_PUBLIC_APP_URL` fallback je `https://partners.ecommerce.hr`
 - `userManagement.ts` — CRUD admin korisnika u svim bazama
 - `partnerManagement.ts` — CRUD partner korisnika + `updatePrimaryContact`; `createPartnerUser` šalje welcome email i logira u `email_logs`
@@ -60,7 +61,10 @@ npm run dev   # → http://localhost:3000
 - `ticketActions.ts` — `createTicket(data)` (admin, `sponsor_id: null`), `createSponsorTicket(sponsorId, data)` (partner portal, veže uz sponzora), `bulkCreateTickets` (postoji, ali bulk upload UI je uklonjen), `deleteTicket`, `generateMissingSlugs`; svi generiraju jedinstveni QR slug via `makeUniqueSlug`
 
 **Ključne API rute** (`src/app/api/`):
-- `api/auth/signout` — GET `/api/auth/signout?redirect=...`: odjavljuje iz **oba projekta** (2025 i 2026) i redirecta; Route Handler može pisati cookies za razliku od Server Component layouta — koristiti ovdje umjesto `supabase.auth.signOut()` u layoutima
+- `api/auth/signout` — GET `/api/auth/signout?redirect=...`: odjavljuje iz **oba projekta** (2025 i 2026) i redirecta; Route Handler može pisati cookies za razliku od Server Component layouta — koristiti ovdje umjesto `supabase.auth.signOut()` u layoutima **i sidebarima** (AdminSidebar/PortalSidebar zovu ovu rutu). `redirect` prima samo relativne putanje (open redirect zaštita)
+- `api/benefits/[id]/notify` i `api/benefits/[id]/remind` — **requireAdmin**; notify čita podatke benefita iz baze po `params.id` (ne iz bodyja) i escapa HTML; remind uzima projekt iz cookieja; Resend `{error}` se provjerava prije upisa `sent` u `email_logs`
+- `api/portal/invite` — **requireAdmin** (zove se samo iz admin UI-ja)
+- `api/cron/reminders` — obrađuje **OBA** projekta; `CRON_SECRET` obavezan (500 ako fali); overdue admin alert šalje se samo za benefite koji su TEK SADA prešli u overdue (UPDATE ... .neq("status","overdue").select())
 
 **Ključne portal komponente** (`src/components/portal/`):
 - `PortalSidebar.tsx` — nav + projekt switcher + jezik toggle + `<PortalHelpModal />`
@@ -100,8 +104,9 @@ npm run dev   # → http://localhost:3000
 
 **Status benefita**: `'not_started' | 'in_progress' | 'completed' | 'overdue'`
 
-**Status plaćanja**: `'paid' | 'pending' | 'overdue' | 'partial'`
+**Status plaćanja**: `'paid' | 'pending' | 'overdue' | 'partial' | 'compensation'`
 - `partial` = Djelomično plaćeno; `partial_amount` kolona sadrži plaćeni iznos
+- `compensation` = Kompenzacija (nije naplativa — ne ulazi u dashboard "Neplaćeno")
 
 **Status troškova**: `'pending' | 'paid' | 'cancelled' | 'unconfirmed'`
 
@@ -142,7 +147,7 @@ Cookie `cro_active_project` (`'2026'` | `'2025'`). Token exchange flow:
 ### Notifikacije — koristiti Postgres triggere
 `createServerClient` s service role keyem ne bypassira RLS pouzdano za INSERT u `notifications`.
 Jedino sigurno rješenje: Postgres trigger s `SECURITY DEFINER`.
-Iznimka: `recordPartnerLogin` koristi `createAdminClientForProject` direktno.
+Iznimke koje insertaju direktno preko `createAdminClientForProject` (pouzdano bypassira RLS): `recordPartnerLogin`, `addSponsorComment` (notifikacija uz komentar), `api/cron/comment-reminders`.
 
 ### Security lintovi (Supabase) — `migration_038`
 `migration_038_security_lints.sql` rješava Supabase database linter upozorenja (pokrenuti u **obje** baze):
@@ -153,9 +158,11 @@ Iznimka: `recordPartnerLogin` koristi `createAdminClientForProject` direktno.
 - **Leaked Password Protection** se NE rješava SQL-om — uključiti u Dashboardu (Authentication → Policies) u oba projekta.
 
 ### Partner login flow
-`partner/page.tsx` ne poziva `recordPartnerLogin` — prijava ide direktno na `/portal/benefits`.
+Partner login je na `/` (`src/app/page.tsx`); `/partner` i `/login` su SAMO middleware redirecti — te su stranice obrisane (bile su mrtvi duplikati). Admin login je `src/app/admin/page.tsx`.
+Login ne poziva `recordPartnerLogin` — prijava ide direktno na `/portal/benefits`.
 Stranica ima HR/EN language toggle (lokalno, bez i18n konteksta); error poruke prate odabrani jezik (`errorKey` state).
 `recordPartnerLogin` i dalje postoji u `notifications.ts` i može se pozvati iz drugog mjesta ako zatreba.
+**`createBrowserClient` na login stranicama MORA dobiti `{ isSingleton: false }`** kao treći argument — inače drugi poziv s URL-om drugog projekta vrati cached klijent prvog i login u 2025 tiho ne radi.
 
 ---
 
@@ -219,7 +226,11 @@ git add . && git commit -m "Opis" && git push origin main
 - **EditBenefitDialog/Modal** — primarni kontakt: fetchuje sve kontakte sponzora (bez type filtera) + primarni; matching ime (case-insensitive) → fallback email; ★ oznaka + pre-select
 - **Inbox brisanje** vidljivo samo za `marcel@ecommerce.hr`; `deleteAllNotifications` koristi `.neq("id", "00000000-...")` jer Supabase zahtijeva WHERE uvjet za DELETE
 - **CSS animacije** u `globals.css`: `animate-enter` (slideUp 0.35s), `animate-fade-in` (fadeIn 0.2s), `animate-slide-up` (slideUp 0.25s) — koristiti za modalne prozore i page transitions
-- **Ulaznica (`/[slug]`)**: mobile-responzivan layout (`flex-col sm:flex-row`), lokacija: Mozaik Event Centar, Slavonska Avenija 6/2, Zagreb; QR sekcija na mobilnom je horizontalni red (QR lijevo, vlasnik desno)
+- **Ulaznica (`/[slug]`)**: mobile-responzivan layout (`flex-col sm:flex-row`), lokacija: Mozaik Event Centar, Slavonska Avenija 6/2, Zagreb; QR sekcija na mobilnom je horizontalni red (QR lijevo, vlasnik desno). **NE prikazuje email** (PII na javnoj stranici); nepostojeći slug → `notFound()`; nema fallback pogađanja po imenu
+- **Dijeljeni util helperi u `lib/utils.ts`** (koristiti umjesto lokalnih kopija): `CONTACT_TYPE_LABELS`/`contactTypeLabel` (HR labeli svih 7 tipova kontakata), `PAYMENT_STATUS_OPTIONS` (opcije za selecte), `sortPackageNames` (standardni sort paketa), `formatEur` (hr-HR EUR), `isBenefitOverdue(status, deadline)` (JEDINA definicija "kasni": rok striktno prije danas + nije completed, uključuje not_started), `escapeHtml` (za email HTML)
+- **Jezik portala** se pamti u `localStorage("cro_lang")` + cookie `cro_lang` (čita se u useEffect nakon mounta — bez hydration mismatcha)
+- **Brisanje datoteka**: prije `storage.remove` provjeriti postoje li drugi `files` redovi s istim `storage_url` ili path počinje sa `shared/` — tada obrisati SAMO DB red (dijeljeni dokumenti pattern)
+- **Brisanje kontakata u admin UI** ide ISKLJUČIVO preko server actiona `deleteContact`/`deleteContactsBulk` (nullificiraju FK na benefitima), nikad direktnim `supabase.delete()` iz browsera
 - **`AddSponsorModal`** više **NE** auto-kreira benefite po paketu pri dodavanju sponzora — inserta samo `sponsors` red; benefiti se dodaju zasebno (`AddBenefitModal` / grupni edit)
 - **`/admin/ulaznice`** (`UlazniceActions.tsx`): `ExportXlsxButton` radi client-side XLSX export (`xlsx` paket, `json_to_sheet` + `writeFile`); export kolone (Ime i prezime, Email, Telefon, Tvrtka, Kategorija tvrtke, Tip ulaznice, Komentar, Partner, QR link) — bulk upload UI i `BulkModal` su **uklonjeni**; sekcije se dijele po `sponsor_contacts.source` (`'portal'` = partner unio kroz portal, `'admin'` = ručno u adminu, neovisno o `sponsor_id`); svi insert pointi postavljaju `source` (`ticketActions.ts`, `AddContactModal`, `ContactsSection` → `'admin'`; `createSponsorTicket`, `PortalContactsSection` → `'portal'`) uz graceful retry bez kolone dok migration_039 nije pokrenut (tada fallback podjela po `sponsor_id`)
 - **Dijeljeni dokumenti za više partnera**: jedan storage objekt (npr. `sponsor-files/shared/...`) + po jedan `files` red po sponzoru (`benefit_id: null`, isti `storage_url`) — tako su dimenzije standa podijeljene svim partnerima po paketu (veliki stand → Srebrni/Zlatni/Glavni; regular stand → Brončani); brisanje `files` reda ne briše storage objekt

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/authGuards";
 
 export async function createTask(data: {
   title: string;
@@ -10,6 +11,9 @@ export async function createTask(data: {
   due_date: string;
   assigned_to: string;
 }) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error, data: null };
+
   const adminClient = await createAdminClient();
 
   const payload: Record<string, any> = {
@@ -23,13 +27,13 @@ export async function createTask(data: {
   const { data: task, error } = await adminClient
     .from("tasks")
     .insert(payload)
-    .select("id")
+    .select("*, sponsors(name, package_type)")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: error.message, data: null };
 
   // Notifikacija se kreira automatski via Postgres trigger (migration_021)
 
   revalidatePath("/admin/tasks");
-  return { error: null };
+  return { error: null, data: task };
 }

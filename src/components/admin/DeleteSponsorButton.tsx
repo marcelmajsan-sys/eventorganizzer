@@ -54,7 +54,7 @@ export default function DeleteSponsorButton({ sponsorId, sponsorName }: Props) {
 
             <div className="px-6 py-5">
               <p className="text-sm text-gray-700">
-                Jesi li siguran da želiš obrisati sponzora <span className="font-semibold">{sponsorName}</span>?
+                Jesi li siguran da želiš obrisati partnera <span className="font-semibold">{sponsorName}</span>?
               </p>
               <p className="text-xs text-gray-400 mt-2">
                 Ova akcija je nepovratna. Briše se i sve povezano (benefiti, kontakti, datoteke).

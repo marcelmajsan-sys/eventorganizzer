@@ -51,9 +51,39 @@ export default function BenefitFileUpload({ benefitId, sponsorId, initialFiles }
   }, [benefitId, sponsorId, supabase]);
 
   async function handleDelete(fileId: string, storageUrl: string) {
+    setError("");
     const path = storageUrl.split("/sponsor-files/")[1];
-    if (path) await supabase.storage.from("sponsor-files").remove([path]);
-    await supabase.from("files").delete().eq("id", fileId);
+
+    // Dijeljeni dokumenti: isti storage objekt može imati više `files` redova
+    // (drugi partneri) ili živjeti u shared/ — tada se briše SAMO files red.
+    let removeStorage = path != null && !path.startsWith("shared/");
+    if (removeStorage) {
+      const { data: otherRows, error: checkErr } = await supabase
+        .from("files")
+        .select("id")
+        .eq("storage_url", storageUrl)
+        .neq("id", fileId)
+        .limit(1);
+      if (checkErr) {
+        setError(`Greška pri provjeri dijeljenih datoteka: ${checkErr.message}`);
+        return;
+      }
+      if ((otherRows ?? []).length > 0) removeStorage = false;
+    }
+
+    const { error: dbErr } = await supabase.from("files").delete().eq("id", fileId);
+    if (dbErr) {
+      setError(`Greška pri brisanju: ${dbErr.message}`);
+      return;
+    }
+
+    if (removeStorage && path) {
+      const { error: storErr } = await supabase.storage.from("sponsor-files").remove([path]);
+      if (storErr) {
+        setError(`Datoteka obrisana, ali storage objekt nije uklonjen: ${storErr.message}`);
+      }
+    }
+
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
   }
 
@@ -90,11 +120,11 @@ export default function BenefitFileUpload({ benefitId, sponsorId, initialFiles }
           >
             {f.filename}
           </a>
-          {f.file_size && (
+          {f.file_size ? (
             <span className="text-gray-400 flex-shrink-0">
               {Math.round(f.file_size / 1024)}KB
             </span>
-          )}
+          ) : null}
           <button
             onClick={() => handleDelete(f.id, f.storage_url)}
             className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"

@@ -15,7 +15,17 @@ interface Automation {
   custom_subject: string | null;
   is_active: boolean;
   created_at: string;
-  email_templates?: { name: string } | null;
+  // Supabase join: TS tip zna biti array, runtime objekt — normalizira se pri prikazu
+  email_templates?: { name: string } | { name: string }[] | null;
+}
+
+/** HR množina: 1 aktivna automatizacija / 2-4 aktivne automatizacije / 5+ aktivnih automatizacija */
+function activeAutomationsLabel(n: number) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} aktivna automatizacija`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} aktivne automatizacije`;
+  return `${n} aktivnih automatizacija`;
 }
 
 const PRESETS = [
@@ -145,13 +155,21 @@ export default function AutomatizacijaView({ automations: initial, templates }: 
   const supabase = createClient();
 
   async function handleToggle(a: Automation) {
-    await supabase.from("email_automations").update({ is_active: !a.is_active }).eq("id", a.id);
+    const { error } = await supabase.from("email_automations").update({ is_active: !a.is_active }).eq("id", a.id);
+    if (error) {
+      alert(`Greška pri promjeni statusa automatizacije: ${error.message}`);
+      return;
+    }
     setAutomations(prev => prev.map(x => x.id === a.id ? { ...x, is_active: !x.is_active } : x));
   }
 
   async function handleDelete(a: Automation) {
     if (!confirm(`Obriši automatizaciju "${a.name}"?`)) return;
-    await supabase.from("email_automations").delete().eq("id", a.id);
+    const { error } = await supabase.from("email_automations").delete().eq("id", a.id);
+    if (error) {
+      alert(`Greška pri brisanju automatizacije: ${error.message}`);
+      return;
+    }
     setAutomations(prev => prev.filter(x => x.id !== a.id));
   }
 
@@ -167,7 +185,7 @@ export default function AutomatizacijaView({ automations: initial, templates }: 
       <div className="page-header flex items-start justify-between">
         <div>
           <h1 className="page-title">Automatizacija</h1>
-          <p className="page-subtitle">{activeCount} aktivna automatizacija</p>
+          <p className="page-subtitle">{activeAutomationsLabel(activeCount)}</p>
         </div>
         <button onClick={() => setModal("new")} className="btn-primary">
           <Plus size={16} /> Nova automatizacija
@@ -181,7 +199,9 @@ export default function AutomatizacijaView({ automations: initial, templates }: 
         </div>
       ) : (
         <div className="space-y-3">
-          {automations.map(a => (
+          {automations.map(a => {
+            const template = Array.isArray(a.email_templates) ? (a.email_templates[0] ?? null) : (a.email_templates ?? null);
+            return (
             <div key={a.id} className="card p-5 flex items-center justify-between gap-4">
               <div className="flex items-start gap-4 flex-1 min-w-0">
                 <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${a.is_active ? "bg-brand-50" : "bg-gray-100"}`}>
@@ -196,7 +216,7 @@ export default function AutomatizacijaView({ automations: initial, templates }: 
                   </div>
                   <p className="text-sm text-gray-500">
                     Okidač: rok benefita · <span className="font-medium">{a.days_before} dana prije</span>
-                    {a.email_templates?.name && <> · Predložak: <span className="font-medium">{a.email_templates.name}</span></>}
+                    {template?.name && <> · Predložak: <span className="font-medium">{template.name}</span></>}
                   </p>
                 </div>
               </div>
@@ -212,7 +232,8 @@ export default function AutomatizacijaView({ automations: initial, templates }: 
                 <button onClick={() => handleDelete(a)} className="btn-secondary p-2 text-red-500 hover:bg-red-50 hover:border-red-200"><Trash2 size={14} /></button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

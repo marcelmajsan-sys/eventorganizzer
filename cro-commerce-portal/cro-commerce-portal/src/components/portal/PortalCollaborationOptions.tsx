@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Check, X, Mail } from "lucide-react";
 import { useLang } from "@/context/LanguageContext";
 import type { TRANSLATIONS } from "@/lib/i18n/portal";
@@ -161,8 +162,8 @@ export default function PortalCollaborationOptions({ currentPackage }: Props = {
 
               <tbody>
                 {CATEGORIES.map((cat) => (
-                  <>
-                    <tr key={`cat-${cat.labelKey}`} className="bg-gray-50">
+                  <Fragment key={cat.labelKey}>
+                    <tr className="bg-gray-50">
                       <td colSpan={5} className="py-2 px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-t border-gray-100">
                         {t(cat.labelKey)}
                       </td>
@@ -186,7 +187,7 @@ export default function PortalCollaborationOptions({ currentPackage }: Props = {
                         })}
                       </tr>
                     ))}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

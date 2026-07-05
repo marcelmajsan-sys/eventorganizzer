@@ -5,10 +5,9 @@ import { cookies } from "next/headers";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
+import { requireAdmin, FALLBACK_ADMIN_EMAILS } from "@/lib/authGuards";
 
 const ALL_PROJECTS: ProjectId[] = ["2026", "2025"];
-
-const FALLBACK_ADMIN_EMAILS = ["marcel@ecommerce.hr", "udruga@ecommerce.hr", "laura@ecommerce.hr"];
 
 type ActionResult = { error: string | null };
 
@@ -18,6 +17,9 @@ export async function createUserInAllProjects(
   password: string,
   phone?: string
 ): Promise<ActionResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
   const normalizedEmail = email.toLowerCase().trim();
   const normalizedName = name.trim();
   const normalizedPhone = phone?.trim() ?? "";
@@ -66,6 +68,9 @@ export async function updateUserInAllProjects(
   phone?: string,
   password?: string
 ): Promise<ActionResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
   const updates: Record<string, any> = {
     email: email.toLowerCase().trim(),
     user_metadata: { name: name.trim(), phone: phone?.trim() ?? "" },
@@ -87,12 +92,15 @@ export async function updateUserInAllProjects(
 }
 
 export async function deleteUserFromAllProjects(email: string): Promise<ActionResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
   const normalizedEmail = email.toLowerCase();
   const errors: string[] = [];
 
   for (const projectId of ALL_PROJECTS) {
     const adminClient = createAdminClientForProject(projectId);
-    const { data, error: listError } = await adminClient.auth.admin.listUsers();
+    const { data, error: listError } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
     if (listError) {
       errors.push(`${projectId} (list): ${listError.message}`);
       continue;
@@ -114,6 +122,9 @@ export async function deleteUserFromAllProjects(email: string): Promise<ActionRe
 }
 
 export async function listUsersWithMeta(): Promise<{ email: string; name: string | null; phone: string | null; id2026: string | null; id2025: string | null }[]> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return [];
+
   const cookieStore = await cookies();
   const activeProject = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
 

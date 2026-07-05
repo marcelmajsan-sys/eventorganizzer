@@ -4,15 +4,18 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Save, MessageSquare, Send, Trash2, Check } from "lucide-react";
+import { sortPackageNames, PAYMENT_STATUS_OPTIONS } from "@/lib/utils";
 import type { Sponsor, PackageType, LeadStatus } from "@/types";
 import { getSponsorComments, addSponsorComment, updateSponsorComment, deleteSponsorComment, createCommentReminder, updateCommentReminder, type SponsorComment } from "@/app/actions/sponsorComments";
 
 const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
 export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sponsor; packageTypes?: string[] }) {
-  const PACKAGES = packageTypes ?? FALLBACK_PACKAGES;
+  // "Nedefinirano" je uvijek dostupna opcija
+  const PACKAGES = sortPackageNames(["Nedefinirano", ...(packageTypes ?? FALLBACK_PACKAGES)]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
@@ -54,6 +57,7 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setSaveError("");
     const { iznos: _iznos, partial_amount: _partial, ...rest } = form;
     const basePayload = {
       ...rest,
@@ -77,10 +81,12 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
     }
 
     setLoading(false);
-    if (!error) {
-      setOpen(false);
-      router.refresh();
+    if (error) {
+      setSaveError(error.message ?? "Greška pri spremanju.");
+      return;
     }
+    setOpen(false);
+    router.refresh();
   }
 
   async function handleAddComment() {
@@ -165,11 +171,9 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Plaćanje</label>
               <select value={form.payment_status} onChange={(e) => setForm({ ...form, payment_status: e.target.value as any })} className="input-field">
-                <option value="pending">Na čekanju</option>
-                <option value="partial">Djelomično plaćeno</option>
-                <option value="paid">Plaćeno</option>
-                <option value="overdue">Kasni</option>
-                <option value="compensation">Kompenzacija</option>
+                {PAYMENT_STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -392,6 +396,12 @@ export default function EditSponsorForm({ sponsor, packageTypes }: { sponsor: Sp
             </div>
             <p className="text-xs text-gray-400 mt-1">Ctrl+Enter za slanje</p>
           </div>
+
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+              {saveError}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setOpen(false)} className="btn-secondary flex-1 justify-center">Odustani</button>

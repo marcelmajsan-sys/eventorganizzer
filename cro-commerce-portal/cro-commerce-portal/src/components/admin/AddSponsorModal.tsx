@@ -4,22 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
+import { sortPackageNames } from "@/lib/utils";
 import type { PackageType } from "@/types";
 
 const FALLBACK_PACKAGES: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
-const STANDARD_ORDER = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
-
-function sortedPackages(pkgs: string[]): string[] {
-  const undef = pkgs.includes("Nedefinirano") ? ["Nedefinirano"] : ["Nedefinirano"];
-  const standard = STANDARD_ORDER.filter((p) => pkgs.includes(p));
-  const custom = pkgs
-    .filter((p) => !STANDARD_ORDER.includes(p) && p !== "Nedefinirano")
-    .sort();
-  return [...undef, ...standard, ...custom];
-}
 
 export default function AddSponsorModal({ packageTypes }: { packageTypes?: string[] }) {
-  const PACKAGES = sortedPackages(packageTypes ?? FALLBACK_PACKAGES);
+  // "Nedefinirano" je uvijek prisutno kao default opcija
+  const PACKAGES = sortPackageNames(["Nedefinirano", ...(packageTypes ?? FALLBACK_PACKAGES)]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -132,10 +124,10 @@ export default function AddSponsorModal({ packageTypes }: { packageTypes?: strin
                 className="input-field"
               >
                 <option value="">— Nije odabrano —</option>
-                <option value="cold_lead">Cold lead</option>
-                <option value="hot_lead">Hot lead</option>
-                <option value="confirmed_new">Potvrđeno novi</option>
-                <option value="confirmed_returning">Potvrđeno stari</option>
+                <option value="cold_lead">Cold Lead</option>
+                <option value="hot_lead">Hot Lead</option>
+                <option value="confirmed_new">Potvrđeno Novi</option>
+                <option value="confirmed_returning">Potvrđeno Stari</option>
               </select>
             </div>
             <div>

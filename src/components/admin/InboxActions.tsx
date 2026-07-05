@@ -5,6 +5,8 @@ import { useState } from "react";
 import { Loader2, CheckCheck, Check, RotateCcw, Trash2 } from "lucide-react";
 import { markNotificationRead, markNotificationUnread, markAllNotificationsRead, deleteNotification, deleteAllNotifications } from "@/app/actions/notifications";
 
+type ActionResult = { error?: string | null } | undefined | void;
+
 export function MarkAllReadButton({ disabled }: { disabled?: boolean }) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -81,8 +83,12 @@ export function DeleteNotificationButton({ id }: { id: string }) {
 
   async function handle() {
     setLoading(true);
-    await deleteNotification(id);
+    const res = (await deleteNotification(id)) as ActionResult;
     setLoading(false);
+    if (res && res.error) {
+      alert(`Greška pri brisanju obavijesti: ${res.error}`);
+      return;
+    }
     router.refresh();
   }
 
@@ -124,9 +130,13 @@ export function DeleteAllNotificationsButton({ total }: { total: number }) {
 
   async function handle() {
     setLoading(true);
-    await deleteAllNotifications();
+    const res = (await deleteAllNotifications()) as ActionResult;
     setLoading(false);
     setConfirm(false);
+    if (res && res.error) {
+      alert(`Greška pri brisanju obavijesti: ${res.error}`);
+      return;
+    }
     router.refresh();
   }
 

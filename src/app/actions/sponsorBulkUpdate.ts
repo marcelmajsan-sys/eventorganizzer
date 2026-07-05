@@ -1,7 +1,8 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/authGuards";
 
 export async function bulkUpdateSponsors(
   ids: string[],
@@ -11,6 +12,9 @@ export async function bulkUpdateSponsors(
     lead_status?: string | null;
   }
 ) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
   if (ids.length === 0) return { error: "Nema odabranih sponzora" };
 
   const update: Record<string, string | null> = {};
@@ -20,7 +24,7 @@ export async function bulkUpdateSponsors(
 
   if (Object.keys(update).length === 0) return { error: "Nema polja za ažuriranje" };
 
-  const supabase = await createClient();
+  const supabase = createAdminClientForProject(auth.projectId);
   const { error } = await supabase.from("sponsors").update(update).in("id", ids);
 
   if (error) return { error: error.message };

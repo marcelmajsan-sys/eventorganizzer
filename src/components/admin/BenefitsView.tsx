@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  packageColor, benefitStatusLabel, benefitStatusColor, formatDate, daysUntil
+  packageColor, benefitStatusLabel, benefitStatusColor, formatDate, daysUntil, isBenefitOverdue
 } from "@/lib/utils";
 import type { PackageType, BenefitStatus } from "@/types";
 import EditBenefitDialog from "@/components/admin/EditBenefitDialog";
@@ -48,6 +48,13 @@ const PACKAGE_HEADER_COLORS: Record<string, string> = {
   Community: "text-emerald-800 bg-emerald-100 border-emerald-200",
 };
 
+/** HR množina za "partner": 1 partner, 2+ partnera (uz 11-14 iznimku). */
+function partnerCountLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  return `${n} ${mod10 === 1 && mod100 !== 11 ? "partner" : "partnera"}`;
+}
+
 const statusIcon: Record<string, React.ReactNode> = {
   completed: <CheckCircle2 size={14} className="text-emerald-500" />,
   in_progress: <Clock size={14} className="text-blue-500" />,
@@ -62,15 +69,19 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
   const router = useRouter();
   const supabase = createClient();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
-  const isOverdue = days !== null && days < 0 && benefit.status !== "completed" && benefit.status !== "not_started";
+  const isOverdue = isBenefitOverdue(benefit.status, benefit.deadline);
   const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
 
   async function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
     setDeleting(true);
-    await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
+    const { error } = await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
     setDeleting(false);
     setConfirming(false);
+    if (error) {
+      alert(`Greška pri brisanju: ${error.message}`);
+      return;
+    }
     router.refresh();
   }
 
@@ -99,16 +110,22 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <Link
-              href={`/admin/sponsors/${benefit.sponsors?.id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="font-medium text-gray-900 hover:text-brand-600"
-            >
-              {benefit.sponsors?.name}
-            </Link>
-            <span className={`badge text-xs flex-shrink-0 ${packageColor(benefit.sponsors?.package_type as PackageType)}`}>
-              {benefit.sponsors?.package_type}
-            </span>
+            {benefit.sponsors ? (
+              <>
+                <Link
+                  href={`/admin/sponsors/${benefit.sponsors.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-medium text-gray-900 hover:text-brand-600"
+                >
+                  {benefit.sponsors.name}
+                </Link>
+                <span className={`badge text-xs flex-shrink-0 ${packageColor(benefit.sponsors.package_type as PackageType)}`}>
+                  {benefit.sponsors.package_type}
+                </span>
+              </>
+            ) : (
+              <span className="font-medium text-gray-400">Bez partnera</span>
+            )}
           </div>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className="text-gray-400 text-xs">
@@ -217,30 +234,37 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
     .sort()
     .at(-1);
 
-  const overdueCount = rows.filter(
-    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
-  ).length;
+  const overdueCount = rows.filter((r) => isBenefitOverdue(r.status, r.deadline)).length;
+  const partnerCount = rows.filter((r) => r.sponsors).length;
 
   const assignedIds = new Set(rows.map((r) => r.sponsors?.id).filter(Boolean));
   const availableSponsors = sponsors.filter((s) => !assignedIds.has(s.id));
 
   async function handleDelete() {
     setDeleting(true);
-    await supabase.from("sponsor_benefits").delete().eq("benefit_name", name);
+    const { error } = await supabase.from("sponsor_benefits").delete().eq("benefit_name", name);
     setDeleting(false);
     setConfirming(false);
+    if (error) {
+      alert(`Greška pri brisanju: ${error.message}`);
+      return;
+    }
     router.refresh();
   }
 
   async function handleAddSponsor() {
     if (!selectedSponsorId) return;
     setAddingLoading(true);
-    await supabase.from("sponsor_benefits").insert({
+    const { error } = await supabase.from("sponsor_benefits").insert({
       benefit_name: name,
       sponsor_id: selectedSponsorId,
       status: "not_started",
     });
     setAddingLoading(false);
+    if (error) {
+      alert(`Greška pri dodavanju: ${error.message}`);
+      return;
+    }
     setAddingSponsor(false);
     setSelectedSponsorId("");
     router.refresh();
@@ -302,7 +326,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
               <AlertTriangle size={12} /> {overdueCount} kasni
             </span>
           )}
-          <span className="text-xs text-gray-500">{rows.length} partnera</span>
+          <span className="text-xs text-gray-500">{partnerCountLabel(partnerCount)}</span>
           <span className="text-xs text-gray-400">{doneCount}/{rows.length} završeno</span>
           {lastReminded && (
             <span className="text-xs text-gray-400">
@@ -383,9 +407,7 @@ function PackageCategorySection({ pkg, rows, byBenefit, names, doneCount, border
   headerCls: string;
 }) {
   const [open, setOpen] = useState(false);
-  const overdueCount = rows.filter(
-    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
-  ).length;
+  const overdueCount = rows.filter((r) => isBenefitOverdue(r.status, r.deadline)).length;
 
   return (
     <div className={`rounded-xl border-2 overflow-hidden ${borderCls}`}>
@@ -433,15 +455,17 @@ function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[]
   const catDeadlineCounts: Record<string, number> = {};
   rows.forEach((r) => { if (r.deadline) catDeadlineCounts[r.deadline] = (catDeadlineCounts[r.deadline] ?? 0) + 1; });
   const catCommonDeadline = Object.keys(catDeadlineCounts).sort((a, b) => catDeadlineCounts[b] - catDeadlineCounts[a])[0] ?? null;
-  const overdueCount = rows.filter(
-    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
-  ).length;
+  const overdueCount = rows.filter((r) => isBenefitOverdue(r.status, r.deadline)).length;
 
   async function handleDelete() {
     setDeleting(true);
-    await supabase.from("sponsor_benefits").delete().eq("benefit_name", name);
+    const { error } = await supabase.from("sponsor_benefits").delete().eq("benefit_name", name);
     setDeleting(false);
     setConfirming(false);
+    if (error) {
+      alert(`Greška pri brisanju: ${error.message}`);
+      return;
+    }
     router.refresh();
   }
 
@@ -525,15 +549,19 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
   const router = useRouter();
   const supabase = createClient();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
-  const isOverdue = days !== null && days < 0 && benefit.status !== "completed" && benefit.status !== "not_started";
+  const isOverdue = isBenefitOverdue(benefit.status, benefit.deadline);
   const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
 
   async function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
     setDeleting(true);
-    await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
+    const { error } = await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
     setDeleting(false);
     setConfirming(false);
+    if (error) {
+      alert(`Greška pri brisanju: ${error.message}`);
+      return;
+    }
     router.refresh();
   }
 
@@ -646,9 +674,7 @@ function SponsorGroup({ sponsorId, sponsorName, packageType, rows }: {
 }) {
   const [open, setOpen] = useState(false);
   const doneCount = rows.filter((r) => r.status === "completed").length;
-  const overdueCount = rows.filter(
-    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
-  ).length;
+  const overdueCount = rows.filter((r) => isBenefitOverdue(r.status, r.deadline)).length;
 
   return (
     <div className="card overflow-hidden">
@@ -845,9 +871,7 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
                 });
                 const partnerList = Object.values(partnerMap).sort((a, b) => a.name.localeCompare(b.name));
                 const partnerCount = partnerList.length;
-                const pkgOverdue = pkgRows.filter(
-                  (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed" && r.status !== "not_started")
-                ).length;
+                const pkgOverdue = pkgRows.filter((r) => isBenefitOverdue(r.status, r.deadline)).length;
                 const isActive = pkg === current;
                 return (
                   <button

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { PROJECTS, PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
+import { PROJECTS } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
 
 // GET /api/auth/signout?redirect=/login%3Ferror%3Dno_access
@@ -9,8 +9,12 @@ import type { ProjectId } from "@/lib/supabase/projects";
 // pa signOut() ovdje stvarno briše session cookie i sprječava redirect petlje.
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
-  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
-  const redirectTo = request.nextUrl.searchParams.get("redirect") ?? "/";
+  // Dozvoli samo relativne putanje — sprječava open redirect na vanjske domene
+  // ("//example.com" bi browser tretirao kao protocol-relative URL).
+  let redirectTo = request.nextUrl.searchParams.get("redirect") ?? "/";
+  if (!redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
+    redirectTo = "/";
+  }
 
   // Odjavi iz oba projekta kako bi se cookies sigurno obrisali
   for (const pid of ["2026", "2025"] as ProjectId[]) {

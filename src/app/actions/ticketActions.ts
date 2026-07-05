@@ -1,16 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
-import { resolveProjectId, PROJECT_COOKIE } from "@/lib/supabase/projects";
 import { uniqueSlug } from "@/lib/slugUtils";
-
-async function getClient() {
-  const cookieStore = await cookies();
-  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
-  return createAdminClientForProject(projectId);
-}
+import { requireAdmin, requireSponsor } from "@/lib/authGuards";
 
 export type TicketFormData = {
   name: string;
@@ -21,7 +14,7 @@ export type TicketFormData = {
   notes: string;
 };
 
-async function makeUniqueSlug(supabase: Awaited<ReturnType<typeof getClient>>, name: string) {
+async function makeUniqueSlug(supabase: ReturnType<typeof createAdminClientForProject>, name: string) {
   return uniqueSlug(name, async (s) => {
     const { data } = await supabase
       .from("sponsor_contacts")
@@ -33,7 +26,10 @@ async function makeUniqueSlug(supabase: Awaited<ReturnType<typeof getClient>>, n
 }
 
 export async function createTicket(data: TicketFormData): Promise<{ error: string | null }> {
-  const supabase = await getClient();
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = createAdminClientForProject(auth.projectId);
   const slug = await makeUniqueSlug(supabase, data.name.trim());
 
   const record = {
@@ -61,8 +57,11 @@ export async function createTicket(data: TicketFormData): Promise<{ error: strin
 export async function bulkCreateTickets(
   rows: TicketFormData[]
 ): Promise<{ inserted: number; error: string | null }> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { inserted: 0, error: auth.error };
+
   if (rows.length === 0) return { inserted: 0, error: null };
-  const supabase = await getClient();
+  const supabase = createAdminClientForProject(auth.projectId);
 
   const records = [];
   for (const r of rows) {
@@ -94,7 +93,10 @@ export async function bulkCreateTickets(
 }
 
 export async function generateMissingSlugs(): Promise<{ updated: number; error: string | null }> {
-  const supabase = await getClient();
+  const auth = await requireAdmin();
+  if (!auth.ok) return { updated: 0, error: auth.error };
+
+  const supabase = createAdminClientForProject(auth.projectId);
 
   const { data: contacts, error } = await supabase
     .from("sponsor_contacts")
@@ -123,7 +125,10 @@ export async function createSponsorTicket(
   sponsorId: string,
   data: TicketFormData
 ): Promise<{ error: string | null }> {
-  const supabase = await getClient();
+  const auth = await requireSponsor(sponsorId);
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = createAdminClientForProject(auth.projectId);
   const slug = await makeUniqueSlug(supabase, data.name.trim());
 
   const record = {
@@ -149,7 +154,10 @@ export async function createSponsorTicket(
 }
 
 export async function deleteTicket(id: string): Promise<{ error: string | null }> {
-  const supabase = await getClient();
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = createAdminClientForProject(auth.projectId);
   const { error } = await supabase.from("sponsor_contacts").delete().eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/admin/ulaznice");

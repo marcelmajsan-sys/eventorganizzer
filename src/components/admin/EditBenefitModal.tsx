@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Send, CheckCircle } from "lucide-react";
+import { benefitStatusLabel } from "@/lib/utils";
 import type { SponsorBenefit, BenefitStatus } from "@/types";
+
+const BENEFIT_STATUSES: BenefitStatus[] = ["not_started", "in_progress", "completed", "overdue"];
 import BenefitFileUpload from "@/components/admin/BenefitFileUpload";
 import { getAdminEmails } from "@/app/actions/getAdminEmails";
 
@@ -47,7 +50,7 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
     deadline: benefit.deadline?.slice(0, 10) ?? "",
     status: benefit.status,
     notes: benefit.notes ?? "",
-    assigned_to: benefit.assigned_to || "laura@ecommerce.hr",
+    assigned_to: benefit.assigned_to || "",
     reminder_email: benefit.reminder_email ?? "",
     reminder_template_id: "",
     description: benefit.description ?? "",
@@ -65,7 +68,7 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
       const primaryName = (sponsorData?.contact_name ?? "").toLowerCase().trim();
       const primaryEmail = (sponsorData?.contact_email ?? "").toLowerCase().trim();
       const primaryContact = allContacts.find(c =>
-        (primaryName && c.name.toLowerCase().trim() === primaryName) ||
+        (primaryName && (c.name ?? "").toLowerCase().trim() === primaryName) ||
         (primaryEmail && c.email && c.email.toLowerCase().trim() === primaryEmail)
       ) ?? null;
       const sorted = primaryContact
@@ -207,10 +210,9 @@ export default function EditBenefitModal({ benefit, templates = [] }: Props) {
               <select value={form.status}
                 onChange={e => setForm({ ...form, status: e.target.value as BenefitStatus })}
                 className="input-field">
-                <option value="not_started">Nije počelo</option>
-                <option value="in_progress">U tijeku</option>
-                <option value="completed">Završeno</option>
-                <option value="overdue">Kasni</option>
+                {BENEFIT_STATUSES.map((s) => (
+                  <option key={s} value={s}>{benefitStatusLabel(s)}</option>
+                ))}
               </select>
             </div>
           </div>

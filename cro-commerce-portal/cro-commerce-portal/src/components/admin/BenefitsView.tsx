@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  packageColor, benefitStatusLabel, benefitStatusColor, formatDate, daysUntil
+  packageColor, benefitStatusLabel, benefitStatusColor, formatDate, daysUntil, isBenefitOverdue
 } from "@/lib/utils";
 import type { PackageType, BenefitStatus } from "@/types";
 import EditBenefitDialog from "@/components/admin/EditBenefitDialog";
@@ -28,21 +28,32 @@ type BenefitRow = {
   sponsors: { id: string; name: string; package_type: string } | null;
 };
 
-const PACKAGE_ORDER: PackageType[] = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
+const PACKAGE_ORDER: string[] = ["Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
 
 const PACKAGE_COLORS: Record<string, string> = {
-  Glavni: "border-purple-300 bg-purple-50",
-  Zlatni: "border-yellow-300 bg-yellow-50",
-  Srebrni: "border-slate-300 bg-slate-50",
-  "Brončani": "border-orange-300 bg-orange-50",
+  Glavni:    "border-purple-300 bg-purple-50",
+  Zlatni:    "border-yellow-300 bg-yellow-50",
+  Srebrni:   "border-slate-300 bg-slate-50",
+  Brončani:  "border-orange-300 bg-orange-50",
+  Medijski:  "border-sky-300 bg-sky-50",
+  Community: "border-emerald-300 bg-emerald-50",
 };
 
 const PACKAGE_HEADER_COLORS: Record<string, string> = {
-  Glavni: "text-purple-800 bg-purple-100 border-purple-200",
-  Zlatni: "text-yellow-800 bg-yellow-100 border-yellow-200",
-  Srebrni: "text-slate-700 bg-slate-100 border-slate-200",
-  "Brončani": "text-orange-800 bg-orange-100 border-orange-200",
+  Glavni:    "text-purple-800 bg-purple-100 border-purple-200",
+  Zlatni:    "text-yellow-800 bg-yellow-100 border-yellow-200",
+  Srebrni:   "text-slate-700 bg-slate-100 border-slate-200",
+  Brončani:  "text-orange-800 bg-orange-100 border-orange-200",
+  Medijski:  "text-sky-800 bg-sky-100 border-sky-200",
+  Community: "text-emerald-800 bg-emerald-100 border-emerald-200",
 };
+
+/** HR množina za "partner": 1 partner, 2+ partnera (uz 11-14 iznimku). */
+function partnerCountLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  return `${n} ${mod10 === 1 && mod100 !== 11 ? "partner" : "partnera"}`;
+}
 
 const statusIcon: Record<string, React.ReactNode> = {
   completed: <CheckCircle2 size={14} className="text-emerald-500" />,
@@ -58,15 +69,19 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
   const router = useRouter();
   const supabase = createClient();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
-  const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
+  const isOverdue = isBenefitOverdue(benefit.status, benefit.deadline);
   const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
 
   async function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
     setDeleting(true);
-    await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
+    const { error } = await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
     setDeleting(false);
     setConfirming(false);
+    if (error) {
+      alert(`Greška pri brisanju: ${error.message}`);
+      return;
+    }
     router.refresh();
   }
 
@@ -95,16 +110,22 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <Link
-              href={`/admin/sponsors/${benefit.sponsors?.id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="font-medium text-gray-900 hover:text-brand-600"
-            >
-              {benefit.sponsors?.name}
-            </Link>
-            <span className={`badge text-xs flex-shrink-0 ${packageColor(benefit.sponsors?.package_type as PackageType)}`}>
-              {benefit.sponsors?.package_type}
-            </span>
+            {benefit.sponsors ? (
+              <>
+                <Link
+                  href={`/admin/sponsors/${benefit.sponsors.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-medium text-gray-900 hover:text-brand-600"
+                >
+                  {benefit.sponsors.name}
+                </Link>
+                <span className={`badge text-xs flex-shrink-0 ${packageColor(benefit.sponsors.package_type as PackageType)}`}>
+                  {benefit.sponsors.package_type}
+                </span>
+              </>
+            ) : (
+              <span className="font-medium text-gray-400">Bez partnera</span>
+            )}
           </div>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className="text-gray-400 text-xs">
@@ -164,11 +185,17 @@ function SponsorRow({ benefit }: { benefit: BenefitRow }) {
             </>
           ) : (
             <>
-              <Pencil size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              <button
+                onClick={(e) => { e.stopPropagation(); document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" }); setEditing(true); }}
+                className="p-0.5 text-gray-300 hover:text-gray-600 transition-colors opacity-0 group-hover:opacity-100"
+                title="Uredi benefit"
+              >
+                <Pencil size={13} />
+              </button>
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
                 className="p-0.5 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                title="Obriši za ovog sponzora"
+                title="Obriši za ovog partnera"
               >
                 <Trash2 size={12} />
               </button>
@@ -207,30 +234,37 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
     .sort()
     .at(-1);
 
-  const overdueCount = rows.filter(
-    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed")
-  ).length;
+  const overdueCount = rows.filter((r) => isBenefitOverdue(r.status, r.deadline)).length;
+  const partnerCount = rows.filter((r) => r.sponsors).length;
 
   const assignedIds = new Set(rows.map((r) => r.sponsors?.id).filter(Boolean));
   const availableSponsors = sponsors.filter((s) => !assignedIds.has(s.id));
 
   async function handleDelete() {
     setDeleting(true);
-    await supabase.from("sponsor_benefits").delete().eq("benefit_name", name);
+    const { error } = await supabase.from("sponsor_benefits").delete().eq("benefit_name", name);
     setDeleting(false);
     setConfirming(false);
+    if (error) {
+      alert(`Greška pri brisanju: ${error.message}`);
+      return;
+    }
     router.refresh();
   }
 
   async function handleAddSponsor() {
     if (!selectedSponsorId) return;
     setAddingLoading(true);
-    await supabase.from("sponsor_benefits").insert({
+    const { error } = await supabase.from("sponsor_benefits").insert({
       benefit_name: name,
       sponsor_id: selectedSponsorId,
       status: "not_started",
     });
     setAddingLoading(false);
+    if (error) {
+      alert(`Greška pri dodavanju: ${error.message}`);
+      return;
+    }
     setAddingSponsor(false);
     setSelectedSponsorId("");
     router.refresh();
@@ -292,7 +326,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
               <AlertTriangle size={12} /> {overdueCount} kasni
             </span>
           )}
-          <span className="text-xs text-gray-500">{rows.length} sponzora</span>
+          <span className="text-xs text-gray-500">{partnerCountLabel(partnerCount)}</span>
           <span className="text-xs text-gray-400">{doneCount}/{rows.length} završeno</span>
           {lastReminded && (
             <span className="text-xs text-gray-400">
@@ -317,7 +351,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
                     onChange={(e) => setSelectedSponsorId(e.target.value)}
                     className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                   >
-                    <option value="">— odaberi sponzora —</option>
+                    <option value="">— odaberi partnera —</option>
                     {availableSponsors.map((s) => (
                       <option key={s.id} value={s.id}>{s.name} ({s.package_type})</option>
                     ))}
@@ -342,7 +376,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
                   className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors py-0.5"
                 >
                   <Plus size={12} />
-                  Dodaj sponzora
+                  Dodaj partnera
                 </button>
               )}
             </div>
@@ -355,7 +389,7 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
         className="w-full flex items-center justify-center gap-1.5 px-5 py-2.5 text-xs text-gray-500 hover:text-brand-600 hover:bg-gray-50 transition-colors border-t border-gray-100"
       >
         {open
-          ? <><ChevronDown size={13} className="rotate-180" /> Sakrij sponzore</>
+          ? <><ChevronDown size={13} className="rotate-180" /> Sakrij partnere</>
           : <><ChevronDown size={13} /> Prikaži sve ({rows.length})</>
         }
       </button>
@@ -363,8 +397,54 @@ function AccordionGroup({ name, rows, sponsors = [] }: {
   );
 }
 
+function PackageCategorySection({ pkg, rows, byBenefit, names, doneCount, borderCls, headerCls }: {
+  pkg: string;
+  rows: BenefitRow[];
+  byBenefit: Record<string, BenefitRow[]>;
+  names: string[];
+  doneCount: number;
+  borderCls: string;
+  headerCls: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const overdueCount = rows.filter((r) => isBenefitOverdue(r.status, r.deadline)).length;
+
+  return (
+    <div className={`rounded-xl border-2 overflow-hidden ${borderCls}`}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full flex items-center justify-between px-5 py-3 border-b text-left transition-opacity hover:opacity-90 ${headerCls}`}
+      >
+        <div className="flex items-center gap-3">
+          <ChevronDown size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+          <h2 className="font-bold text-base">{pkg} partneri</h2>
+          {overdueCount > 0 && (
+            <span className="flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+              <AlertTriangle size={11} /> {overdueCount} kasni
+            </span>
+          )}
+        </div>
+        <span className="text-xs font-medium opacity-70">
+          {open ? `${names.length} benefita` : `${doneCount}/${rows.length} završeno · ${names.length} benefita`}
+        </span>
+      </button>
+      {open && (
+        <div className="divide-y divide-white/60">
+          {names.map((benefitName) => (
+            <CategoryBenefitGroup
+              key={benefitName}
+              name={benefitName}
+              rows={byBenefit[benefitName]!}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[] }) {
-  const [open, setOpen] = useState(rows.length === 1);
+  const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -375,15 +455,17 @@ function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[]
   const catDeadlineCounts: Record<string, number> = {};
   rows.forEach((r) => { if (r.deadline) catDeadlineCounts[r.deadline] = (catDeadlineCounts[r.deadline] ?? 0) + 1; });
   const catCommonDeadline = Object.keys(catDeadlineCounts).sort((a, b) => catDeadlineCounts[b] - catDeadlineCounts[a])[0] ?? null;
-  const overdueCount = rows.filter(
-    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed")
-  ).length;
+  const overdueCount = rows.filter((r) => isBenefitOverdue(r.status, r.deadline)).length;
 
   async function handleDelete() {
     setDeleting(true);
-    await supabase.from("sponsor_benefits").delete().eq("benefit_name", name);
+    const { error } = await supabase.from("sponsor_benefits").delete().eq("benefit_name", name);
     setDeleting(false);
     setConfirming(false);
+    if (error) {
+      alert(`Greška pri brisanju: ${error.message}`);
+      return;
+    }
     router.refresh();
   }
 
@@ -452,7 +534,7 @@ function CategoryBenefitGroup({ name, rows }: { name: string; rows: BenefitRow[]
         className="w-full flex items-center justify-center gap-1.5 px-5 py-2 text-xs text-gray-500 hover:text-brand-600 hover:bg-white/60 transition-colors border-t border-white/60"
       >
         {open
-          ? <><ChevronDown size={13} className="rotate-180" /> Sakrij sponzore</>
+          ? <><ChevronDown size={13} className="rotate-180" /> Sakrij partnere</>
           : <><ChevronDown size={13} /> Prikaži sve ({rows.length})</>
         }
       </button>
@@ -467,15 +549,19 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
   const router = useRouter();
   const supabase = createClient();
   const days = benefit.deadline ? daysUntil(benefit.deadline) : null;
-  const isOverdue = days !== null && days < 0 && benefit.status !== "completed";
+  const isOverdue = isBenefitOverdue(benefit.status, benefit.deadline);
   const isUrgent = days !== null && days >= 0 && days <= 7 && benefit.status !== "completed";
 
   async function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
     setDeleting(true);
-    await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
+    const { error } = await supabase.from("sponsor_benefits").delete().eq("id", benefit.id);
     setDeleting(false);
     setConfirming(false);
+    if (error) {
+      alert(`Greška pri brisanju: ${error.message}`);
+      return;
+    }
     router.refresh();
   }
 
@@ -558,7 +644,13 @@ function BenefitItemRow({ benefit }: { benefit: BenefitRow }) {
             </>
           ) : (
             <>
-              <Pencil size={13} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              <button
+                onClick={(e) => { e.stopPropagation(); document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" }); setEditing(true); }}
+                className="p-0.5 text-gray-300 hover:text-gray-600 transition-colors opacity-0 group-hover:opacity-100"
+                title="Uredi benefit"
+              >
+                <Pencil size={13} />
+              </button>
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
                 className="p-0.5 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
@@ -582,9 +674,7 @@ function SponsorGroup({ sponsorId, sponsorName, packageType, rows }: {
 }) {
   const [open, setOpen] = useState(false);
   const doneCount = rows.filter((r) => r.status === "completed").length;
-  const overdueCount = rows.filter(
-    (r) => r.status === "overdue" || (r.deadline !== null && daysUntil(r.deadline) < 0 && r.status !== "completed")
-  ).length;
+  const overdueCount = rows.filter((r) => isBenefitOverdue(r.status, r.deadline)).length;
 
   return (
     <div className="card overflow-hidden">
@@ -639,6 +729,7 @@ interface Props {
 export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: Props) {
   const [view, setView] = useState<"benefit" | "category" | "sponsor">("benefit");
   const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const statusFiltered = filterStatus
     ? benefits.filter((b) => b.status === filterStatus)
@@ -681,7 +772,7 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
   const tabs = [
     { key: "benefit", label: "Po benefitu", icon: <LayoutList size={15} /> },
     { key: "category", label: "Po kategoriji", icon: <Tag size={15} /> },
-    { key: "sponsor", label: "Po sponzoru", icon: <Users size={15} /> },
+    { key: "sponsor", label: "Po partneru", icon: <Users size={15} /> },
   ] as const;
 
   return (
@@ -737,43 +828,109 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
         </div>
       )}
 
-      {view === "category" && (
-        <div className="space-y-6">
-          {PACKAGE_ORDER.filter((pkg) => groupedByPackage[pkg]?.length).map((pkg) => {
-            const rows = groupedByPackage[pkg]!;
-            const byBenefit: Record<string, BenefitRow[]> = {};
-            rows.forEach((b) => {
-              if (!byBenefit[b.benefit_name]) byBenefit[b.benefit_name] = [];
-              byBenefit[b.benefit_name]!.push(b);
-            });
-            const names = Object.keys(byBenefit).sort();
-            const doneCount = rows.filter((r) => r.status === "completed").length;
+      {view === "category" && (() => {
+        const orderedPkgs = PACKAGE_ORDER.filter((pkg) => groupedByPackage[pkg]?.length);
+        const extraPkgs = Object.keys(groupedByPackage)
+          .filter((k) => !PACKAGE_ORDER.includes(k) && groupedByPackage[k]?.length)
+          .sort();
+        const allPkgs = [...orderedPkgs, ...extraPkgs];
 
-            return (
-              <div key={pkg} className={`rounded-xl border-2 overflow-hidden ${PACKAGE_COLORS[pkg]}`}>
-                <div className={`flex items-center justify-between px-5 py-3 border-b ${PACKAGE_HEADER_COLORS[pkg]}`}>
-                  <h2 className="font-bold text-base">{pkg} sponzori</h2>
-                  <span className="text-xs font-medium opacity-70">{doneCount}/{rows.length} završeno</span>
-                </div>
-                <div className="divide-y divide-white/60">
-                  {names.map((benefitName) => (
-                    <CategoryBenefitGroup
-                      key={benefitName}
-                      name={benefitName}
-                      rows={byBenefit[benefitName]!}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-          {PACKAGE_ORDER.every((pkg) => !groupedByPackage[pkg]?.length) && (
+        if (allPkgs.length === 0) {
+          return (
             <div className="card p-12 text-center text-gray-400 text-sm">
               Nema benefita za prikaz
             </div>
-          )}
-        </div>
-      )}
+          );
+        }
+
+        const current = (activeCategory && groupedByPackage[activeCategory]) ? activeCategory : allPkgs[0]!;
+        const currentRows = groupedByPackage[current]!;
+        const byBenefit: Record<string, BenefitRow[]> = {};
+        currentRows.forEach((b) => {
+          if (!byBenefit[b.benefit_name]) byBenefit[b.benefit_name] = [];
+          byBenefit[b.benefit_name]!.push(b);
+        });
+        const names = Object.keys(byBenefit).sort();
+        const doneCount = currentRows.filter((r) => r.status === "completed").length;
+        const borderCls = PACKAGE_COLORS[current] ?? "border-gray-300 bg-gray-50";
+        const headerCls = PACKAGE_HEADER_COLORS[current] ?? "text-gray-700 bg-gray-100 border-gray-200";
+
+        return (
+          <div>
+            {/* Horizontalni tabovi */}
+            <div className="flex gap-1 flex-wrap mb-4 border-b border-gray-200">
+              {allPkgs.map((pkg) => {
+                const pkgRows = groupedByPackage[pkg]!;
+                // Grupiraj benefite po partneru za tooltip
+                const partnerMap: Record<string, { name: string; benefits: string[] }> = {};
+                pkgRows.forEach((r) => {
+                  if (!r.sponsors) return;
+                  const sid = r.sponsors.id;
+                  if (!partnerMap[sid]) partnerMap[sid] = { name: r.sponsors.name, benefits: [] };
+                  partnerMap[sid]!.benefits.push(r.benefit_name);
+                });
+                const partnerList = Object.values(partnerMap).sort((a, b) => a.name.localeCompare(b.name));
+                const partnerCount = partnerList.length;
+                const pkgOverdue = pkgRows.filter((r) => isBenefitOverdue(r.status, r.deadline)).length;
+                const isActive = pkg === current;
+                return (
+                  <button
+                    key={pkg}
+                    onClick={() => setActiveCategory(pkg)}
+                    className={`relative group px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                      isActive
+                        ? "border-brand-500 text-brand-600"
+                        : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
+                    }`}
+                  >
+                    <span>{pkg}</span>
+                    {pkgOverdue > 0 && (
+                      <span className="ml-1.5 text-xs text-red-500 font-semibold">{pkgOverdue}!</span>
+                    )}
+                    <span className={`ml-1.5 text-xs ${isActive ? "text-brand-400" : "text-gray-400"}`}>
+                      {partnerCount}
+                    </span>
+
+                    {/* Tooltip na hover broja */}
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 hidden group-hover:block pointer-events-none">
+                      <div className="bg-gray-900 text-white rounded-xl shadow-xl p-3 min-w-[200px] max-w-[280px] text-left">
+                        <p className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wide">{pkg} partneri ({partnerCount})</p>
+                        <div className="space-y-2">
+                          {partnerList.map((p) => (
+                            <div key={p.name}>
+                              <p className="text-sm font-medium text-white leading-tight">{p.name}</p>
+                              <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{p.benefits.length} benefita</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Strelica */}
+                      <div className="absolute left-1/2 -translate-x-1/2 -top-1.5 w-3 h-3 bg-gray-900 rotate-45 rounded-sm" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sadržaj aktivne kategorije */}
+            <div className={`rounded-xl border-2 overflow-hidden ${borderCls}`}>
+              <div className={`flex items-center justify-between px-5 py-3 ${headerCls}`}>
+                <h2 className="font-bold text-base">{current} partneri</h2>
+                <span className="text-xs font-medium opacity-70">{doneCount}/{currentRows.length} završeno · {names.length} benefita</span>
+              </div>
+              <div className="divide-y divide-white/60">
+                {names.map((benefitName) => (
+                  <CategoryBenefitGroup
+                    key={benefitName}
+                    name={benefitName}
+                    rows={byBenefit[benefitName]!}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {view === "sponsor" && (
         <div className="space-y-3">
@@ -788,7 +945,7 @@ export default function BenefitsView({ benefits, filterStatus, sponsors = [] }: 
           ))}
           {sponsorGroups.length === 0 && (
             <div className="card p-12 text-center text-gray-400 text-sm">
-              Nema sponzora s benefitima
+              Nema partnera s benefitima
             </div>
           )}
         </div>

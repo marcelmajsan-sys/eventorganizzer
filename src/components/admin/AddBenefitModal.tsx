@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
+import { benefitStatusLabel } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
+
+const BENEFIT_STATUSES: BenefitStatus[] = ["not_started", "in_progress", "completed", "overdue"];
 import { getAdminEmails } from "@/app/actions/getAdminEmails";
 
 interface Sponsor {
@@ -33,7 +36,7 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
     deadline: "",
     status: "not_started" as BenefitStatus,
     notes: "",
-    assigned_to: "laura@ecommerce.hr",
+    assigned_to: "",
     selected_sponsor_id: sponsorId ?? "",
   });
 
@@ -202,10 +205,9 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
                 onChange={(e) => setForm({ ...form, status: e.target.value as BenefitStatus })}
                 className="input-field"
               >
-                <option value="not_started">Nije počelo</option>
-                <option value="in_progress">U tijeku</option>
-                <option value="completed">Završeno</option>
-                <option value="overdue">Kasni</option>
+                {BENEFIT_STATUSES.map((s) => (
+                  <option key={s} value={s}>{benefitStatusLabel(s)}</option>
+                ))}
               </select>
             </div>
           </div>

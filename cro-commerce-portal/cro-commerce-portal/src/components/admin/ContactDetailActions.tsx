@@ -4,16 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, X, Loader2, Save, Trash2 } from "lucide-react";
+import { CONTACT_TYPE_LABELS } from "@/lib/utils";
+import { deleteContact } from "@/app/actions/contactActions";
 
-const CONTACT_TYPES = [
-  { value: "contact",          label: "Kontakt" },
-  { value: "ticket",           label: "Ulaznica" },
-  { value: "partner",          label: "Partner" },
-  { value: "visitor",          label: "Visitor" },
-  { value: "speaker",          label: "Speaker" },
-  { value: "service_provider", label: "Service Provider" },
-  { value: "brand_ambassador", label: "Brand Ambassador" },
-];
+const CONTACT_TYPES = Object.entries(CONTACT_TYPE_LABELS).map(([value, label]) => ({ value, label }));
 
 interface Contact {
   id: string;
@@ -36,6 +30,7 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [form, setForm] = useState({
     name:       contact.name       ?? "",
@@ -89,7 +84,12 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
 
   async function handleDelete() {
     if (!confirm(`Obriši kontakt "${contact.name}"?`)) return;
-    await supabase.from("sponsor_contacts").delete().eq("id", contact.id);
+    setDeleteError("");
+    const { error } = await deleteContact(contact.id);
+    if (error) {
+      setDeleteError(error);
+      return;
+    }
     router.push("/admin/contacts");
   }
 
@@ -97,14 +97,24 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
 
   if (!editing) {
     return (
-      <div className="flex gap-2">
-        <button onClick={openEdit} className="btn-secondary">
-          <Pencil size={14} />
-          Uredi
-        </button>
-        <button onClick={handleDelete} className="btn-secondary text-red-600 hover:bg-red-50 hover:border-red-200">
-          <Trash2 size={14} />
-        </button>
+      <div className="flex flex-col items-end gap-2">
+        <div className="flex gap-2">
+          <button onClick={openEdit} className="btn-secondary">
+            <Pencil size={14} />
+            Uredi
+          </button>
+          <button onClick={handleDelete} className="btn-secondary text-red-600 hover:bg-red-50 hover:border-red-200">
+            <Trash2 size={14} />
+          </button>
+        </div>
+        {deleteError && (
+          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700 max-w-sm text-right">
+            <span>{deleteError}</span>
+            <button onClick={() => setDeleteError("")} className="flex-shrink-0 text-red-400 hover:text-red-600 mt-0.5">
+              <X size={12} />
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -144,9 +154,9 @@ export default function ContactDetailActions({ contact }: { contact: Contact }) 
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field resize-none" rows={3} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponzor / partner</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Partner</label>
             <select value={form.sponsor_id} onChange={(e) => setForm({ ...form, sponsor_id: e.target.value })} className="input-field">
-              <option value="">— Bez sponzora —</option>
+              <option value="">— Bez partnera —</option>
               {sponsors.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}

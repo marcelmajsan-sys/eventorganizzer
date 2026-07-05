@@ -18,12 +18,16 @@ export default function DeleteBenefitButton({ benefitId, benefitName }: Props) {
 
   async function handleRemove() {
     setLoading(true);
-    await supabase
+    const { error } = await supabase
       .from("sponsor_benefits")
       .delete()
       .eq("id", benefitId);
     setLoading(false);
     setConfirming(false);
+    if (error) {
+      alert(`Greška pri brisanju: ${error.message}`);
+      return;
+    }
     router.refresh();
   }
 

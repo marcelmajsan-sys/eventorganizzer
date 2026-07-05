@@ -38,7 +38,7 @@ export default function TaskDetailActions({ task }: { task: Task }) {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await supabase.from("tasks").update({
+    const { error } = await supabase.from("tasks").update({
       title: form.title,
       description: form.description || null,
       status: form.status,
@@ -46,13 +46,21 @@ export default function TaskDetailActions({ task }: { task: Task }) {
       assigned_to: form.assigned_to || null,
     }).eq("id", task.id);
     setLoading(false);
+    if (error) {
+      alert(`Greška pri spremanju zadatka: ${error.message}`);
+      return;
+    }
     setEditing(false);
     router.refresh();
   }
 
   async function handleDelete() {
     if (!confirm(`Obriši zadatak "${task.title}"?`)) return;
-    await supabase.from("tasks").delete().eq("id", task.id);
+    const { error } = await supabase.from("tasks").delete().eq("id", task.id);
+    if (error) {
+      alert(`Greška pri brisanju zadatka: ${error.message}`);
+      return;
+    }
     router.push("/admin/tasks");
   }
 
@@ -102,7 +110,7 @@ export default function TaskDetailActions({ task }: { task: Task }) {
               <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="input-field" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Dodijeljeno</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba</label>
               {adminEmails.length > 0 ? (
                 <div className="relative">
                   <select
@@ -110,7 +118,7 @@ export default function TaskDetailActions({ task }: { task: Task }) {
                     onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
                     className="input-field appearance-none pr-8"
                   >
-                    <option value="">— Nije dodijeljeno —</option>
+                    <option value="">— Nije dodijeljena —</option>
                     {adminEmails.map((email) => (
                       <option key={email} value={email}>{email}</option>
                     ))}

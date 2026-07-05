@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, KanbanSquare, Calendar, Gift,
   LogOut, ChevronRight, Building2, Settings, ListVideo, Receipt,
@@ -39,8 +38,6 @@ interface Props {
 
 export default function AdminSidebar({ userEmail, activeProject, conferenceDate, conferenceDates, unreadCount = 0 }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
-  const supabase = createClient();
   const [open, setOpen] = useState(false);
 
   const firstName = userEmail.split("@")[0];
@@ -52,9 +49,9 @@ export default function AdminSidebar({ userEmail, activeProject, conferenceDate,
   const isPast = rawDays < 0;
   const daysDisplay = Math.abs(rawDays);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/admin");
+  function handleLogout() {
+    // Route Handler odjavljuje iz OBA projekta i briše cookies
+    window.location.href = "/api/auth/signout?redirect=/admin";
   }
 
   return (

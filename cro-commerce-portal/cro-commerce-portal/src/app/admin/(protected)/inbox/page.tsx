@@ -1,15 +1,16 @@
-import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { cookies } from "next/headers";
 import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import InboxView from "@/components/admin/InboxView";
 
-type NotifType = "task" | "contact" | "ticket" | "followup" | "comment";
+type NotifType = "task" | "contact" | "ticket" | "login" | "followup" | "comment";
 
 function getNotifType(n: any): NotifType {
   if (n.task_id) return "task";
   if (n.title === "Follow up podsjetnik") return "followup";
   if (n.title === "Novi komentar") return "comment";
+  if (n.title === "Prijava partnera") return "login";
   if (n.title === "Nova osoba za ulaznice") return "ticket";
   return "contact";
 }
@@ -19,10 +20,9 @@ export default async function InboxPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id ?? null;
 
-  const adminClient = await createAdminClient();
   const cookieStore = await cookies();
   const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
-  const projectClient = createAdminClientForProject(projectId);
+  const adminClient = createAdminClientForProject(projectId);
 
   const [{ data: raw }, { data: reads }, { data: rawComments }] = await Promise.all([
     adminClient
@@ -35,7 +35,7 @@ export default async function InboxPage() {
           .select("notification_id")
           .eq("user_id", userId)
       : Promise.resolve({ data: [] }),
-    projectClient
+    adminClient
       .from("sponsor_comments")
       .select("id, sponsor_id, comment, admin_email, created_at, sponsors(id, name)")
       .order("created_at", { ascending: false }),

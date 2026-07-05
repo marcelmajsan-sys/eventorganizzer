@@ -1,5 +1,7 @@
-import { createAdminClient } from "@/lib/supabase/server";
-import { Ticket, Building2, Mail, Phone, User, Briefcase, Handshake } from "lucide-react";
+import { cookies } from "next/headers";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
+import { Ticket, Building2, Mail, Phone, User, Briefcase, Handshake, AlertTriangle } from "lucide-react";
 import UlazniceActions, {
   DeleteTicketButton,
   QRButton,
@@ -45,7 +47,7 @@ function TicketsTable({ contacts, showPartner }: { contacts: TicketContact[]; sh
             <th className="text-left px-4 py-3 font-medium text-gray-600">Ime i prezime</th>
             <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
             <th className="text-left px-4 py-3 font-medium text-gray-600">Tvrtka / Kategorija</th>
-            <th className="text-left px-4 py-3 font-medium text-gray-600">Tip</th>
+            <th className="text-left px-4 py-3 font-medium text-gray-600">Tip ulaznice</th>
             {showPartner && <th className="text-left px-4 py-3 font-medium text-gray-600">Partner</th>}
             <th className="px-4 py-3" />
           </tr>
@@ -108,7 +110,9 @@ export default async function UlaznicePage() {
   // Auto-generiraj slugove za ulaznice koje ih nemaju
   await generateMissingSlugs();
 
-  const adminClient = await createAdminClient();
+  const cookieStore = await cookies();
+  const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+  const adminClient = createAdminClientForProject(projectId);
 
   let { data: raw, error: rawErr } = await adminClient
     .from("sponsor_contacts")
@@ -129,12 +133,30 @@ export default async function UlaznicePage() {
 
   // Graceful degradation: ako slug kolona još ne postoji (migration_028 nije pokrenut)
   if (rawErr?.message?.includes("slug")) {
-    const { data: rawNoSlug } = await adminClient
+    const { data: rawNoSlug, error: noSlugErr } = await adminClient
       .from("sponsor_contacts")
       .select("id, name, company, role, email, phone, ticket_type, notes, sponsor_id, sponsors(id, name)")
       .eq("type", "ticket")
       .order("name");
     raw = (rawNoSlug ?? []).map((c: any) => ({ ...c, slug: null, source: null }));
+    rawErr = noSlugErr;
+  }
+
+  // Ako nakon svih fallbackova čitanje i dalje ne radi — prikaži grešku umjesto prazne stranice
+  if (rawErr) {
+    return (
+      <div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-display font-bold text-gray-900">Ulaznice</h1>
+          <p className="text-gray-500 mt-1">Sve osobe za ulaznice</p>
+        </div>
+        <div className="card p-10 text-center">
+          <AlertTriangle size={32} className="mx-auto mb-3 text-amber-500" />
+          <p className="text-gray-700 font-medium">Greška pri učitavanju ulaznica</p>
+          <p className="text-sm text-gray-500 mt-1">{rawErr.message}</p>
+        </div>
+      </div>
+    );
   }
 
   const contacts: TicketContact[] = (raw ?? []).map((c: any) => ({
@@ -164,7 +186,8 @@ export default async function UlaznicePage() {
   const manualTickets = contacts.filter((c) => !isPortalTicket(c));
 
   const vipCount = contacts.filter((c) => c.ticket_type === "vip").length;
-  const standardCount = contacts.filter((c) => c.ticket_type !== "vip").length;
+  const noTypeCount = contacts.filter((c) => !c.ticket_type).length;
+  const standardCount = contacts.length - vipCount - noTypeCount;
 
   return (
     <div>
@@ -219,6 +242,9 @@ export default async function UlaznicePage() {
           <div>
             <p className="text-2xl font-bold text-gray-900">{standardCount}</p>
             <p className="text-xs text-gray-500">Standard ulaznice</p>
+            {noTypeCount > 0 && (
+              <p className="text-xs text-gray-400">+ {noTypeCount} bez tipa</p>
+            )}
           </div>
         </div>
       </div>

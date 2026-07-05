@@ -1,14 +1,7 @@
 "use server";
 
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
-import { createAdminClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
-import { PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
-
-async function getProjectId() {
-  const cookieStore = await cookies();
-  return resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
-}
+import { requireAdmin } from "@/lib/authGuards";
 
 export type SponsorComment = {
   id: string;
@@ -22,8 +15,10 @@ export type SponsorComment = {
 export async function getSponsorComments(
   sponsorId: string
 ): Promise<{ data: SponsorComment[] | null; error: string | null }> {
-  const projectId = await getProjectId();
-  const supabase = createAdminClientForProject(projectId);
+  const auth = await requireAdmin();
+  if (!auth.ok) return { data: null, error: auth.error };
+
+  const supabase = createAdminClientForProject(auth.projectId);
   let { data, error } = await supabase
     .from("sponsor_comments")
     .select("*, sponsor_comment_reminders(remind_at)")
@@ -53,24 +48,25 @@ export async function addSponsorComment(
   sponsorId: string,
   comment: string
 ): Promise<{ data: SponsorComment | null; error: string | null }> {
-  const projectId = await getProjectId();
-  const adminClient = await createAdminClient();
-  const { data: { user } } = await adminClient.auth.getUser();
-  if (!user?.email) return { data: null, error: "Niste prijavljeni" };
+  const auth = await requireAdmin();
+  if (!auth.ok) return { data: null, error: auth.error };
 
-  const supabase = createAdminClientForProject(projectId);
+  const supabase = createAdminClientForProject(auth.projectId);
   const { data, error } = await supabase
     .from("sponsor_comments")
-    .insert({ sponsor_id: sponsorId, comment, admin_email: user.email })
+    .insert({ sponsor_id: sponsorId, comment, admin_email: auth.user.email })
     .select()
     .single();
   if (error) return { data: null, error: error.message };
 
-  await supabase.from("notifications").insert({
+  const { error: notifError } = await supabase.from("notifications").insert({
     sponsor_id: sponsorId,
     title: "Novi komentar",
-    message: `${user.email.split("@")[0]}: ${comment}`,
+    message: `${auth.user.email.split("@")[0]}: ${comment}`,
   });
+  if (notifError) {
+    console.error("[addSponsorComment] notifications insert error:", notifError.message);
+  }
 
   return { data: data as SponsorComment, error: null };
 }
@@ -79,8 +75,10 @@ export async function updateSponsorComment(
   commentId: string,
   comment: string
 ): Promise<{ error: string | null }> {
-  const projectId = await getProjectId();
-  const supabase = createAdminClientForProject(projectId);
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = createAdminClientForProject(auth.projectId);
   const { error } = await supabase
     .from("sponsor_comments")
     .update({ comment })
@@ -92,8 +90,10 @@ export async function updateSponsorComment(
 export async function deleteSponsorComment(
   commentId: string
 ): Promise<{ error: string | null }> {
-  const projectId = await getProjectId();
-  const supabase = createAdminClientForProject(projectId);
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = createAdminClientForProject(auth.projectId);
   const { error } = await supabase
     .from("sponsor_comments")
     .delete()
@@ -106,8 +106,10 @@ export async function updateCommentReminder(
   commentId: string,
   remindAt: string
 ): Promise<{ error: string | null }> {
-  const projectId = await getProjectId();
-  const supabase = createAdminClientForProject(projectId);
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = createAdminClientForProject(auth.projectId);
   const { error } = await supabase
     .from("sponsor_comment_reminders")
     .update({ remind_at: remindAt })
@@ -122,17 +124,15 @@ export async function createCommentReminder(
   commentText: string,
   remindAt: string
 ): Promise<{ error: string | null }> {
-  const projectId = await getProjectId();
-  const adminClient = await createAdminClient();
-  const { data: { user } } = await adminClient.auth.getUser();
-  if (!user?.email) return { error: "Niste prijavljeni" };
+  const auth = await requireAdmin();
+  if (!auth.ok) return { error: auth.error };
 
-  const supabase = createAdminClientForProject(projectId);
+  const supabase = createAdminClientForProject(auth.projectId);
   const { error } = await supabase.from("sponsor_comment_reminders").insert({
     comment_id: commentId,
     sponsor_id: sponsorId,
     comment_text: commentText,
-    admin_email: user.email,
+    admin_email: auth.user.email,
     remind_at: remindAt,
   });
   if (error) return { error: error.message };

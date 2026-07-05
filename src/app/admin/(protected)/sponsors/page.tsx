@@ -1,7 +1,8 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Filter } from "lucide-react";
-import { leadStatusColor, leadStatusLabel } from "@/lib/utils";
-import type { LeadStatus, PaymentStatus } from "@/types";
+import { leadStatusColor, leadStatusLabel, PAYMENT_STATUS_OPTIONS } from "@/lib/utils";
+import type { LeadStatus } from "@/types";
 import AddSponsorModal from "@/components/admin/AddSponsorModal";
 import SearchInput from "@/components/admin/SearchInput";
 import PackageTypeManager from "@/components/admin/PackageTypeManager";
@@ -19,20 +20,29 @@ function parseList(raw?: string): string[] {
 // Keep alias for backward compatibility
 const parsePackages = parseList;
 
-function buildUrl(params: { package?: string; payment?: string; lead?: string; type?: string }) {
+function buildUrl(params: { package?: string; payment?: string; lead?: string; type?: string; q?: string }) {
   const p = new URLSearchParams();
   if (params.package) p.set("package", params.package);
   if (params.payment) p.set("payment", params.payment);
   if (params.lead)    p.set("lead", params.lead);
   if (params.type)    p.set("type", params.type);
-  return `/admin/sponsors${p.size ? "?" + p.toString() : ""}`;
+  if (params.q)       p.set("q", params.q);
+  const qs = p.toString();
+  return `/admin/sponsors${qs ? "?" + qs : ""}`;
 }
 
-function togglePayment(active: string[], value: string, rest: { package?: string; lead?: string; type?: string }): string {
+function togglePayment(active: string[], value: string, rest: { package?: string; lead?: string; type?: string; q?: string }): string {
   const next = active.includes(value)
     ? active.filter((p) => p !== value)
     : [...active, value];
   return buildUrl({ ...rest, payment: next.join(",") || undefined });
+}
+
+/** HR množina za "partner": 1 partner, 2-4 partnera, 5+ partnera (uz 11-14 iznimku). */
+function partnerCountLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  return `${n} ${mod10 === 1 && mod100 !== 11 ? "partner" : "partnera"}`;
 }
 
 const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
@@ -40,14 +50,6 @@ const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
   { value: "hot_lead",            label: "Hot Lead" },
   { value: "confirmed_new",       label: "Potvrđeno Novi" },
   { value: "confirmed_returning", label: "Potvrđeno Stari" },
-];
-
-const PAYMENT_STATUSES: { value: PaymentStatus; label: string }[] = [
-  { value: "paid",         label: "Plaćeno" },
-  { value: "partial",      label: "Djelomično plaćeno" },
-  { value: "pending",      label: "Na čekanju" },
-  { value: "overdue",      label: "Kasni" },
-  { value: "compensation", label: "Kompenzacija" },
 ];
 
 export default async function SponsorsPage({ searchParams }: Props) {
@@ -99,12 +101,16 @@ export default async function SponsorsPage({ searchParams }: Props) {
     });
   }
 
+  const isFiltered = Boolean(
+    searchParams.package || searchParams.payment || searchParams.lead || searchParams.type || searchParams.q
+  );
+
   return (
     <div className="animate-enter">
       <div className="page-header flex items-start justify-between">
         <div>
           <h1 className="page-title">Partneri</h1>
-          <p className="page-subtitle">{sponsors.length} partnera ukupno</p>
+          <p className="page-subtitle">{partnerCountLabel(sponsors.length)}{isFiltered ? "" : " ukupno"}</p>
         </div>
         <AddSponsorModal packageTypes={packageTypeNames} />
       </div>
@@ -113,7 +119,9 @@ export default async function SponsorsPage({ searchParams }: Props) {
       <div className="card p-4 mb-6 space-y-3">
         {/* Row 0 — Tražilica */}
         <div className="flex flex-wrap gap-3 items-center">
-          <SearchInput placeholder="Pretraži partnere..." />
+          <Suspense fallback={null}>
+            <SearchInput placeholder="Pretraži partnere..." />
+          </Suspense>
         </div>
 
         {/* Row 1 — Kategorija */}
@@ -138,19 +146,19 @@ export default async function SponsorsPage({ searchParams }: Props) {
           </div>
           <div className="flex gap-2 flex-wrap">
             <a
-              href={buildUrl({ package: searchParams.package, lead: searchParams.lead, type: searchParams.type })}
+              href={buildUrl({ package: searchParams.package, lead: searchParams.lead, type: searchParams.type, q: searchParams.q })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 activePayments.length === 0 ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               Svi
             </a>
-            {PAYMENT_STATUSES.map((s) => {
+            {PAYMENT_STATUS_OPTIONS.map((s) => {
               const isActive = activePayments.includes(s.value);
               return (
                 <a
                   key={s.value}
-                  href={togglePayment(activePayments, s.value, { package: searchParams.package, lead: searchParams.lead, type: searchParams.type })}
+                  href={togglePayment(activePayments, s.value, { package: searchParams.package, lead: searchParams.lead, type: searchParams.type, q: searchParams.q })}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     isActive ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
@@ -170,7 +178,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
           </div>
           <div className="flex gap-2 flex-wrap">
             <a
-              href={buildUrl({ package: searchParams.package, payment: searchParams.payment })}
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment, q: searchParams.q })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 !searchParams.lead && !searchParams.type ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
@@ -180,7 +188,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
             {LEAD_STATUSES.map((s) => (
               <a
                 key={s.value}
-                href={buildUrl({ package: searchParams.package, payment: searchParams.payment, lead: s.value })}
+                href={buildUrl({ package: searchParams.package, payment: searchParams.payment, lead: s.value, q: searchParams.q })}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
                   searchParams.lead === s.value
                     ? "bg-gray-900 text-white border-gray-900"
@@ -201,7 +209,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
           </div>
           <div className="flex gap-2 flex-wrap">
             <a
-              href={buildUrl({ package: searchParams.package, payment: searchParams.payment })}
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment, q: searchParams.q })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 !searchParams.type && !searchParams.lead ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
@@ -209,7 +217,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
               Svi
             </a>
             <a
-              href={buildUrl({ package: searchParams.package, payment: searchParams.payment, type: "leads" })}
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment, type: "leads", q: searchParams.q })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
                 searchParams.type === "leads"
                   ? "bg-gray-900 text-white border-gray-900"
@@ -219,7 +227,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
               Leadovi
             </a>
             <a
-              href={buildUrl({ package: searchParams.package, payment: searchParams.payment, type: "clients" })}
+              href={buildUrl({ package: searchParams.package, payment: searchParams.payment, type: "clients", q: searchParams.q })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
                 searchParams.type === "clients"
                   ? "bg-gray-900 text-white border-gray-900"

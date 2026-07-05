@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   DndContext, DragOverlay, closestCorners,
-  KeyboardSensor, PointerSensor, useSensor, useSensors,
+  KeyboardSensor, PointerSensor, useSensor, useSensors, useDroppable,
   type DragStartEvent, type DragEndEvent,
 } from "@dnd-kit/core";
 import {
@@ -15,6 +15,11 @@ import Link from "next/link";
 import { Calendar, Tag, GripVertical } from "lucide-react";
 import { formatDate, packageBadgeColor } from "@/lib/utils";
 import type { Task, TaskStatus } from "@/types";
+
+function emailLabel(email: string) {
+  // "marcel.majsan@gmail.com" → "marcel.majsan"
+  return email.split("@")[0];
+}
 
 const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
   { id: "todo",        label: "Za napraviti", color: "bg-gray-100 text-gray-700" },
@@ -74,11 +79,20 @@ function TaskCard({ task, isDragging }: TaskCardProps) {
               </span>
             )}
             {task.assigned_to && (
-              <span className="text-xs text-gray-400">→ {task.assigned_to}</span>
+              <span className="text-xs text-gray-400" title={task.assigned_to}>→ {emailLabel(task.assigned_to)}</span>
             )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function DroppableColumn({ id, children }: { id: TaskStatus; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className="min-h-[200px] space-y-2.5">
+      {children}
     </div>
   );
 }
@@ -146,7 +160,7 @@ export default function KanbanBoard({ tasks, onStatusChange }: Props) {
                 </div>
               </div>
 
-              <div id={col.id} className="min-h-[200px] space-y-2.5">
+              <DroppableColumn id={col.id}>
                 <SortableContext
                   items={colTasks.map((t) => t.id)}
                   strategy={verticalListSortingStrategy}
@@ -161,7 +175,7 @@ export default function KanbanBoard({ tasks, onStatusChange }: Props) {
                     <p className="text-xs text-gray-400">Povucite zadatak ovdje</p>
                   </div>
                 )}
-              </div>
+              </DroppableColumn>
             </div>
           );
         })}

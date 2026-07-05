@@ -2,17 +2,8 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Mail, Phone, User, Building2, Tag, FileText } from "lucide-react";
+import { contactTypeLabel } from "@/lib/utils";
 import ContactDetailActions from "@/components/admin/ContactDetailActions";
-
-const TYPE_LABELS: Record<string, string> = {
-  contact:          "Kontakt osoba",
-  ticket:           "Osoba za ulaznice",
-  partner:          "Partner",
-  visitor:          "Visitor",
-  speaker:          "Speaker",
-  service_provider: "Service Provider",
-  brand_ambassador: "Brand Ambassador",
-};
 
 const TYPE_STYLE: Record<string, string> = {
   contact:          "bg-blue-50 text-blue-700 border-blue-200",
@@ -39,11 +30,16 @@ export default async function ContactDetailPage({ params }: Props) {
 
   if (!contact) notFound();
 
-  const { data: sponsor } = await supabase
-    .from("sponsors")
-    .select("id, name, package_type")
-    .eq("id", contact.sponsor_id)
-    .single();
+  // Sponsor query samo kad kontakt ima partnera (.eq("id", null) nema smisla)
+  let sponsor: { id: string; name: string; package_type: string } | null = null;
+  if (contact.sponsor_id) {
+    const { data } = await supabase
+      .from("sponsors")
+      .select("id, name, package_type")
+      .eq("id", contact.sponsor_id)
+      .single();
+    sponsor = data;
+  }
 
   return (
     <div className="animate-enter max-w-2xl">
@@ -60,7 +56,7 @@ export default async function ContactDetailPage({ params }: Props) {
           <div>
             <h1 className="page-title">{contact.name}</h1>
             <p className="page-subtitle">
-              {TYPE_LABELS[contact.type] ?? contact.type}
+              {contactTypeLabel(contact.type)}
               {sponsor ? ` · ${sponsor.name}` : ""}
             </p>
           </div>
@@ -169,7 +165,7 @@ export default async function ContactDetailPage({ params }: Props) {
 
         <div className="pt-2 border-t border-gray-100">
           <span className={`badge ${TYPE_STYLE[contact.type] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
-            {TYPE_LABELS[contact.type] ?? contact.type}
+            {contactTypeLabel(contact.type)}
           </span>
         </div>
       </div>

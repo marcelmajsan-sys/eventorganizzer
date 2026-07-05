@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { X, Loader2, User, Send, CheckCircle } from "lucide-react";
+import { benefitStatusLabel } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
+
+const BENEFIT_STATUSES: BenefitStatus[] = ["not_started", "in_progress", "completed", "overdue"];
 import BenefitFileUpload from "@/components/admin/BenefitFileUpload";
 import { getAdminEmails } from "@/app/actions/getAdminEmails";
 
@@ -69,7 +72,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
         deadline: benefit.deadline?.slice(0, 10) ?? "",
         status: benefit.status as BenefitStatus,
         notes: benefit.notes ?? "",
-        assigned_to: benefit.assigned_to || "laura@ecommerce.hr",
+        assigned_to: benefit.assigned_to || "",
         description: benefit.description ?? "",
         contact_person_id: benefit.contact_person_id ?? "",
       });
@@ -85,7 +88,7 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
           const primaryEmail = (sponsorData?.contact_email ?? "").toLowerCase().trim();
           // Match by name first, fallback to email
           const primaryContact = allContacts.find(c =>
-            (primaryName && c.name.toLowerCase().trim() === primaryName) ||
+            (primaryName && (c.name ?? "").toLowerCase().trim() === primaryName) ||
             (primaryEmail && c.email && c.email.toLowerCase().trim() === primaryEmail)
           ) ?? null;
           // Sort primary contact first
@@ -263,10 +266,9 @@ export default function EditBenefitDialog({ benefit, onClose }: Props) {
                 onChange={(e) => setForm({ ...form, status: e.target.value as BenefitStatus })}
                 className="input-field"
               >
-                <option value="not_started">Nije počelo</option>
-                <option value="in_progress">U tijeku</option>
-                <option value="completed">Završeno</option>
-                <option value="overdue">Kasni</option>
+                {BENEFIT_STATUSES.map((s) => (
+                  <option key={s} value={s}>{benefitStatusLabel(s)}</option>
+                ))}
               </select>
             </div>
           </div>

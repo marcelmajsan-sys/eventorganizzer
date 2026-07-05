@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import {
   DndContext, DragOverlay, closestCorners,
-  KeyboardSensor, PointerSensor, useSensor, useSensors,
+  KeyboardSensor, PointerSensor, useSensor, useSensors, useDroppable,
   type DragStartEvent, type DragEndEvent,
 } from "@dnd-kit/core";
 import {
@@ -11,16 +11,20 @@ import {
   verticalListSortingStrategy, useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { Calendar, Tag, GripVertical, ExternalLink } from "lucide-react";
+import { Calendar, Tag, GripVertical } from "lucide-react";
 import { formatDate, packageBadgeColor } from "@/lib/utils";
 import type { Task, TaskStatus } from "@/types";
 
+function emailLabel(email: string) {
+  // "marcel.majsan@gmail.com" → "marcel.majsan"
+  return email.split("@")[0];
+}
+
 const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
-  { id: "todo", label: "Za napraviti", color: "bg-gray-100 text-gray-700" },
-  { id: "in_progress", label: "U tijeku", color: "bg-blue-100 text-blue-700" },
-  { id: "done", label: "Završeno", color: "bg-emerald-100 text-emerald-700" },
+  { id: "todo",        label: "Za napraviti", color: "bg-gray-100 text-gray-700" },
+  { id: "in_progress", label: "U tijeku",     color: "bg-blue-100 text-blue-700" },
+  { id: "done",        label: "Završeno",     color: "bg-emerald-100 text-emerald-700" },
 ];
 
 interface TaskCardProps {
@@ -52,7 +56,10 @@ function TaskCard({ task, isDragging }: TaskCardProps) {
           <GripVertical size={14} />
         </button>
         <div className="flex-1 min-w-0">
-          <Link href={`/admin/tasks/${task.id}`} className="text-sm font-medium text-gray-900 leading-snug hover:text-brand-600 transition-colors line-clamp-2 block">
+          <Link
+            href={`/admin/tasks/${task.id}`}
+            className="text-sm font-medium text-gray-900 leading-snug hover:text-brand-600 transition-colors line-clamp-2 block"
+          >
             {task.title}
           </Link>
           {task.description && (
@@ -72,9 +79,7 @@ function TaskCard({ task, isDragging }: TaskCardProps) {
               </span>
             )}
             {task.assigned_to && (
-              <span className="text-xs text-gray-400">
-                → {task.assigned_to}
-              </span>
+              <span className="text-xs text-gray-400" title={task.assigned_to}>→ {emailLabel(task.assigned_to)}</span>
             )}
           </div>
         </div>
@@ -83,50 +88,54 @@ function TaskCard({ task, isDragging }: TaskCardProps) {
   );
 }
 
-export default function KanbanBoard({ initialTasks }: { initialTasks: (Task & { sponsors?: any })[] }) {
-  const [tasks, setTasks] = useState(initialTasks);
+function DroppableColumn({ id, children }: { id: TaskStatus; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className="min-h-[200px] space-y-2.5">
+      {children}
+    </div>
+  );
+}
+
+interface Props {
+  tasks: (Task & { sponsors?: any })[];
+  onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
+}
+
+export default function KanbanBoard({ tasks, onStatusChange }: Props) {
   const [activeTask, setActiveTask] = useState<(Task & { sponsors?: any }) | null>(null);
-  const supabase = createClient();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const getTasksByStatus = (status: TaskStatus) =>
-    tasks.filter((t) => t.status === status);
+  const getTasksByStatus = (status: TaskStatus) => tasks.filter((t) => t.status === status);
 
   function handleDragStart(event: DragStartEvent) {
-    const task = tasks.find((t) => t.id === event.active.id);
-    setActiveTask(task ?? null);
+    setActiveTask(tasks.find((t) => t.id === event.active.id) ?? null);
   }
 
-  async function handleDragEnd(event: DragEndEvent) {
+  function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveTask(null);
-
     if (!over) return;
 
     const taskId = active.id as string;
     const overId = over.id as string;
 
-    // Check if dropped on a column header
+    // Dropped on a column header
     const targetColumn = COLUMNS.find((c) => c.id === overId);
     if (targetColumn) {
-      setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, status: targetColumn.id } : t))
-      );
-      await supabase.from("tasks").update({ status: targetColumn.id }).eq("id", taskId);
+      onStatusChange(taskId, targetColumn.id);
       return;
     }
 
-    // Check if dropped on another task — figure out which column that task is in
+    // Dropped on another task — move to that task's column
     const overTask = tasks.find((t) => t.id === overId);
-    if (overTask && overTask.status !== tasks.find((t) => t.id === taskId)?.status) {
-      setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, status: overTask.status } : t))
-      );
-      await supabase.from("tasks").update({ status: overTask.status }).eq("id", taskId);
+    const draggedTask = tasks.find((t) => t.id === taskId);
+    if (overTask && draggedTask && overTask.status !== draggedTask.status) {
+      onStatusChange(taskId, overTask.status);
     }
   }
 
@@ -141,11 +150,7 @@ export default function KanbanBoard({ initialTasks }: { initialTasks: (Task & { 
         {COLUMNS.map((col) => {
           const colTasks = getTasksByStatus(col.id);
           return (
-            <div
-              key={col.id}
-              className="bg-gray-50 rounded-xl border border-gray-200 p-4"
-            >
-              {/* Column header */}
+            <div key={col.id} className="bg-gray-50 rounded-xl border border-gray-200 p-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-gray-700 text-sm">{col.label}</h3>
@@ -155,11 +160,7 @@ export default function KanbanBoard({ initialTasks }: { initialTasks: (Task & { 
                 </div>
               </div>
 
-              {/* Drop zone for column */}
-              <div
-                id={col.id}
-                className="min-h-[200px] space-y-2.5"
-              >
+              <DroppableColumn id={col.id}>
                 <SortableContext
                   items={colTasks.map((t) => t.id)}
                   strategy={verticalListSortingStrategy}
@@ -174,7 +175,7 @@ export default function KanbanBoard({ initialTasks }: { initialTasks: (Task & { 
                     <p className="text-xs text-gray-400">Povucite zadatak ovdje</p>
                   </div>
                 )}
-              </div>
+              </DroppableColumn>
             </div>
           );
         })}

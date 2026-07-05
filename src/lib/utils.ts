@@ -54,7 +54,7 @@ export function paymentStatusColor(status: PaymentStatus): string {
 
 export function benefitStatusLabel(status: BenefitStatus): string {
   const labels: Record<BenefitStatus, string> = {
-    not_started: "Nije početo",
+    not_started: "Nije počelo",
     in_progress: "U tijeku",
     completed: "Završeno",
     overdue: "Kasni",
@@ -113,33 +113,89 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export const PACKAGE_BENEFITS: Record<PackageType, string[]> = {
-  Glavni: [
-    "Govor na glavnoj pozornici",
-    "Podcast pozornica",
-    "VIP štand (premium lokacija)",
-    "Naslovnica konferencijskog magazina",
-    "3 stranice oglasa u magazinu",
-    "10 kotizacija",
-  ],
-  Zlatni: [
-    "Govor ili panel diskusija",
-    "Veliki izložbeni štand",
-    "Oglas u konferencijskom magazinu",
-    "8 kotizacija",
-  ],
-  Srebrni: [
-    "Workshop predavanje",
-    "Veliki izložbeni štand",
-    "Branding u goodie bag-u",
-    "Oglas u magazinu (manja veličina)",
-    "5 kotizacija",
-  ],
-  "Brončani": [
-    "Mali izložbeni štand",
-    "Branding u goodie bag-u",
-    "3 kotizacije",
-  ],
-  Medijski: [],
-  Community: [],
+/** Jedinstvena HR mapa labela za tipove kontakata — koristiti svugdje umjesto lokalnih kopija. */
+export const CONTACT_TYPE_LABELS: Record<string, string> = {
+  contact: "Kontakt",
+  ticket: "Ulaznica",
+  partner: "Partner",
+  visitor: "Posjetitelj",
+  speaker: "Govornik",
+  service_provider: "Usluga",
+  brand_ambassador: "Ambasador",
 };
+
+export function contactTypeLabel(type: string | null | undefined): string {
+  return CONTACT_TYPE_LABELS[type ?? ""] ?? type ?? "—";
+}
+
+/** Opcije za selecte statusa plaćanja — jedan izvor istine (labeli iz paymentStatusLabel). */
+export const PAYMENT_STATUS_OPTIONS: { value: PaymentStatus; label: string }[] = (
+  ["pending", "paid", "partial", "overdue", "compensation"] as PaymentStatus[]
+).map((value) => ({ value, label: paymentStatusLabel(value) }));
+
+const STANDARD_PACKAGE_ORDER = [
+  "Nedefinirano",
+  "Glavni",
+  "Zlatni",
+  "Srebrni",
+  "Brončani",
+  "Medijski",
+  "Community",
+];
+
+/**
+ * Standardni sort paketa: Nedefinirano → Glavni → Zlatni → Srebrni → Brončani
+ * → Medijski → Community → custom (alfabetski). Jedina implementacija — ne
+ * duplicirati po komponentama.
+ */
+export function sortPackageNames(names: string[]): string[] {
+  const unique: string[] = [];
+  names.forEach((n) => {
+    if (n && !unique.includes(n)) unique.push(n);
+  });
+  return unique.sort((a, b) => {
+    const ia = STANDARD_PACKAGE_ORDER.indexOf(a);
+    const ib = STANDARD_PACKAGE_ORDER.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.localeCompare(b, "hr");
+  });
+}
+
+/** Jedinstveno formatiranje EUR iznosa (cijeli brojevi bez decimala, inače 2 decimale). */
+export function formatEur(amount: number | null | undefined): string {
+  const n = amount ?? 0;
+  return new Intl.NumberFormat("hr-HR", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: Number.isInteger(n) ? 0 : 2,
+  }).format(n);
+}
+
+/**
+ * Jedinstvena definicija "kasni" za benefite: rok je prošao (striktno prije
+ * današnjeg dana, lokalno), a benefit nije završen. Uključuje i not_started.
+ */
+export function isBenefitOverdue(
+  status: string | null | undefined,
+  deadline: string | null | undefined
+): boolean {
+  if (status === "completed") return false;
+  if (status === "overdue") return true;
+  if (!deadline) return false;
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  return deadline.slice(0, 10) < todayStr;
+}
+
+/** Escapanje user inputa prije interpolacije u HTML (email predlošci i sl.). */
+export function escapeHtml(value: string | null | undefined): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

@@ -78,9 +78,39 @@ export default function FileUploadSection({
   }
 
   async function handleDelete(fileId: string, storageUrl: string) {
+    setUploadError("");
     const path = storageUrl.split("/sponsor-files/")[1];
-    if (path) await supabase.storage.from("sponsor-files").remove([path]);
-    await supabase.from("files").delete().eq("id", fileId);
+
+    // Dijeljeni dokumenti: isti storage objekt može imati više `files` redova
+    // (drugi partneri) ili živjeti u shared/ — tada se briše SAMO files red.
+    let removeStorage = path != null && !path.startsWith("shared/");
+    if (removeStorage) {
+      const { data: otherRows, error: checkError } = await supabase
+        .from("files")
+        .select("id")
+        .eq("storage_url", storageUrl)
+        .neq("id", fileId)
+        .limit(1);
+      if (checkError) {
+        setUploadError(`Greška pri provjeri dijeljenih datoteka: ${checkError.message}`);
+        return;
+      }
+      if ((otherRows ?? []).length > 0) removeStorage = false;
+    }
+
+    const { error: dbError } = await supabase.from("files").delete().eq("id", fileId);
+    if (dbError) {
+      setUploadError(`Greška pri brisanju: ${dbError.message}`);
+      return;
+    }
+
+    if (removeStorage && path) {
+      const { error: storageError } = await supabase.storage.from("sponsor-files").remove([path]);
+      if (storageError) {
+        setUploadError(`Datoteka obrisana, ali storage objekt nije uklonjen: ${storageError.message}`);
+      }
+    }
+
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
   }
 

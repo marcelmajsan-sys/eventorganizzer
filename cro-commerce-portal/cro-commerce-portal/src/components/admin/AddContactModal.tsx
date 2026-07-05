@@ -4,16 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
+import { CONTACT_TYPE_LABELS } from "@/lib/utils";
 
-const CONTACT_TYPES = [
-  { value: "contact",           label: "Kontakt" },
-  { value: "ticket",            label: "Ulaznica" },
-  { value: "partner",           label: "Partner" },
-  { value: "visitor",           label: "Visitor" },
-  { value: "speaker",           label: "Speaker" },
-  { value: "service_provider",  label: "Service Provider" },
-  { value: "brand_ambassador",  label: "Brand Ambassador" },
-];
+const CONTACT_TYPES = Object.entries(CONTACT_TYPE_LABELS).map(([value, label]) => ({ value, label }));
 
 interface Sponsor {
   id: string;
@@ -44,6 +37,10 @@ export default function AddContactModal({ sponsors = [] }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.name.trim() && !form.email.trim()) {
+      setError("Unesi barem ime ili email.");
+      return;
+    }
     setLoading(true);
     setError("");
     const record = {

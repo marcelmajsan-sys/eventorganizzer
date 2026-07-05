@@ -2,8 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { PROJECT_COOKIE, PROJECTS, resolveProjectId } from "@/lib/supabase/projects";
 
+const SESSION_TIMEOUT = Symbol("session-timeout");
+
 async function getSessionWithTimeout(supabase: ReturnType<typeof createServerClient>, ms: number) {
-  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), ms));
+  const timeout = new Promise<typeof SESSION_TIMEOUT>((resolve) =>
+    setTimeout(() => resolve(SESSION_TIMEOUT), ms)
+  );
   async function fetchSession() {
     try {
       const { data } = await supabase.auth.getSession();
@@ -34,9 +38,11 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // 1200ms timeout — if Supabase is slow (cold start after pause), pass through.
+  // 1200ms timeout — if Supabase is slow (cold start after pause), pass the
+  // request through instead of redirecting a possibly logged-in user to login.
   // Real auth enforcement happens in (protected)/layout.tsx and portal/layout.tsx.
   const session = await getSessionWithTimeout(supabase, 1200);
+  if (session === SESSION_TIMEOUT) return supabaseResponse;
   const user = session?.user ?? null;
 
   const pathname = request.nextUrl.pathname;

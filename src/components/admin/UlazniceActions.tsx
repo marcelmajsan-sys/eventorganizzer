@@ -100,11 +100,22 @@ export function QRModal({ slug, name, onClose }: { slug: string; name: string; o
   const url = `${APP_URL}/${slug}`;
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}&margin=10`;
 
-  function handleDownload() {
-    const link = document.createElement("a");
-    link.href = qrApiUrl;
-    link.download = `ulaznica-${slug}.png`;
-    link.click();
+  async function handleDownload() {
+    // Cross-origin download ne radi s <a download> direktno — fetch → blob → object URL
+    try {
+      const res = await fetch(qrApiUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `ulaznica-${slug}.png`;
+      link.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      // Fallback: otvori QR u novom tabu
+      window.open(qrApiUrl, "_blank", "noopener,noreferrer");
+    }
   }
 
   return (
@@ -157,7 +168,7 @@ export function DeleteTicketButton({ id }: { id: string }) {
 
   if (confirming) return (
     <span className="flex items-center gap-1 text-xs">
-      <button onClick={() => startTransition(async () => { await deleteTicket(id); setConfirming(false); })} disabled={isPending} className="text-red-600 hover:text-red-700 font-medium">
+      <button onClick={() => startTransition(async () => { const res = await deleteTicket(id); if (res?.error) alert(`Greška pri brisanju ulaznice: ${res.error}`); setConfirming(false); })} disabled={isPending} className="text-red-600 hover:text-red-700 font-medium">
         {isPending ? <Loader2 size={12} className="animate-spin" /> : "Da"}
       </button>
       <span className="text-gray-300">/</span>
@@ -194,7 +205,7 @@ function ticketsToSheet(rows: ExportTicketRow[]) {
     "Telefon": r.phone ?? "",
     "Tvrtka": r.company ?? "",
     "Kategorija tvrtke": r.role ?? "",
-    "Tip ulaznice": r.ticket_type === "vip" ? "VIP" : "Standard",
+    "Tip ulaznice": r.ticket_type === "vip" ? "VIP" : r.ticket_type === "standard" ? "Standard" : "",
     "Komentar": r.notes ?? "",
     "Partner": r.sponsorName ?? "Ručno",
     "QR link": r.slug ? `${APP_URL}/${r.slug}` : "",

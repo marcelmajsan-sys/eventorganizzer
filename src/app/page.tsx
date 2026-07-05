@@ -22,7 +22,7 @@ const TEXT = {
     invalid: "Neispravni podaci za prijavu. Provjerite email i lozinku.",
     help: "Ako imate pitanja ili želite promijeniti lozinku, javite se na mail: marcel@ecommerce.hr",
     copyright: "Powered by Ecommerce d.o.o. © 2026",
-    langToggle: "Translate to english",
+    langToggle: "Translate to English",
   },
   en: {
     subtitle: "Partner portal",
@@ -65,7 +65,7 @@ function PartnerLoginForm() {
     }
 
     const { url, anonKey } = PROJECTS[projectId];
-    const client = createBrowserClient(url, anonKey);
+    const client = createBrowserClient(url, anonKey, { isSingleton: false });
     const { data, error: authError } = await client.auth.signInWithPassword({ email, password });
 
     if (!authError && data.user) {

@@ -6,13 +6,14 @@ import {
   Users, CreditCard, AlertTriangle, CheckCircle2,
   TrendingUp, Clock, Package, Wallet, CircleDollarSign, ListChecks, LogIn
 } from "lucide-react";
-import { packageColor, packageBadgeColor, paymentStatusColor, paymentStatusLabel, leadStatusColor, leadStatusLabel } from "@/lib/utils";
+import { packageColor, packageBadgeColor, paymentStatusColor, paymentStatusLabel, leadStatusColor, leadStatusLabel, formatEur, isBenefitOverdue, sortPackageNames, CONTACT_TYPE_LABELS } from "@/lib/utils";
 import type { PackageType, LeadStatus } from "@/types";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
   const cookieStore = await cookies();
   const projectId = resolveProjectId(cookieStore.get(PROJECT_COOKIE)?.value);
+  const adminClient = createAdminClientForProject(projectId);
 
   const [
     { data: sponsors },
@@ -24,47 +25,40 @@ export default async function AdminDashboard() {
     supabase.from("tasks").select("*"),
   ]);
 
-  let budgetItems: any[] = [];
-  try {
-    const { data } = await supabase
-      .from("budget_items")
-      .select("id, status, amount")
-      .eq("project_id", projectId);
-    budgetItems = data ?? [];
-  } catch {}
-
-  const formatEur = (n: number) =>
-    new Intl.NumberFormat("hr-HR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+  const { data: budgetData, error: budgetError } = await supabase
+    .from("budget_items")
+    .select("id, status, amount")
+    .eq("project_id", projectId);
+  if (budgetError) console.error("[dashboard budget]", budgetError.message);
+  const budgetItems: any[] = budgetData ?? [];
 
   const budgetPaid    = budgetItems.filter(i => i.status === "paid").reduce((s: number, i: any) => s + i.amount, 0);
   const budgetPending = budgetItems.filter(i => i.status === "pending" || i.status === "paid").reduce((s: number, i: any) => s + i.amount, 0);
-  const budgetPendingCount = budgetItems.filter(i => i.status === "pending" || i.status === "paid").length;
   const budgetTotal   = budgetItems.filter(i => i.status !== "cancelled").reduce((s: number, i: any) => s + i.amount, 0);
   const budgetAll     = budgetItems.reduce((s: number, i: any) => s + (i.amount ?? 0), 0);
-  const budgetAllCount = budgetItems.length;
-  const budgetPendingOnly = budgetItems.filter(i => i.status === "pending").reduce((s: number, i: any) => s + (i.amount ?? 0), 0);
 
-  const totalSponsors = sponsors?.length ?? 0;
   const confirmedSponsors = sponsors?.filter(
     (s) => s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning"
   ) ?? [];
 
-  // Naplaćeno = plaćeni iznos + djelomično plaćeni iznosi (iznosi iz SVIH sponzora)
-  const naplaceno = (sponsors ?? []).reduce((sum, s) => {
+  // Naplaćeno = plaćeni iznos + djelomično plaćeni iznosi (samo potvrđeni partneri,
+  // da se iznosi poklapaju s brojevima ispod i s linkovima na filtrirane liste)
+  const naplaceno = confirmedSponsors.reduce((sum, s) => {
     if (s.payment_status === "paid") return sum + ((s as any).iznos ?? 0);
     if (s.payment_status === "partial") return sum + ((s as any).partial_amount ?? 0);
     return sum;
   }, 0);
-  // Brojevi ispod iznosa — samo aktivni klijenti (potvrđeno novi/stari)
   const naplacenoCount = confirmedSponsors.filter(s => s.payment_status === "paid").length;
   const partialCount = confirmedSponsors.filter(s => s.payment_status === "partial").length;
-  // Neplaćeno = neplaćeni iznosi + preostali dio djelomičnih (iznosi iz SVIH sponzora)
-  const neplaceno = (sponsors ?? []).reduce((sum, s) => {
-    if (s.payment_status === "paid") return sum;
+  // Neplaćeno = neplaćeni iznosi + preostali dio djelomičnih (samo potvrđeni; kompenzacija ne ulazi)
+  const neplaceno = confirmedSponsors.reduce((sum, s) => {
+    if (s.payment_status === "paid" || s.payment_status === "compensation") return sum;
     if (s.payment_status === "partial") return sum + Math.max(0, ((s as any).iznos ?? 0) - ((s as any).partial_amount ?? 0));
     return sum + ((s as any).iznos ?? 0);
   }, 0);
-  const neplacenoCount = confirmedSponsors.filter(s => s.payment_status !== "paid").length;
+  const neplacenoCount = confirmedSponsors.filter(
+    s => s.payment_status !== "paid" && s.payment_status !== "compensation"
+  ).length;
   const confirmedTotal = confirmedSponsors.length;
   const confirmedNewCount = confirmedSponsors.filter(s => s.lead_status === "confirmed_new").length;
   const confirmedReturningCount = confirmedSponsors.filter(s => s.lead_status === "confirmed_returning").length;
@@ -86,9 +80,8 @@ export default async function AdminDashboard() {
   const openTasksSubs = Object.entries(openTasksByPerson)
     .sort((a, b) => b[1] - a[1])
     .map(([name, count]) => `${name}: ${count}`);
-  const now = new Date().toISOString();
   const overdueBenefits = benefits?.filter(
-    (b) => b.status !== "completed" && b.deadline < now
+    (b) => isBenefitOverdue(b.status, b.deadline)
   ).length ?? 0;
   const completedBenefits = benefits?.filter((b) => b.status === "completed").length ?? 0;
   const totalBenefits = benefits?.length ?? 0;
@@ -97,32 +90,48 @@ export default async function AdminDashboard() {
   const byPackage: Record<string, number> = {};
   const byPackagePaid: Record<string, number> = {};
   confirmedSponsors.forEach((s) => {
-    byPackage[s.package_type] = (byPackage[s.package_type] ?? 0) + 1;
+    const pkg = s.package_type ?? "Nedefinirano";
+    byPackage[pkg] = (byPackage[pkg] ?? 0) + 1;
     if (s.payment_status === "paid") {
-      byPackagePaid[s.package_type] = (byPackagePaid[s.package_type] ?? 0) + 1;
+      byPackagePaid[pkg] = (byPackagePaid[pkg] ?? 0) + 1;
     }
   });
 
-  const packageOrder: PackageType[] = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
+  const packageNames = sortPackageNames(Object.keys(byPackage));
 
-  // Recent sponsors
-  const recentSponsors = sponsors?.slice(-5).reverse() ?? [];
-
-  // Recent contacts
-  let recentContacts: any[] = [];
-  try {
-    const { data } = await supabase
-      .from("sponsor_contacts")
-      .select("id, name, email, type, company, created_at, sponsors(name)")
-      .order("created_at", { ascending: false })
+  // Recent sponsors — zadnje uređeni (fallback na created_at ako updated_at ne postoji)
+  let recentSponsors: any[] = [];
+  {
+    const { data, error } = await supabase
+      .from("sponsors")
+      .select("*")
+      .order("updated_at", { ascending: false })
       .limit(5);
-    recentContacts = data ?? [];
-  } catch {}
+    if (error) {
+      const { data: fallback, error: fallbackError } = await supabase
+        .from("sponsors")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (fallbackError) console.error("[dashboard recentSponsors]", fallbackError.message);
+      recentSponsors = fallback ?? [];
+    } else {
+      recentSponsors = data ?? [];
+    }
+  }
+
+  // Recent contacts (service role — RLS može blokirati createClient)
+  const { data: recentContactsData, error: recentContactsError } = await adminClient
+    .from("sponsor_contacts")
+    .select("id, name, email, type, company, created_at, sponsors(name)")
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if (recentContactsError) console.error("[dashboard recentContacts]", recentContactsError.message);
+  const recentContacts: any[] = recentContactsData ?? [];
 
   // Recent partner logins
   let recentLogins: any[] = [];
   try {
-    const adminClient = createAdminClientForProject(projectId);
     const { data, error } = await adminClient
       .from("notifications")
       .select("id, message, created_at, sponsor_id, sponsors(id, name)")
@@ -141,38 +150,6 @@ export default async function AdminDashboard() {
     console.error("[dashboard recentLogins exception]", e?.message ?? e);
   }
 
-  const statCards = [
-    {
-      value: totalSponsors,
-      label: "Ukupno partnera",
-      icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-    },
-    {
-      value: paidCount,
-      label: "Plaćenih",
-      icon: CheckCircle2,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-      sub: `${pendingCount} na čekanju`,
-    },
-    {
-      value: openTasks,
-      label: "Otvorenih zadataka",
-      icon: Clock,
-      color: "text-orange-600",
-      bg: "bg-orange-50",
-    },
-    {
-      value: overdueBenefits,
-      label: "Benefita kasni",
-      icon: AlertTriangle,
-      color: "text-red-600",
-      bg: "bg-red-50",
-    },
-  ];
-
   return (
     <div className="animate-enter">
       <div className="page-header">
@@ -183,7 +160,7 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {[
           { label: "Profitabilnost", value: formatEur((naplaceno + neplaceno) - budgetAll), sub: `prihodi ${formatEur(naplaceno + neplaceno)} − troškovi ${formatEur(budgetAll)}`, icon: CircleDollarSign, iconCls: "text-gray-400", valCls: (naplaceno + neplaceno) - budgetAll >= 0 ? "text-emerald-600" : "text-red-600", href: "/admin/troskovi" },
-          { label: "Procjena troškova (budžet)", value: formatEur(budgetAll), sub: `Potvrđeno: ${formatEur(budgetPendingOnly)}`, icon: TrendingUp, iconCls: "text-gray-400", valCls: "text-gray-700", href: "/admin/troskovi" },
+          { label: "Procjena troškova (budžet)", value: formatEur(budgetAll), sub: `Potvrđeno: ${formatEur(budgetPending)}`, icon: TrendingUp, iconCls: "text-gray-400", valCls: "text-gray-700", href: "/admin/troskovi" },
           { label: "Plaćeno (troškovi)", value: formatEur(budgetPaid), sub: `${budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0}% budžeta`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/troskovi?status=paid", progress: budgetTotal > 0 ? Math.round((budgetPaid/budgetTotal)*100) : 0, progressCls: "bg-emerald-500" },
           { label: "Naplaćeno", value: formatEur(naplaceno), sub: partialCount > 0 ? `${naplacenoCount} plaćenih + ${partialCount} djelomičnih` : `${naplacenoCount} partnera`, icon: Wallet, iconCls: "text-emerald-500", valCls: "text-emerald-600", href: "/admin/sponsors?payment=paid,partial" },
           { label: "Neplaćeno", value: formatEur(neplaceno), sub: `${neplacenoCount} partnera`, icon: ListChecks, iconCls: "text-orange-400", valCls: "text-orange-600", href: "/admin/sponsors?payment=overdue,partial,pending&type=clients" },
@@ -246,7 +223,7 @@ export default async function AdminDashboard() {
           </div>
           <p className="text-xs text-gray-400 mb-4">samo potvrđeni ({confirmedTotal})</p>
           <div className="space-y-3">
-            {packageOrder.map((pkg) => {
+            {packageNames.map((pkg) => {
               const count = byPackage[pkg] ?? 0;
               const paid = byPackagePaid[pkg] ?? 0;
               const pct = count > 0 ? Math.round((paid / count) * 100) : 0;
@@ -280,6 +257,7 @@ export default async function AdminDashboard() {
           <div className="space-y-3">
             {[
               { label: "Plaćeno", count: paidCount, status: "paid", color: "bg-emerald-500" },
+              { label: "Djelomično plaćeno", count: partialCount, status: "partial", color: "bg-sky-500" },
               { label: "Na čekanju", count: pendingCount, status: "pending", color: "bg-yellow-500" },
               { label: "Kasni", count: overduePayments, status: "overdue", color: "bg-red-500" },
               { label: "Kompenzacija", count: compensationCount, status: "compensation", color: "bg-violet-500" },
@@ -466,15 +444,6 @@ export default async function AdminDashboard() {
             </thead>
             <tbody>
               {recentContacts.map((contact) => {
-                const TYPE_LABELS: Record<string, string> = {
-                  contact: "Kontakt",
-                  ticket: "Ulaznica",
-                  partner: "Partner",
-                  visitor: "Posjetitelj",
-                  speaker: "Govornik",
-                  service_provider: "Usluga",
-                  brand_ambassador: "Ambasador",
-                };
                 const sponsorName = contact.sponsors
                   ? (Array.isArray(contact.sponsors) ? contact.sponsors[0]?.name : (contact.sponsors as any)?.name)
                   : null;
@@ -492,7 +461,7 @@ export default async function AdminDashboard() {
                     <td className="py-2.5 px-3 text-gray-500">{contact.email || "—"}</td>
                     <td className="py-2.5 px-3">
                       <span className="badge bg-gray-100 text-gray-600 text-xs">
-                        {TYPE_LABELS[contact.type] ?? contact.type}
+                        {CONTACT_TYPE_LABELS[contact.type] ?? contact.type}
                       </span>
                     </td>
                     <td className="py-2.5 px-3 text-gray-400 text-xs">{addedDate}</td>

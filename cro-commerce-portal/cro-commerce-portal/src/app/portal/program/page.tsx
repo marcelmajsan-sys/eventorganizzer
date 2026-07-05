@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { resolveProjectId, PROJECT_COOKIE } from "@/lib/supabase/projects";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import PortalProgramView from "@/components/portal/PortalProgramView";
-import { CalendarDays } from "lucide-react";
+import PortalPageHeader from "@/components/portal/PortalPageHeader";
 
 export default async function PortalProgramPage() {
   const cookieStore = await cookies();
@@ -18,21 +18,9 @@ export default async function PortalProgramPage() {
 
   return (
     <div className="animate-enter">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Program konferencije</h1>
-          <p className="page-subtitle">Raspored sesija i govornika</p>
-        </div>
-      </div>
+      <PortalPageHeader titleKey="program.title" subtitleKey="program.subtitle" />
 
-      {sessions && sessions.length > 0 ? (
-        <PortalProgramView sessions={sessions} />
-      ) : (
-        <div className="card p-16 text-center">
-          <CalendarDays size={36} className="text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">Program još nije objavljen.</p>
-        </div>
-      )}
+      <PortalProgramView sessions={sessions ?? []} />
     </div>
   );
 }

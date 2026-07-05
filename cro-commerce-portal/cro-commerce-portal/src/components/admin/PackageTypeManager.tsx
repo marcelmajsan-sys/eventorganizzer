@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2, Pencil, Check, Trash2 } from "lucide-react";
@@ -8,6 +9,18 @@ import { Plus, X, Loader2, Pencil, Check, Trash2 } from "lucide-react";
 interface PackageTypeRow {
   id: string;
   name: string;
+}
+
+const STANDARD_ORDER = ["Nedefinirano", "Glavni", "Zlatni", "Srebrni", "Brončani", "Medijski", "Community"];
+
+function sortPackageTypes(pkgs: PackageTypeRow[]): PackageTypeRow[] {
+  const standard = STANDARD_ORDER
+    .map((name) => pkgs.find((p) => p.name === name))
+    .filter((p): p is PackageTypeRow => !!p);
+  const custom = pkgs
+    .filter((p) => !STANDARD_ORDER.includes(p.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return [...standard, ...custom];
 }
 
 interface Props {
@@ -33,14 +46,39 @@ function EditRow({
     const trimmed = name.trim();
     if (!trimmed || trimmed === pkg.name) return;
     setSaving(true);
-    await supabase.from("package_types").update({ name: trimmed }).eq("id", pkg.id);
+    const { error: renameErr } = await supabase.from("package_types").update({ name: trimmed }).eq("id", pkg.id);
+    if (renameErr) {
+      setSaving(false);
+      alert(`Greška pri preimenovanju paketa: ${renameErr.message}`);
+      return;
+    }
+    // Sinkroniziraj sponzore koji koriste stari naziv paketa
+    const { error: sponsorErr } = await supabase
+      .from("sponsors")
+      .update({ package_type: trimmed })
+      .eq("package_type", pkg.name);
     setSaving(false);
+    if (sponsorErr) {
+      alert(`Paket je preimenovan, ali ažuriranje sponzora nije uspjelo: ${sponsorErr.message}`);
+    }
     onDone();
     router.refresh();
   }
 
   async function handleDelete() {
-    await supabase.from("package_types").delete().eq("id", pkg.id);
+    const { error: delErr } = await supabase.from("package_types").delete().eq("id", pkg.id);
+    if (delErr) {
+      alert(`Greška pri brisanju paketa: ${delErr.message}`);
+      return;
+    }
+    // Sponzore s obrisanim paketom prebaci na "Nedefinirano"
+    const { error: sponsorErr } = await supabase
+      .from("sponsors")
+      .update({ package_type: "Nedefinirano" })
+      .eq("package_type", pkg.name);
+    if (sponsorErr) {
+      alert(`Paket je obrisan, ali ažuriranje sponzora nije uspjelo: ${sponsorErr.message}`);
+    }
     onDone();
     router.refresh();
   }
@@ -89,7 +127,8 @@ function EditRow({
   );
 }
 
-export default function PackageTypeManager({ packageTypes, activePackages, activePayment }: Props) {
+export default function PackageTypeManager({ packageTypes: rawPackageTypes, activePackages, activePayment }: Props) {
+  const packageTypes = sortPackageTypes(rawPackageTypes);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState("");
@@ -102,7 +141,8 @@ export default function PackageTypeManager({ packageTypes, activePackages, activ
     const params = new URLSearchParams();
     if (packages.length > 0) params.set("package", packages.join(","));
     if (activePayment) params.set("payment", activePayment);
-    return `/admin/sponsors${params.size ? "?" + params.toString() : ""}`;
+    const qs = params.toString();
+    return `/admin/sponsors${qs ? "?" + qs : ""}`;
   }
 
   function toggle(name: string) {
@@ -143,19 +183,19 @@ export default function PackageTypeManager({ packageTypes, activePackages, activ
 
   return (
     <div className="flex gap-2 flex-wrap items-center">
-      <a
+      <Link
         href={buildUrl([])}
         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
           activePackages.length === 0 ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
         }`}
       >
         Svi
-      </a>
+      </Link>
 
       {packageTypes.map((pkg) => {
         const isActive = activePackages.includes(pkg.name);
         return (
-          <a
+          <Link
             key={pkg.id}
             href={toggle(pkg.name)}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -166,7 +206,7 @@ export default function PackageTypeManager({ packageTypes, activePackages, activ
           >
             {pkg.name}
             {isActive && <X size={11} className="opacity-70" />}
-          </a>
+          </Link>
         );
       })}
 

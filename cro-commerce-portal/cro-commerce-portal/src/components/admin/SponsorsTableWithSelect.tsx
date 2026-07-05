@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ChevronRight, CheckSquare, Square, Minus, FileSpreadsheet } from "lucide-react";
-import { packageColor, paymentStatusColor, paymentStatusLabel, leadStatusColor, leadStatusLabel } from "@/lib/utils";
+import { packageColor, paymentStatusColor, paymentStatusLabel, leadStatusColor, leadStatusLabel, formatEur, PAYMENT_STATUS_OPTIONS } from "@/lib/utils";
 import type { PackageType, PaymentStatus, LeadStatus } from "@/types";
 import { bulkUpdateSponsors } from "@/app/actions/sponsorBulkUpdate";
 
@@ -20,20 +20,19 @@ interface SponsorRow {
   sponsor_contacts: { name: string | null; email: string | null; type: string }[];
 }
 
-const formatEur = (n: number) =>
-  new Intl.NumberFormat("hr-HR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
-
 interface Props {
   sponsors: SponsorRow[];
   packageTypeNames: string[];
 }
 
-const PAYMENT_STATUSES = [
-  { value: "paid",    label: "Plaćeno" },
-  { value: "partial", label: "Djelomično plaćeno" },
-  { value: "pending", label: "Na čekanju" },
-  { value: "overdue", label: "Kasni" },
-];
+/** HR množina za bar odabira: 1 partner odabran / 2-4 partnera odabrana / 5+ partnera odabrano. */
+function selectedCountLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} partner odabran`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} partnera odabrana`;
+  return `${n} partnera odabrano`;
+}
 
 const LEAD_STATUSES = [
   { value: "cold_lead",           label: "Cold Lead" },
@@ -57,7 +56,7 @@ async function exportToXlsx(rows: SponsorRow[]) {
       "Kontakt ime": primary?.name ?? s.contact_name ?? "",
       "Kontakt email": primary?.email ?? s.contact_email ?? "",
       "Iznos (EUR)": s.iznos ?? 0,
-      "Plaćanje": paymentStatusLabel((s.payment_status ?? "") as PaymentStatus),
+      "Plaćanje": paymentStatusLabel((s.payment_status ?? "") as PaymentStatus) ?? "—",
       "Benefiti završeni": completed,
       "Benefiti ukupno": benefits.length,
     };
@@ -137,7 +136,7 @@ export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: 
       {selected.size > 0 && (
         <div className="sticky top-0 z-10 mb-4 bg-brand-50 border border-brand-200 rounded-xl p-3 flex flex-wrap items-center gap-3 shadow-sm">
           <span className="text-sm font-medium text-brand-700 shrink-0">
-            {selected.size} {selected.size === 1 ? "sponzor odabran" : "sponzora odabrano"}
+            {selectedCountLabel(selected.size)}
           </span>
 
           <div className="flex flex-wrap gap-2 flex-1">
@@ -160,7 +159,7 @@ export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: 
               className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="">Plaćanje (bez promjene)</option>
-              {PAYMENT_STATUSES.map((s) => (
+              {PAYMENT_STATUS_OPTIONS.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
@@ -328,7 +327,7 @@ export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: 
               {sponsors.length === 0 && (
                 <tr>
                   <td colSpan={9} className="py-16 text-center">
-                    <p className="text-gray-400">Nema sponzora koji odgovaraju filteru</p>
+                    <p className="text-gray-400">Nema partnera koji odgovaraju filteru</p>
                   </td>
                 </tr>
               )}

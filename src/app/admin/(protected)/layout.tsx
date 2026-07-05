@@ -4,12 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { PROJECT_COOKIE, resolveProjectId, PROJECTS } from "@/lib/supabase/projects";
-
-const FALLBACK_ADMIN_EMAILS = [
-  "marcel@ecommerce.hr",
-  "udruga@ecommerce.hr",
-  "laura@ecommerce.hr",
-];
+import { FALLBACK_ADMIN_EMAILS } from "@/lib/authGuards";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { CheckCircle2, Clock, AlertTriangle, XCircle } from "lucide-react";
-import { benefitStatusLabel } from "@/lib/utils";
+import { benefitStatusLabel, isBenefitOverdue } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
 import BenefitsView from "@/components/admin/BenefitsView";
 import AddBenefitModal from "@/components/admin/AddBenefitModal";
@@ -17,11 +17,15 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
   const activeStatus = searchParams.status ?? null;
   const supabase = await createClient();
 
-  await supabase
+  // Označi kao overdue samo benefite s rokom STRIKTNO prije danas (usklađeno s isBenefitOverdue)
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const { error: overdueUpdateError } = await supabase
     .from("sponsor_benefits")
     .update({ status: "overdue" })
-    .lt("deadline", new Date().toISOString())
+    .lt("deadline", todayStr)
     .not("status", "in", '("completed","overdue")');
+  if (overdueUpdateError) console.error("[benefits overdue update]", overdueUpdateError.message);
 
   // Try with new columns (migration_018); fall back without them if not yet migrated
   let { data: benefits, error: benefitErr } = await supabase
@@ -67,7 +71,11 @@ export default async function BenefitsPage({ searchParams }: { searchParams: { s
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {(["not_started", "in_progress", "completed", "overdue"] as BenefitStatus[]).map((status) => {
-          const count = rows.filter((b) => b.status === status).length;
+          // Jedinstvena podjela: "overdue" broji sve koji kasne (isBenefitOverdue),
+          // ostali statusi broje samo one koji NE kasne — zbroj kartica = ukupno.
+          const count = status === "overdue"
+            ? rows.filter((b) => isBenefitOverdue(b.status, b.deadline)).length
+            : rows.filter((b) => b.status === status && !isBenefitOverdue(b.status, b.deadline)).length;
           const isActive = activeStatus === status;
           return (
             <Link

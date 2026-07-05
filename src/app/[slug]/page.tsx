@@ -1,9 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
+import { notFound } from "next/navigation";
 import QRCode from "qrcode";
-import { nameToSlug } from "@/lib/slugUtils";
-import { Ticket, Building2, Briefcase, Mail } from "lucide-react";
+import { Building2, Briefcase } from "lucide-react";
 
-const SELECT = "id, name, company, role, email, ticket_type, slug";
+const SELECT = "id, name, company, role, ticket_type, slug";
 
 async function findContact(slug: string) {
   const url =
@@ -13,62 +13,34 @@ async function findContact(slug: string) {
     process.env.SUPABASE_SERVICE_ROLE_KEY_2026 ??
     process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!url || !serviceKey) return { contact: null, error: "Nedostaju env varijable." };
+  if (!url || !serviceKey) {
+    console.error("Ulaznica: nedostaju env varijable za Supabase.");
+    return null;
+  }
 
   const supabase = createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // 1. Lookup po stored slug
-  const { data: bySlug } = await supabase
+  const { data: bySlug, error } = await supabase
     .from("sponsor_contacts")
     .select(SELECT)
     .eq("slug", slug)
     .eq("type", "ticket")
     .maybeSingle();
 
-  if (bySlug) return { contact: bySlug, error: null };
+  if (error) {
+    console.error("Ulaznica: greška pri dohvatu:", error.message);
+    return null;
+  }
 
-  // 2. Fallback: izračunaj slug iz svih ticketa i pronađi podudaranje
-  const { data: all, error: e2 } = await supabase
-    .from("sponsor_contacts")
-    .select(SELECT)
-    .eq("type", "ticket");
-
-  if (e2 && !all) return { contact: null, error: e2.message };
-
-  const found = (all ?? []).find(
-    (c: any) => nameToSlug(c.name ?? "") === slug
-  ) ?? null;
-
-  return { contact: found, error: null };
+  return bySlug ?? null;
 }
 
 export default async function TicketPage({ params }: { params: { slug: string } }) {
-  const { contact, error } = await findContact(params.slug);
+  const contact = await findContact(params.slug);
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow p-8 max-w-sm w-full text-center">
-          <p className="text-red-500 font-medium">Greška pri učitavanju ulaznice</p>
-          <p className="text-xs text-gray-400 mt-2 font-mono">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!contact) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow p-8 max-w-sm w-full text-center">
-          <Ticket size={32} className="mx-auto mb-3 text-gray-300" />
-          <p className="text-gray-500 font-medium">Ulaznica nije pronađena</p>
-          <p className="text-xs text-gray-400 mt-1 font-mono">{params.slug}</p>
-        </div>
-      </div>
-    );
-  }
+  if (!contact) notFound();
 
   const ticketUrl = `https://partners.ecommerce.hr/${params.slug}`;
   const qrDataUrl = await QRCode.toDataURL(ticketUrl, {
@@ -122,11 +94,6 @@ export default async function TicketPage({ params }: { params: { slug: string } 
                   {contact.role && (
                     <div className="flex items-center gap-1.5 text-sm text-gray-500">
                       <Briefcase size={13} className="text-gray-400" />{contact.role}
-                    </div>
-                  )}
-                  {contact.email && (
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500">
-                      <Mail size={13} className="text-gray-400" />{contact.email}
                     </div>
                   )}
                 </div>

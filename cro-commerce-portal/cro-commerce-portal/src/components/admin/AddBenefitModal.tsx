@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, X, Loader2 } from "lucide-react";
+import { benefitStatusLabel } from "@/lib/utils";
 import type { BenefitStatus } from "@/types";
+
+const BENEFIT_STATUSES: BenefitStatus[] = ["not_started", "in_progress", "completed", "overdue"];
+import { getAdminEmails } from "@/app/actions/getAdminEmails";
 
 interface Sponsor {
   id: any;
@@ -23,6 +27,7 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
   const [error, setError] = useState("");
   const [existingNames, setExistingNames] = useState<string[]>([]);
   const [isNewBenefit, setIsNewBenefit] = useState(false);
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const router = useRouter();
   const supabase = createClient();
 
@@ -47,6 +52,7 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
         names.sort();
         setExistingNames(names);
       });
+    getAdminEmails().then(setAdminEmails);
   }, [open]);
 
   function handleClose() {
@@ -121,13 +127,13 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
 
           {sponsors && sponsors.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sponzor</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Partner</label>
               <select
                 value={form.selected_sponsor_id}
                 onChange={(e) => setForm({ ...form, selected_sponsor_id: e.target.value })}
                 className="input-field"
               >
-                <option value="">— bez sponzora —</option>
+                <option value="">— bez partnera —</option>
                 {sponsors.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
@@ -199,23 +205,35 @@ export default function AddBenefitModal({ sponsorId, sponsors }: Props) {
                 onChange={(e) => setForm({ ...form, status: e.target.value as BenefitStatus })}
                 className="input-field"
               >
-                <option value="not_started">Nije počelo</option>
-                <option value="in_progress">U tijeku</option>
-                <option value="completed">Završeno</option>
-                <option value="overdue">Kasni</option>
+                {BENEFIT_STATUSES.map((s) => (
+                  <option key={s} value={s}>{benefitStatusLabel(s)}</option>
+                ))}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Odgovorna osoba</label>
-            <input
-              type="text"
-              value={form.assigned_to}
-              onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-              className="input-field"
-              placeholder="Ime i prezime"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Kontakt osoba (za partnera)</label>
+            {adminEmails.length > 0 ? (
+              <select
+                value={form.assigned_to}
+                onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+              >
+                <option value="">— bez kontakt osobe —</option>
+                {adminEmails.map((email) => (
+                  <option key={email} value={email}>{email}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="email"
+                value={form.assigned_to}
+                onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+                className="input-field"
+                placeholder="osoba@tvrtka.hr"
+              />
+            )}
           </div>
 
           <div>

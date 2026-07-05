@@ -9,7 +9,9 @@ export default async function CalendarPage() {
     .not("due_date", "is", null)
     .order("due_date");
 
-  const currentMonth = new Date().getMonth();
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
 
   return (
     <div className="animate-enter">
@@ -23,6 +25,7 @@ export default async function CalendarPage() {
       <CalendarView
         tasks={(tasks ?? []) as any}
         currentMonth={currentMonth}
+        currentYear={currentYear}
       />
     </div>
   );

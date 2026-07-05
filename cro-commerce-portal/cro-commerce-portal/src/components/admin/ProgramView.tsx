@@ -65,6 +65,21 @@ function typeLabel(type: SessionType) {
   return SESSION_TYPE_OPTIONS.find(t => t.value === type)?.label ?? type;
 }
 
+/** Normalizira vrijeme u "HH:MM" (npr. "9:15" → "09:15") da sortiranje i grupiranje rade ispravno. */
+function normalizeTime(t: string): string {
+  const m = t.trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return t.trim();
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+}
+
+/** HR množina: 2-4 paralelne sesije / 5+ paralelnih sesija */
+function parallelSessionsLabel(n: number) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} paralelne sesije`;
+  return `${n} paralelnih sesija`;
+}
+
 const emptyForm = {
   time_start:   "",
   time_end:     "",
@@ -135,8 +150,8 @@ export default function ProgramView({ sessions: initial, projectId }: Props) {
     setSaving(true);
     setError("");
     const payload = {
-      time_start:   form.time_start,
-      time_end:     form.time_end,
+      time_start:   normalizeTime(form.time_start),
+      time_end:     normalizeTime(form.time_end),
       stage:        form.stage,
       speaker_name: form.speaker_name || null,
       topic:        form.topic,
@@ -170,9 +185,13 @@ export default function ProgramView({ sessions: initial, projectId }: Props) {
   }
 
   async function handleDelete(id: string) {
-    await supabase.from("program_sessions").delete().eq("id", id);
-    setSessions(prev => prev.filter(s => s.id !== id));
+    const { error: err } = await supabase.from("program_sessions").delete().eq("id", id);
     setConfirmDel(null);
+    if (err) {
+      alert(`Greška pri brisanju sesije: ${err.message}`);
+      return;
+    }
+    setSessions(prev => prev.filter(s => s.id !== id));
   }
 
   const canSave = form.topic.trim() && form.time_start && form.time_end && !saving;
@@ -226,17 +245,17 @@ export default function ProgramView({ sessions: initial, projectId }: Props) {
         <div className="space-y-2">
           {groups.map(({ key, items }) => {
             const [timeStart, timeEnd] = key.split("|");
-            const isAllStage = items.every(s => s.session_type === "break" || s.session_type === "networking");
+            const isBreakSlot = items.every(s => s.session_type === "break" || s.session_type === "networking");
 
             return (
-              <div key={key} className={`card overflow-hidden ${isAllStage ? "opacity-80" : ""}`}>
+              <div key={key} className={`card overflow-hidden ${isBreakSlot ? "opacity-80" : ""}`}>
                 {/* Time header */}
-                <div className={`px-4 py-2 border-b border-gray-100 flex items-center gap-2 ${isAllStage ? "bg-gray-50" : "bg-white"}`}>
+                <div className={`px-4 py-2 border-b border-gray-100 flex items-center gap-2 ${isBreakSlot ? "bg-gray-50" : "bg-white"}`}>
                   <span className="text-sm font-bold text-gray-800 tabular-nums">{timeStart}</span>
                   <span className="text-gray-300 text-xs">—</span>
                   <span className="text-sm text-gray-400 tabular-nums">{timeEnd}</span>
                   {items.length > 1 && (
-                    <span className="ml-2 text-xs text-gray-400">{items.length} paralelne sesije</span>
+                    <span className="ml-2 text-xs text-gray-400">{parallelSessionsLabel(items.length)}</span>
                   )}
                 </div>
 
@@ -308,19 +327,19 @@ export default function ProgramView({ sessions: initial, projectId }: Props) {
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Početak *</label>
                   <input
-                    value={form.time_start}
+                    type="time"
+                    value={normalizeTime(form.time_start)}
                     onChange={e => setForm({ ...form, time_start: e.target.value })}
                     className="input-field text-sm"
-                    placeholder="09:15"
                   />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Kraj *</label>
                   <input
-                    value={form.time_end}
+                    type="time"
+                    value={normalizeTime(form.time_end)}
                     onChange={e => setForm({ ...form, time_end: e.target.value })}
                     className="input-field text-sm"
-                    placeholder="09:45"
                   />
                 </div>
               </div>
@@ -359,7 +378,7 @@ export default function ProgramView({ sessions: initial, projectId }: Props) {
                   value={form.speaker_name}
                   onChange={e => setForm({ ...form, speaker_name: e.target.value })}
                   className="input-field text-sm"
-                  placeholder="Ime i prezime (opcijalno)"
+                  placeholder="Ime i prezime (opcionalno)"
                 />
               </div>
 

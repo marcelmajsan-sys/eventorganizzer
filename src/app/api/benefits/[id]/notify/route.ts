@@ -1,36 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
+import { requireAdmin } from "@/lib/authGuards";
+import { escapeHtml } from "@/lib/utils";
 import { Resend } from "resend";
-import { cookies } from "next/headers";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_missing_key");
 const FROM_EMAIL = "CRO Commerce <konferencija@ecommerce.hr>";
 
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { benefit_name, assigned_to, deadline, notes, sponsor_name } = await req.json();
+    const auth = await requireAdmin();
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: 401 });
+    }
 
-    if (!assigned_to) {
+    const supabase = createAdminClientForProject(auth.projectId);
+
+    // Podatke o benefitu čitamo iz baze po id-u — ne vjerujemo request bodyju
+    const { data: benefit } = await supabase
+      .from("sponsor_benefits")
+      .select("benefit_name, deadline, notes, reminder_email, assigned_to, sponsors(name)")
+      .eq("id", params.id)
+      .single();
+
+    if (!benefit) {
+      return NextResponse.json({ error: "Benefit nije pronađen." }, { status: 404 });
+    }
+
+    const recipient = benefit.reminder_email || benefit.assigned_to;
+    if (!recipient) {
       return NextResponse.json({ error: "Nije definirana odgovorna osoba (email)." }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
-    const projectId = cookieStore.get("cro_active_project")?.value ?? "2026";
-    const projectName = `CRO Commerce ${projectId}`;
+    const sponsorsRaw = benefit.sponsors as unknown;
+    const sponsor = (Array.isArray(sponsorsRaw) ? sponsorsRaw[0] : sponsorsRaw) as { name: string } | null;
+    const sponsorName = sponsor?.name ?? null;
 
-    const deadlineFormatted = deadline
-      ? new Date(deadline).toLocaleDateString("hr-HR")
+    const projectName = `CRO Commerce ${auth.projectId}`;
+
+    const deadlineFormatted = benefit.deadline
+      ? new Date(benefit.deadline).toLocaleDateString("hr-HR")
       : null;
 
     const rows = [
-      notes && `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px;width:120px;vertical-align:top">Napomene:</td><td style="padding:8px 0;color:#111827;font-size:14px">${notes}</td></tr>`,
-      deadlineFormatted && `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px">Rok:</td><td style="padding:8px 0;color:#111827;font-size:14px;font-weight:600">${deadlineFormatted}</td></tr>`,
+      benefit.notes && `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px;width:120px;vertical-align:top">Napomene:</td><td style="padding:8px 0;color:#111827;font-size:14px">${escapeHtml(benefit.notes)}</td></tr>`,
+      deadlineFormatted && `<tr><td style="padding:8px 0;color:#6b7280;font-size:14px">Rok:</td><td style="padding:8px 0;color:#111827;font-size:14px;font-weight:600">${escapeHtml(deadlineFormatted)}</td></tr>`,
     ].filter(Boolean).join("");
 
-    const subject = `${projectName} - Podsjetnik za ${benefit_name}`;
+    const subject = `${projectName} - Podsjetnik za ${benefit.benefit_name}`;
 
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
@@ -40,7 +60,7 @@ export async function POST(
         <div style="padding:32px;background:white">
           <p style="margin:0 0 16px;color:#374151;font-size:15px">Poštovani,</p>
           <p style="margin:0 0 24px;color:#374151;font-size:15px">
-            podsjećamo vas na rok za korištenje benefita <strong>${benefit_name}</strong>${sponsor_name ? ` (${sponsor_name})` : ""}.
+            podsjećamo vas na rok za korištenje benefita <strong>${escapeHtml(benefit.benefit_name)}</strong>${sponsorName ? ` (${escapeHtml(sponsorName)})` : ""}.
           </p>
           ${rows ? `<table style="border-collapse:collapse;width:100%;margin-bottom:24px">${rows}</table>` : ""}
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
@@ -53,20 +73,22 @@ export async function POST(
 
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
-      to: assigned_to,
+      to: recipient,
       subject,
       html,
     });
 
     if (sendError) return NextResponse.json({ error: sendError.message }, { status: 500 });
 
-    const supabase = await createClient();
-    await supabase.from("email_logs").insert({
+    const { error: logError } = await supabase.from("email_logs").insert({
       benefit_id: params.id,
-      recipient: assigned_to,
+      recipient,
       subject,
       status: "sent",
     });
+    if (logError) {
+      console.error("[benefits/notify] email_logs insert error:", logError.message);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
