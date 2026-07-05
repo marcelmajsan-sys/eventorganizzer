@@ -166,9 +166,19 @@ function ContactRow({
   );
 }
 
-function AddTicketModal({ sponsorId, onClose }: { sponsorId: string; onClose: () => void }) {
+function AddTicketModal({
+  sponsorId, onClose, availableTypes,
+}: {
+  sponsorId: string;
+  onClose: () => void;
+  availableTypes: { standard: boolean; vip: boolean };
+}) {
   const { t } = useLang();
-  const [form, setForm] = useState<TicketFormData>(EMPTY_TICKET);
+  const [form, setForm] = useState<TicketFormData>({
+    ...EMPTY_TICKET,
+    // Pre-selektiraj tip koji partneru još stoji na raspolaganju
+    ticket_type: availableTypes.standard ? "standard" : "vip",
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -221,8 +231,12 @@ function AddTicketModal({ sponsorId, onClose }: { sponsorId: string; onClose: ()
               <div className="flex gap-2 mt-1">
                 {(["standard", "vip"] as const).map((opt) => (
                   <button key={opt} type="button" onClick={() => set("ticket_type", opt)}
+                    disabled={!availableTypes[opt]}
+                    title={!availableTypes[opt] ? t("contacts.quotaFull") : undefined}
                     className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                      form.ticket_type === opt
+                      !availableTypes[opt]
+                        ? "border-gray-100 text-gray-300 cursor-not-allowed line-through"
+                        : form.ticket_type === opt
                         ? opt === "vip" ? "bg-amber-100 border-amber-300 text-amber-800" : "bg-gray-100 border-gray-300 text-gray-700"
                         : "border-gray-200 text-gray-400 hover:border-gray-300"
                     }`}>
@@ -431,11 +445,12 @@ function PrimaryContactSection({ sponsorId, initial }: { sponsorId: string; init
 }
 
 export default function PortalContactsSection({
-  sponsorId, primaryContact, contacts: initial,
+  sponsorId, primaryContact, contacts: initial, ticketQuota,
 }: {
   sponsorId: string;
   primaryContact: PrimaryContact;
   contacts: Contact[];
+  ticketQuota: { vip: number | null; standard: number | null };
 }) {
   const { t } = useLang();
   const [contacts, setContacts] = useState(initial);
@@ -444,6 +459,18 @@ export default function PortalContactsSection({
 
   const mainContacts = contacts.filter((c) => c.type === "contact");
   const ticketContacts = contacts.filter((c) => c.type === "ticket");
+
+  // Iskorištenost limita ulaznica (limit dolazi iz benefita partnera)
+  const usedVip = ticketContacts.filter((c) => c.ticket_type === "vip").length;
+  const usedStandard = ticketContacts.length - usedVip;
+  const vipAvailable = ticketQuota.vip !== null && usedVip < ticketQuota.vip;
+  const standardAvailable = ticketQuota.standard !== null && usedStandard < ticketQuota.standard;
+  const hasQuota = ticketQuota.vip !== null || ticketQuota.standard !== null;
+  const canAddTicket = vipAvailable || standardAvailable;
+
+  const quotaParts: string[] = [];
+  if (ticketQuota.standard !== null) quotaParts.push(`${usedStandard}/${ticketQuota.standard} Standard`);
+  if (ticketQuota.vip !== null) quotaParts.push(`${usedVip}/${ticketQuota.vip} VIP`);
 
   function handleDelete(id: string) { setContacts((prev) => prev.filter((c) => c.id !== id)); }
   function handleAdded(c: Contact) { setContacts((prev) => [...prev, c]); }
@@ -465,7 +492,14 @@ export default function PortalContactsSection({
       </div>
 
       <div className="border-t border-gray-100 pt-5">
-        <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2 text-sm"><Ticket size={15} className="text-gray-400" />{t("contacts.tickets")}</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-gray-900 flex items-center gap-2 text-sm"><Ticket size={15} className="text-gray-400" />{t("contacts.tickets")}</h3>
+          {quotaParts.length > 0 && (
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${canAddTicket ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+              {t("contacts.used")}: {quotaParts.join(" · ")}
+            </span>
+          )}
+        </div>
         <p className="text-xs text-gray-500 mb-3 leading-relaxed">
           {t("contacts.vipInfo")}
         </p>
@@ -473,11 +507,23 @@ export default function PortalContactsSection({
           {ticketContacts.length === 0 && <p className="text-xs text-gray-400 px-3 py-2">{t("contacts.noTickets")}</p>}
           {ticketContacts.map((c) => <ContactRow key={c.id} contact={c} onDelete={handleDelete} />)}
         </div>
-        <button onClick={() => setTicketModal(true)} className="flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-medium mt-1 px-3">
-          <Plus size={13} />
-          {t("contacts.addTicket")}
-        </button>
-        {ticketModal && <AddTicketModal sponsorId={sponsorId} onClose={() => setTicketModal(false)} />}
+        {!hasQuota ? (
+          <p className="text-xs text-gray-400 mt-1 px-3">{t("contacts.noTicketQuota")}</p>
+        ) : canAddTicket ? (
+          <button onClick={() => setTicketModal(true)} className="flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-medium mt-1 px-3">
+            <Plus size={13} />
+            {t("contacts.addTicket")}
+          </button>
+        ) : (
+          <p className="text-xs text-gray-400 mt-1 px-3">{t("contacts.quotaFull")}</p>
+        )}
+        {ticketModal && (
+          <AddTicketModal
+            sponsorId={sponsorId}
+            onClose={() => setTicketModal(false)}
+            availableTypes={{ standard: standardAvailable, vip: vipAvailable }}
+          />
+        )}
       </div>
     </div>
   );

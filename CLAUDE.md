@@ -58,7 +58,7 @@ npm run dev   # → http://localhost:3000
 - `contactActions.ts` — `deleteContact(id)`: nullificira `contact_person_id` FK na benefitima prije brisanja; FK error za kontakte vezane uz portal korisnika. `deleteDuplicateContacts()`: briše duplikate po emailu (partner > ticket > contact prioritet), batch 50
 - `sponsorBulkUpdate.ts` — bulk update paketa/plaćanja/statusa
 - `findPartnerProject.ts` — pronađi u kojoj bazi postoji email
-- `ticketActions.ts` — `createTicket(data)` (admin, `sponsor_id: null`), `createSponsorTicket(sponsorId, data)` (partner portal, veže uz sponzora), `bulkCreateTickets` (postoji, ali bulk upload UI je uklonjen), `deleteTicket`, `generateMissingSlugs`; svi generiraju jedinstveni QR slug via `makeUniqueSlug`
+- `ticketActions.ts` — `createTicket(data)` (admin, `sponsor_id: null`, BEZ limita), `createSponsorTicket(sponsorId, data)` (partner portal, veže uz sponzora, **provjerava limit ulaznica iz benefita** — vidi `lib/ticketQuota.ts`), `bulkCreateTickets` (postoji, ali bulk upload UI je uklonjen), `deleteTicket`, `generateMissingSlugs`; svi generiraju jedinstveni QR slug via `makeUniqueSlug`
 
 **Ključne API rute** (`src/app/api/`):
 - `api/auth/signout` — GET `/api/auth/signout?redirect=...`: odjavljuje iz **oba projekta** (2025 i 2026) i redirecta; Route Handler može pisati cookies za razliku od Server Component layouta — koristiti ovdje umjesto `supabase.auth.signOut()` u layoutima **i sidebarima** (AdminSidebar/PortalSidebar zovu ovu rutu). `redirect` prima samo relativne putanje (open redirect zaštita)
@@ -71,7 +71,8 @@ npm run dev   # → http://localhost:3000
 - `PortalHelpModal.tsx` — step-by-step wizard modal s uputama; `steps?` prop za buduću Supabase integraciju; svaki korak ima `preview` ReactNode koji prikazuje relevantan UI element; prijevodi u `lib/i18n/portal.ts` pod `help.*` ključevima
 - `PortalBenefitsView.tsx`, `PortalPartnerTabs.tsx`, `PortalProgramView.tsx`, `PortalPageHeader.tsx`, `PortalLangProvider.tsx`
 - `PortalContactsSection.tsx` — uređivanje primarnog kontakta, kontakt osoba i osoba za ulaznice; `AddTicketModal` otvara puni form (Ime, Email, Tvrtka, Kategorija, Tip ulaznice, Komentar) i poziva `createSponsorTicket`
-- `PortalCollaborationOptions.tsx` — hardkodirani `PACKAGES` i `CATEGORIES` array za usporedbu paketa; broj ulaznica: Brončani 2, Srebrni 3, Zlatni 5, Glavni 10; dodavanje novog broja zahtijeva i18n entry (`cell.vipN` u HR i EN) + update `CATEGORIES`
+- `PortalCollaborationOptions.tsx` — hardkodirani `PACKAGES` i `CATEGORIES` array za usporedbu paketa; broj ulaznica: Brončani 2, Srebrni 3, Zlatni 5, Glavni 10; dodavanje novog broja zahtijeva i18n entry (`cell.vipN` u HR i EN) + update `CATEGORIES`. To je MARKETINŠKA tablica — stvarni limit svakog partnera dolazi iz njegovih benefita (vidi Limit ulaznica dolje)
+- **Limit ulaznica partnera** (`lib/ticketQuota.ts`): limit NIJE globalan po paketu nego se parsira iz naziva partnerovih `sponsor_benefits` — benefit čiji naziv sadrži `ulaznic|kotizacij|ticket` je ulaznički; broj = prva znamenka u nazivu (bez broja = 1); `VIP` u nazivu → VIP kvota, inače standard (npr. "2 VIP ulaznice", "5 kotizacija"). Enforcement je server-side u `createSponsorTicket` (vraća `{error}` kad je limit pun ili tip nije u benefitima); UI (`PortalContactsSection`) prikazuje "Iskorišteno: X/Y" badge i gasi gumb/tip kad je kvota puna. Admin unos (`createTicket`, `/admin/ulaznice`) NEMA limit. Ugovor (`PortalContractView`) prikazuje stvarne benefite partnera kad postoje; hardkodirani popis po paketu je samo fallback (VIP brojke usklađene s tablicom: 2/3/5/10)
 
 ---
 

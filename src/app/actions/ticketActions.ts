@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { uniqueSlug } from "@/lib/slugUtils";
 import { requireAdmin, requireSponsor } from "@/lib/authGuards";
+import { parseTicketQuota } from "@/lib/ticketQuota";
 
 export type TicketFormData = {
   name: string;
@@ -129,6 +130,36 @@ export async function createSponsorTicket(
   if (!auth.ok) return { error: auth.error };
 
   const supabase = createAdminClientForProject(auth.projectId);
+
+  // Limit ulaznica dolazi iz benefita partnera (vidi lib/ticketQuota.ts) —
+  // admin unos kroz createTicket nema limit, ovo vrijedi samo za portal.
+  const requestedType = data.ticket_type === "vip" ? "vip" : "standard";
+  const [{ data: benefitRows }, { data: existingTickets }] = await Promise.all([
+    supabase.from("sponsor_benefits").select("benefit_name").eq("sponsor_id", sponsorId),
+    supabase.from("sponsor_contacts").select("id, ticket_type").eq("sponsor_id", sponsorId).eq("type", "ticket"),
+  ]);
+  const quota = parseTicketQuota(
+    (benefitRows ?? []).map((b: { benefit_name: string | null }) => b.benefit_name)
+  );
+  const limit = requestedType === "vip" ? quota.vip : quota.standard;
+  const used = (existingTickets ?? []).filter(
+    (tk: { ticket_type: string | null }) => (tk.ticket_type === "vip" ? "vip" : "standard") === requestedType
+  ).length;
+
+  if (limit === null) {
+    return {
+      error:
+        requestedType === "vip"
+          ? "Vaš paket benefita ne uključuje VIP ulaznice. Za dodatne ulaznice kontaktirajte organizatora."
+          : "Vaš paket benefita ne uključuje standardne ulaznice. Za dodatne ulaznice kontaktirajte organizatora.",
+    };
+  }
+  if (used >= limit) {
+    return {
+      error: `Iskoristili ste sve ${requestedType === "vip" ? "VIP" : "standardne"} ulaznice iz svojih benefita (${used}/${limit}). Za dodatne ulaznice kontaktirajte organizatora — vrijedi 30% popusta.`,
+    };
+  }
+
   const slug = await makeUniqueSlug(supabase, data.name.trim());
 
   const record = {

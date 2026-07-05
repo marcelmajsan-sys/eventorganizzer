@@ -2,6 +2,7 @@ import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import PortalPartnerTabs from "@/components/portal/PortalPartnerTabs";
 import PortalPageHeader from "@/components/portal/PortalPageHeader";
+import { parseTicketQuota } from "@/lib/ticketQuota";
 
 export default async function PortalSponsorPage() {
   const supabase = await createClient();
@@ -43,6 +44,11 @@ export default async function PortalSponsorPage() {
     return desc ? `${name} — ${desc}` : name;
   });
 
+  // Limit ulaznica partnera dolazi iz njegovih benefita (lib/ticketQuota.ts)
+  const ticketQuota = parseTicketQuota(
+    (benefits ?? []).map((b: Record<string, unknown>) => b.benefit_name as string | null)
+  );
+
   return (
     <div className="animate-enter">
       <PortalPageHeader titleKey="partner.title" subtitleKey="partner.subtitle" />
@@ -56,6 +62,7 @@ export default async function PortalSponsorPage() {
         contractAcceptedAt={contractAcceptedAt}
         contractAcceptedBy={contractAcceptedBy}
         contractBenefits={contractBenefits}
+        ticketQuota={ticketQuota}
       />
     </div>
   );

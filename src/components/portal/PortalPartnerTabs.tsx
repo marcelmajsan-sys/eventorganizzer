@@ -47,6 +47,7 @@ interface Props {
   contractAcceptedAt: string | null;
   contractAcceptedBy: string | null;
   contractBenefits: string[];
+  ticketQuota: { vip: number | null; standard: number | null };
 }
 
 const MAIN_PACKAGES = ["Glavni", "Zlatni", "Srebrni", "Brončani"];
@@ -65,7 +66,7 @@ type Tab = typeof TAB_IDS[number];
 
 export default function PortalPartnerTabs({
   sponsorId, sponsor, contacts, files,
-  userEmail, contractAcceptedAt, contractAcceptedBy, contractBenefits,
+  userEmail, contractAcceptedAt, contractAcceptedBy, contractBenefits, ticketQuota,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("info");
   const { t, lang } = useLang();
@@ -165,6 +166,7 @@ export default function PortalPartnerTabs({
             phone: sponsor.contact_phone,
           }}
           contacts={contacts}
+          ticketQuota={ticketQuota}
         />
       )}
 

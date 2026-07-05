@@ -52,7 +52,10 @@ const HR = {
   "contacts.ticketLink": "Ulaznica",
   "contacts.openTicket": "Otvori ulaznicu",
   "contacts.noQrLink": "QR link još nije generiran",
-  "contacts.vipInfo": "U svojim benefitima možete vidjeti koliko VIP ulaznica je uključeno u vaš paket. Možete dodavati i mijenjati osobe za ulaznice najkasnije do 10.10.2026. Ako dodate više osoba nego što imate u svom paketu benefita, poslat ćemo vam ponudu za dodatne ulaznice po želji uz 30% popusta.",
+  "contacts.vipInfo": "Broj ulaznica koji vam pripada definiran je vašim benefitima. Možete dodavati i mijenjati osobe za ulaznice najkasnije do 10.10.2026. Ako trebate više osoba nego što vaš paket benefita uključuje, javite nam se — poslat ćemo vam ponudu za dodatne ulaznice uz 30% popusta.",
+  "contacts.used": "Iskorišteno",
+  "contacts.quotaFull": "Iskoristili ste sve ulaznice iz svojih benefita. Za dodatne ulaznice kontaktirajte organizatora — vrijedi 30% popusta.",
+  "contacts.noTicketQuota": "Vaš paket benefita ne uključuje ulaznice. Za ulaznice kontaktirajte organizatora.",
 
   // Collaboration options
   "options.title": "Usporedba paketa sponzorstva",
@@ -95,9 +98,7 @@ const HR = {
   // Cell text values
   "cell.vip2": "2 VIP ulaznice",
   "cell.vip3": "3 VIP ulaznice",
-  "cell.vip4": "4 VIP ulaznice",
   "cell.vip5": "5 VIP ulaznica",
-  "cell.vip6": "6 VIP ulaznica",
   "cell.vip10": "10 VIP ulaznica",
   "cell.goodiePlus": "+500 € opcija",
   "cell.page1": "1 stranica",
@@ -216,7 +217,10 @@ const EN: typeof HR = {
   "contacts.ticketLink": "Ticket",
   "contacts.openTicket": "Open ticket",
   "contacts.noQrLink": "QR link not generated yet",
-  "contacts.vipInfo": "In your benefits you can see how many VIP tickets are included in your package. You can add and change ticket holders until 10 October 2026 at the latest. If you add more people than your benefits package includes, we will send you an offer for additional tickets at a 30% discount.",
+  "contacts.vipInfo": "The number of tickets you are entitled to is defined by your benefits. You can add and change ticket holders until 10 October 2026 at the latest. If you need more people than your benefits package includes, contact us — we will send you an offer for additional tickets at a 30% discount.",
+  "contacts.used": "Used",
+  "contacts.quotaFull": "You have used all tickets included in your benefits. For additional tickets contact the organizer — a 30% discount applies.",
+  "contacts.noTicketQuota": "Your benefits package does not include tickets. Please contact the organizer.",
 
   // Collaboration options
   "options.title": "Sponsorship Package Comparison",
@@ -259,9 +263,7 @@ const EN: typeof HR = {
   // Cell text values
   "cell.vip2": "2 VIP tickets",
   "cell.vip3": "3 VIP tickets",
-  "cell.vip4": "4 VIP tickets",
   "cell.vip5": "5 VIP tickets",
-  "cell.vip6": "6 VIP tickets",
   "cell.vip10": "10 VIP tickets",
   "cell.goodiePlus": "+€500 option",
   "cell.page1": "1 page",
