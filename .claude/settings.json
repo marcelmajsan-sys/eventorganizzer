@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "timeout": 120,
+            "statusMessage": "Type-checking (tsc --noEmit)…",
+            "command": "f=$(node -e 'let d=\"\";process.stdin.on(\"data\",c=>d+=c).on(\"end\",()=>{try{const j=JSON.parse(d);process.stdout.write((j.tool_input&&j.tool_input.file_path)||(j.tool_response&&j.tool_response.filePath)||\"\")}catch(e){}})'); case \"$f\" in *.ts|*.tsx) case \"$f\" in *cro-commerce-portal*) d=\"cro-commerce-portal/cro-commerce-portal\";; *) d=\".\";; esac; cd \"$d\" && npx --no-install tsc --noEmit ;; esac"
+          }
+        ]
+      }
+    ]
+  }
+}

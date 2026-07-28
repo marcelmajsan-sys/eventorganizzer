@@ -120,6 +120,9 @@ npm run dev   # → http://localhost:3000
 `program_sessions` i `budget_items` koriste `project_id TEXT` (`'2025'` | `'2026'`).
 Ostale tablice su na zasebnim Supabase instancama.
 
+### Prije popravka bilo kojeg DB problema — VAŽNO
+Prije ispravljanja bilo kojeg problema vezanog uz bazu: provjeri da je migracija STVARNO pokrenuta protiv live baze i potvrdi da je u pitanju ISPRAVAN Supabase projekt (paziti na zabunu **2025 vs 2026** — to su zasebne instance). Nikad ne pretpostavljaj da je migracija pokrenuta. Migracije se pokreću ručno u Supabase Dashboard → SQL Editor, i to u **obje** baze (vidi [`MIGRATIONS.md`](./MIGRATIONS.md)).
+
 ---
 
 ## Autentikacija i arhitektura
@@ -206,6 +209,8 @@ git add . && git commit -m "Opis" && git push origin main
 
 **Supabase config** (u oba projekta): Authentication → URL Configuration → Redirect URLs dodati `https://partners.ecommerce.hr/auth/callback`
 
+> **VAŽNO — promjene nisu odmah na produkciji**: Nakon BILO KOJE izmjene koda koja utječe na live stranicu, podsjeti korisnika da se promjena NEĆE vidjeti dok nije commitana I deployana na Vercel. Navedi točne korake: (1) `git commit`, (2) `git push origin main`, (3) pričekaj da Vercel deploy završi (~1–2 min). Editiranje koda samo po sebi ne mijenja ništa live.
+
 ---
 
 ## Ključne implementacijske napomene
@@ -247,3 +252,21 @@ Kako pokrenuti: Supabase Dashboard → SQL Editor → New query → kopiraj migr
 ### Utility SQL skripte (nisu migracije)
 
 - **`supabase/cleanup_duplicate_contacts.sql`** — ručno čišćenje duplih kontakata (isti email). Dvostupanjski: KORAK 1 samo prikaže što će se zadržati/obrisati (`ROW_NUMBER()` preview); KORAK 2 je zakomentiran — odkomentirati tek nakon provjere. Prioritet zadržavanja: ima `sponsor_id` → dulje ime → više popunjenih polja → stariji `created_at`.
+
+---
+
+## Git / Commit Conventions
+
+- Koristi **Bash-kompatibilnu** sintaksu za commit poruke. NE koristi PowerShell here-string sintaksu (`@'...'@`) unutar Bash tool poziva — ona iskrivljuje commit poruke (ubacuje stray `@` znakove). Za commit poruke koristi obični `git commit -m "..."`.
+
+---
+
+## Architecture / Conventions
+
+- **Sekundarni kontakti su zasebni `sponsor_contacts` zapisi** (i, gdje treba, zasebni portal korisnici), kako već postoji u modelu. NE uvoditi novi `SecondaryContact` model i NE over-engineerirati — prati postojeći obrazac (`sponsor_contacts` + `sponsor_users`).
+
+---
+
+## Working Style
+
+- Drži izmjene usko ograničene na točno ono što je traženo. Za promjene teksta/UI-a, promijeni SAMO konkretan navedeni string — ne širi opseg i ne zamjenjuj sve pojave (npr. "promijeni samo riječ Korisnici" znači samo tu jednu riječ).
