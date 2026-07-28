@@ -21,8 +21,8 @@ interface Session {
 
 const STAGE_TABS = [
   { id: "sve",        label: "Sve" },
-  { id: "future",     label: "Future Stage" },
-  { id: "action",     label: "Action Stage" },
+  { id: "future",     label: "Blackwall Stage" },
+  { id: "action",     label: "Manago AI Stage" },
   { id: "wonderland", label: "Wonderland Stage" },
 ] as const;
 
@@ -352,8 +352,8 @@ export default function ProgramView({ sessions: initial, projectId }: Props) {
                     onChange={e => setForm({ ...form, stage: e.target.value as Stage })}
                     className="input-field text-sm"
                   >
-                    <option value="future">Future Stage</option>
-                    <option value="action">Action Stage</option>
+                    <option value="future">Blackwall Stage</option>
+                    <option value="action">Manago AI Stage</option>
                     <option value="wonderland">Wonderland Stage</option>
                     <option value="all">Sve pozornice</option>
                   </select>

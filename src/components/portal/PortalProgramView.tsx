@@ -19,8 +19,8 @@ interface Session {
 
 const STAGE_TABS_BASE = [
   { id: "sve",        labelKey: "program.all" as const },
-  { id: "future",     label: "Future Stage" },
-  { id: "action",     label: "Action Stage" },
+  { id: "future",     label: "Blackwall Stage" },
+  { id: "action",     label: "Manago AI Stage" },
   { id: "wonderland", label: "Wonderland Stage" },
 ] as const;
 
