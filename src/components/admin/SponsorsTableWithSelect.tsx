@@ -46,15 +46,16 @@ async function exportToXlsx(rows: SponsorRow[]) {
 
   const data = rows.map((s) => {
     const contacts = s.sponsor_contacts ?? [];
-    const primary = contacts.find((c) => c.type === "contact") ?? contacts[0] ?? null;
+    const fallback = contacts.find((c) => c.type === "contact") ?? contacts[0] ?? null;
+    const hasPrimary = Boolean(s.contact_name || s.contact_email);
     const benefits = s.sponsor_benefits ?? [];
     const completed = benefits.filter((b) => b.status === "completed").length;
     return {
       "Tvrtka": s.name,
       "Paket": s.package_type ?? "",
       "Status": leadStatusLabel((s.lead_status ?? "") as LeadStatus) || (s.lead_status ?? ""),
-      "Kontakt ime": primary?.name ?? s.contact_name ?? "",
-      "Kontakt email": primary?.email ?? s.contact_email ?? "",
+      "Kontakt ime": (hasPrimary ? s.contact_name : fallback?.name) ?? "",
+      "Kontakt email": (hasPrimary ? s.contact_email : fallback?.email) ?? "",
       "Iznos (EUR)": s.iznos ?? 0,
       "Plaćanje": paymentStatusLabel((s.payment_status ?? "") as PaymentStatus) ?? "—",
       "Benefiti završeni": completed,
@@ -239,9 +240,10 @@ export default function SponsorsTableWithSelect({ sponsors, packageTypeNames }: 
                 const total = benefits.length;
                 const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
                 const contacts = sponsor.sponsor_contacts ?? [];
-                const primaryContact = contacts.find((c) => c.type === "contact") ?? contacts[0] ?? null;
-                const contactName = primaryContact?.name ?? sponsor.contact_name;
-                const contactEmail = primaryContact?.email ?? sponsor.contact_email;
+                const fallbackContact = contacts.find((c) => c.type === "contact") ?? contacts[0] ?? null;
+                const hasPrimary = Boolean(sponsor.contact_name || sponsor.contact_email);
+                const contactName = hasPrimary ? sponsor.contact_name : fallbackContact?.name ?? null;
+                const contactEmail = hasPrimary ? sponsor.contact_email : fallbackContact?.email ?? null;
                 const isSelected = selected.has(sponsor.id);
 
                 return (
