@@ -28,6 +28,7 @@ import AddBenefitModal from "@/components/admin/AddBenefitModal";
 import DeleteBenefitButton from "@/components/admin/DeleteBenefitButton";
 import ContactsSection from "@/components/admin/ContactsSection";
 import DeleteSponsorButton from "@/components/admin/DeleteSponsorButton";
+import ImpersonateButton from "@/components/admin/ImpersonateButton";
 import AdminPrimaryContactEdit from "@/components/admin/AdminPrimaryContactEdit";
 import SponsorCommentsSection from "@/components/admin/SponsorCommentsSection";
 import { getSponsorComments } from "@/app/actions/sponsorComments";
@@ -129,6 +130,7 @@ export default async function SponsorDetailPage({ params }: Props) {
             <p className="page-subtitle">Detalji partnera i upravljanje benefitima</p>
           </div>
           <div className="flex items-center gap-2">
+            <ImpersonateButton sponsorId={sponsor.id} />
             <DeleteSponsorButton sponsorId={sponsor.id} sponsorName={sponsor.name} />
             <EditSponsorForm sponsor={sponsor} packageTypes={packageTypeNames} />
           </div>

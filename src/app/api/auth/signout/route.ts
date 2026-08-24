@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { PROJECTS } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
+import { IMP_COOKIE } from "@/lib/impersonation";
 
 // GET /api/auth/signout?redirect=/login%3Ferror%3Dno_access
 // Route Handler može pisati cookies (za razliku od Server Component layouta),
@@ -15,6 +16,11 @@ export async function GET(request: NextRequest) {
   if (!redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
     redirectTo = "/";
   }
+
+  // Obična odjava mora ubiti i impersonaciju — inače bi cookie s adminovim
+  // tokenima preživio i sljedeći partner na istom računalu bi gumbom "Izađi"
+  // dobio adminovu sesiju.
+  cookieStore.delete(IMP_COOKIE);
 
   // Odjavi iz oba projekta kako bi se cookies sigurno obrisali
   for (const pid of ["2026", "2025"] as ProjectId[]) {

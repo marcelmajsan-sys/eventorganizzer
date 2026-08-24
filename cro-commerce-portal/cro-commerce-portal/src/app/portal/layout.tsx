@@ -5,7 +5,9 @@ import { createAdminClientForProject } from "@/lib/supabase/adminProjectClient";
 import { PROJECTS, PROJECT_COOKIE, resolveProjectId } from "@/lib/supabase/projects";
 import type { ProjectId } from "@/lib/supabase/projects";
 import PortalSidebar from "@/components/portal/PortalSidebar";
+import ImpersonationBanner from "@/components/portal/ImpersonationBanner";
 import { LangProvider } from "@/context/LanguageContext";
+import { getImpersonation } from "@/lib/impersonation";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -87,6 +89,14 @@ export default async function PortalLayout({ children }: { children: React.React
     }
   } catch {}
 
+  // Traka se prikazuje samo ako je prijavljeni korisnik doista onaj kojeg je
+  // admin preuzeo — zaostali cookie ne smije ponuditi "Izađi" nekom drugom.
+  const impRaw = await getImpersonation();
+  const impersonation =
+    impRaw && impRaw.partnerEmail.toLowerCase() === (user.email ?? "").toLowerCase()
+      ? impRaw
+      : null;
+
   return (
     <LangProvider>
       <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -97,11 +107,17 @@ export default async function PortalLayout({ children }: { children: React.React
           otherProjectId={otherProjectAvailable ? otherProjectId : undefined}
         />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
-          <div className="p-4 md:p-8 max-w-[1200px] mx-auto">
+          <div className={`p-4 md:p-8 max-w-[1200px] mx-auto ${impersonation ? "pb-24" : ""}`}>
             {children}
           </div>
         </main>
       </div>
+      {impersonation && (
+        <ImpersonationBanner
+          sponsorName={impersonation.sponsorName}
+          adminEmail={impersonation.adminEmail}
+        />
+      )}
     </LangProvider>
   );
 }
