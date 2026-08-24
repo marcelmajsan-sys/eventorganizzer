@@ -287,7 +287,17 @@ export default async function SponsorDetailPage({ params }: Props) {
           </div>
 
           {/* Contacts */}
-          <ContactsSection sponsorId={sponsor.id} sponsorName={sponsor.name} contacts={contacts ?? []} projectId={projectId} />
+          <ContactsSection
+            sponsorId={sponsor.id}
+            sponsorName={sponsor.name}
+            contacts={contacts ?? []}
+            projectId={projectId}
+            primaryContact={{
+              name: sponsor.contact_name ?? null,
+              email: sponsor.contact_email ?? null,
+              phone: sponsor.contact_phone ?? null,
+            }}
+          />
 
           {/* Files */}
           <FileUploadSection sponsorId={sponsor.id} existingFiles={files ?? []} />

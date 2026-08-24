@@ -23,6 +23,8 @@ interface Props {
   sponsorName: string;
   contacts: Contact[];
   projectId?: string;
+  /** Prikazuje se kad partner nema nijednu unesenu kontakt osobu. */
+  primaryContact?: { name: string | null; email: string | null; phone: string | null };
 }
 
 const emptyForm = { name: "", email: "", phone: "", role: "", ticket_type: "standard" as TicketType };
@@ -456,7 +458,7 @@ function AddContactForm({
   );
 }
 
-export default function ContactsSection({ sponsorId, sponsorName, contacts: initial, projectId }: Props) {
+export default function ContactsSection({ sponsorId, sponsorName, contacts: initial, projectId, primaryContact }: Props) {
   const [contacts, setContacts] = useState(initial);
 
   useEffect(() => {
@@ -465,6 +467,11 @@ export default function ContactsSection({ sponsorId, sponsorName, contacts: init
 
   const mainContacts = contacts.filter((c) => c.type === "contact");
   const ticketContacts = contacts.filter((c) => c.type === "ticket");
+
+  // Bez ijedne unesene kontakt osobe kartica je prazna — tada pokaži primarni
+  // kontakt sponzora umjesto praznog stanja.
+  const primaryFallback =
+    primaryContact && (primaryContact.name || primaryContact.email) ? primaryContact : null;
 
   function handleDelete(id: string) {
     setContacts((prev) => prev.filter((c) => c.id !== id));
@@ -484,7 +491,28 @@ export default function ContactsSection({ sponsorId, sponsorName, contacts: init
         </h3>
         <div className="divide-y divide-gray-100">
           {mainContacts.length === 0 && (
-            <p className="text-xs text-gray-400 px-3 py-2">Nema dodanih kontakt osoba</p>
+            primaryFallback ? (
+              <div className="flex items-start gap-3 py-2.5 px-3 rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {primaryFallback.name ?? primaryFallback.email}
+                    </p>
+                    <span className="text-[10px] text-gray-400 border border-gray-200 rounded px-1.5 py-0.5 flex-shrink-0">
+                      primarni kontakt
+                    </span>
+                  </div>
+                  {primaryFallback.name && primaryFallback.email && (
+                    <p className="text-xs text-gray-500 truncate mt-0.5">{primaryFallback.email}</p>
+                  )}
+                  {primaryFallback.phone && (
+                    <p className="text-xs text-gray-500">{primaryFallback.phone}</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 px-3 py-2">Nema dodanih kontakt osoba</p>
+            )
           )}
           {mainContacts.map((c) => (
             <ContactRow key={c.id} contact={c} sponsorId={sponsorId} sponsorName={sponsorName} projectId={projectId} onDelete={handleDelete} />
