@@ -161,6 +161,14 @@ Iznimke koje insertaju direktno preko `createAdminClientForProject` (pouzdano by
 - **Storage**: široki `"authenticated read"` SELECT policy na `storage.objects` **obrisan** (lint 0025); `sponsor-files` je public bucket → download radi preko public URL-a, app ne koristi `.list()`. Ne vraćati policy natrag.
 - **Leaked Password Protection** se NE rješava SQL-om — uključiti u Dashboardu (Authentication → Policies) u oba projekta.
 
+### Impersonacija partnera (kolovoz 2026.)
+Admin gumb **"Logiraj se kao partner"** na profilu partnera (`ImpersonateButton` → `actions/impersonate.ts`, guard `requireAdmin`). Za razliku od members portala (JWT u sessionStorageu, izolirano po tabu), ovdje sesija živi u **cookiejima** a portal je server-rendered — zato se adminova sesija privremeno **zamjenjuje** partnerovom u ISTOM tabu (i ostali tabovi vide portal kao partner):
+1. `impersonatePartner(sponsorId)` nađe portal korisnika preko `sponsor_users` (kad ih je više, bira onog koji je primarni kontakt), spremi adminove tokene u httpOnly cookie **`cro_imp`** (base64 JSON, 2h) i napravi isti token exchange kao `switchProject` (`generateLink` → `fetch` s `redirect:"manual"` → `setSession`).
+2. Portal prikazuje žutu traku `ImpersonationBanner` ("Admin testni način") s gumbom **Izađi** → `stopImpersonation()` vraća adminovu sesiju iz cookieja, resetira `PROJECT_COOKIE` na adminov projekt i redirecta na profil partnera.
+- **Cookie SADRŽI adminov refresh token** — posjedovanje cookieja JE kredencijal. Ne zamjenjivati ga običnom `adminEmail` oznakom: cookieje kontrolira browser, pa bi je bilo tko mogao podmetnuti i gumbom "Izađi" dobiti admin sesiju.
+- Dvije obrane od zaostalog cookieja: `/api/auth/signout` briše `cro_imp`, a traka i `stopImpersonation` rade samo ako se email prijavljenog korisnika poklapa s `partnerEmail` iz cookieja.
+- Sve što admin napravi u testnom načinu bilježi se kao radnja partnera (npr. ulaznica dobiva `sponsor_contacts.source='portal'`) — nema posebnog `imp` označavanja zapisa.
+
 ### Partner login flow
 Partner login je na `/` (`src/app/page.tsx`); `/partner` i `/login` su SAMO middleware redirecti — te su stranice obrisane (bile su mrtvi duplikati). Admin login je `src/app/admin/page.tsx`.
 Login ne poziva `recordPartnerLogin` — prijava ide direktno na `/portal/benefits`.
