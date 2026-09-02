@@ -209,37 +209,37 @@ const LAYOUT = {
   square: {
     ml: .074, logoW: .470, logoY: .068,
     badgeY: .318, badgeH: .055, badgeFs: .0250,
-    nameY: .320, nameFs: .0620, nameMax: .44,
-    compY: .378, compFs: .0190, compTrack: .0022,
-    talkY: .452, talkFs: .0225, talkLh: 1.32, talkMax: .43, talkLines: 3,
+    nameY: .320, nameFs: .0720, nameMax: .52,
+    compY: .378, compFs: .0230, compTrack: .0022,
+    talkY: .452, talkFs: .0270, talkLh: 1.32, talkMax: .50, talkLines: 3,
     divY: .836, divW: .520,
-    labY: .874, labFs: .0175,
-    fooY: .952, fooH: .052, sloganFs: .0190,
+    labY: .874, labFs: .0210,
+    fooY: .952, fooH: .052, sloganFs: .0190, footStack: true,
     photo: [.520, .215, 1.02, 1.0],
     plane: [.520, .915, .804, .869, .992]
   },
   portrait: {
     ml: .074, logoW: .490, logoY: .055,
     badgeY: .292, badgeH: .044, badgeFs: .0250,
-    nameY: .300, nameFs: .0640, nameMax: .48,
-    compY: .352, compFs: .0190, compTrack: .0022,
-    talkY: .414, talkFs: .0225, talkLh: 1.32, talkMax: .43, talkLines: 3,
+    nameY: .300, nameFs: .0740, nameMax: .56,
+    compY: .352, compFs: .0230, compTrack: .0022,
+    talkY: .414, talkFs: .0270, talkLh: 1.32, talkMax: .50, talkLines: 3,
     divY: .856, divW: .520,
-    labY: .887, labFs: .0175,
-    fooY: .960, fooH: .042, sloganFs: .0190,
+    labY: .887, labFs: .0210,
+    fooY: .960, fooH: .042, sloganFs: .0190, footStack: true,
     photo: [.505, .230, 1.02, 1.0],
     plane: [.505, .930, .839, .891, .992]
   },
   story: {
     ml: .074, logoW: .560, logoY: .100,
     badgeY: .206, badgeH: .040, badgeFs: .0320,
-    nameY: .258, nameFs: .0890, nameMax: .56,
-    compY: .303, compFs: .0250, compTrack: .0022,
-    talkY: .356, talkFs: .0290, talkLh: 1.32, talkMax: .52, talkLines: 3,
+    nameY: .258, nameFs: .0980, nameMax: .72,
+    compY: .306, compFs: .0285, compTrack: .0022,
+    talkY: .362, talkFs: .0330, talkLh: 1.32, talkMax: .60, talkLines: 3,
     divY: .845, divW: .600,
-    labY: .869, labFs: .0230,
-    fooY: .920, fooH: .040, sloganFs: .0235,
-    photo: [.330, .455, 1.02, .800],
+    labY: .869, labFs: .0265,
+    fooY: .920, fooH: .040, sloganFs: .0265,
+    photo: [.155, .455, .845, .800],
     plane: [.330, .806, .726, .763, .992]
   }
 };
@@ -578,42 +578,71 @@ function renderCard(canvas, fmtName, data, assets) {
   let contentRight = ml + L.divW * W;
   if (L.photo[3] * H > L.divY * H) contentRight = Math.min(contentRight, L.photo[0] * W - W * 0.020);
 
-  /* --- crta --- */
-  const lw = Math.max(1, Math.round(W / 750));
-  ctx.fillStyle = C.white;
-  ctx.fillRect(ml + 8, L.divY * H, contentRight - (ml + 8), lw);
-
   /* --- footer --- */
   const fooY = L.fooY * H;
   const col1 = ml + 8;
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = C.white;
 
-  // Lijevo: info u 3 reda (zamjenjuje "Organizator" + logo)
   const infoLines = ['CRO Commerce 2026', '13.10.2026.', 'conference.ecommerce.hr'];
   const infoFs = L.labFs * W * 1.25;
   const infoLh = infoFs * 1.32;
-  const infoTop = fooY - (infoLines.length - 1) * infoLh;   // baseline prve linije
+
+  // širina info bloka (za side-by-side raspored)
   let maxInfoW = 0;
   infoLines.forEach((ln, i) => {
     ctx.font = fnt(i === 0 ? 700 : 400, infoFs);
     maxInfoW = Math.max(maxInfoW, ctx.measureText(ln).width);
   });
+
+  // pripremi slogan: L.footStack = ispod info bloka (puna širina); inače desno
+  let slog = null;
+  if (data.slogan) {
+    const sBase = infoFs * 1.05;
+    const availSide = Math.max(contentRight - (col1 + maxInfoW + W * 0.030), W * 0.14);
+    const availStack = contentRight - col1;
+    const r = wrapTo(ctx, data.slogan, 600, L.footStack ? availStack : availSide, 3, sBase, sBase * 0.55);
+    slog = { r, lh: r.fs * 1.24, col: L.footStack ? col1 : (col1 + maxInfoW + W * 0.030) };
+  }
+
+  // vertikalni raspored: zadnji red bloka poravnat na fooY
+  const sgap = infoLh * 0.55;
+  let infoTop;
+  if (L.footStack && slog) {
+    const lastInfoBaseline = fooY - (slog.r.lines.length - 1) * slog.lh - sgap - slog.r.fs;
+    infoTop = lastInfoBaseline - (infoLines.length - 1) * infoLh;
+  } else {
+    infoTop = fooY - (infoLines.length - 1) * infoLh;
+  }
+  const blockBottomFs = (L.footStack && slog) ? slog.r.fs : infoFs;
+
+  /* --- crta: margina iznad teksta = margina ispod teksta do dna vizuala --- */
+  const textTop = infoTop - infoFs * 0.73;      // vizualni vrh prvog reda
+  const bottomMargin = H - (fooY + blockBottomFs * 0.08);
+  let dividerY = textTop - bottomMargin;
+  // ako slika završava iznad podnožja, crta ne smije preko nje
+  if (L.photo[3] * H <= L.divY * H) dividerY = Math.max(dividerY, L.photo[3] * H + W * 0.020);
+  const lw = Math.max(1, Math.round(W / 750));
+  ctx.fillStyle = C.white;
+  ctx.fillRect(ml + 8, dividerY, contentRight - (ml + 8), lw);
+
+  // info blok (3 reda)
   infoLines.forEach((ln, i) => {
     ctx.font = fnt(i === 0 ? 700 : 400, infoFs);
     ctx.fillText(ln, col1, infoTop + i * infoLh);
   });
 
-  // Desno: slogan većim fontom, poravnat po vrhu s lijevim blokom (ista visina)
-  if (data.slogan) {
-    const col2 = col1 + maxInfoW + W * 0.030;
-    const avail = Math.max(contentRight - col2, W * 0.14);
-    const base = infoFs * 1.05;
-    const r = wrapTo(ctx, data.slogan, 600, avail, 3, base, base * 0.55);
-    ctx.font = fnt(600, r.fs);
-    const lh = r.fs * 1.24;
-    let y = infoTop;
-    for (const line of r.lines) { ctx.fillText(line, col2, y); y += lh; }
+  // slogan
+  if (slog) {
+    ctx.font = fnt(600, slog.r.fs);
+    let y;
+    if (L.footStack) {
+      const lastInfoBaseline = infoTop + (infoLines.length - 1) * infoLh;
+      y = lastInfoBaseline + sgap + slog.r.fs;
+    } else {
+      y = infoTop;
+    }
+    for (const line of slog.r.lines) { ctx.fillText(line, slog.col, y); y += slog.lh; }
   }
 }
 </script>
