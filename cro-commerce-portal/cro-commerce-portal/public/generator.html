@@ -111,7 +111,7 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}
     <label for="ime">Ime i prezime</label>
     <input type="text" id="ime">
     <label for="tvrtka">Tvrtka</label>
-    <input type="text" id="tvrtka">
+    <input type="text" id="tvrtka" style="text-transform:uppercase">
     <label for="predavanje">Naslov predavanja</label>
     <textarea id="predavanje" placeholder="Trgovina 2030: Što će stvarati konkurentsku prednost kada svi imaju AI?"></textarea>
   </section>
@@ -553,15 +553,16 @@ function renderCard(canvas, fmtName, data, assets) {
     ctx.fillText(data.name, ml, L.nameY * H);
   }
 
-  /* --- tvrtka --- */
+  /* --- tvrtka (uvijek velika slova) --- */
   if (data.company) {
+    const company = data.company.toUpperCase();
     let cfs = L.compFs * W;
     const track = L.compTrack * W;
     ctx.font = fnt(400, cfs);
-    while (trackedWidth(ctx, data.company, track) > L.divW * W && cfs > 6) {
+    while (trackedWidth(ctx, company, track) > L.divW * W && cfs > 6) {
       cfs *= 0.94; ctx.font = fnt(400, cfs);
     }
-    trackedText(ctx, data.company, ml + 2, L.compY * H, track);
+    trackedText(ctx, company, ml + 2, L.compY * H, track);
   }
 
   /* --- naslov predavanja --- */
