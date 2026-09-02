@@ -31,7 +31,9 @@ main{flex:1;display:grid;grid-template-columns:400px 1fr;min-height:0}
 aside{
   border-right:1px solid var(--line); background:#0a1c2b;
   overflow:auto; padding:18px 20px 40px;
+  scrollbar-width:none;            /* Firefox */
 }
+aside::-webkit-scrollbar{display:none} /* Chrome/Safari/Edge */
 section{margin-bottom:26px}
 h2{font:600 11px/1 Poppins;letter-spacing:1.4px;text-transform:uppercase;
    color:var(--muted);margin:0 0 12px}
@@ -159,22 +161,6 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}
     <div class="btnrow">
       <button id="dl-one">Preuzmi prikazani</button>
       <button id="dl-all" class="primary">Preuzmi sve formate (zip)</button>
-    </div>
-  </section>
-
-  <hr>
-
-  <section>
-    <h2>Više govornika odjednom</h2>
-    <label for="csv">CSV (ime, tvrtka, predavanje, foto)</label>
-    <input type="file" id="csv" accept=".csv,text/csv">
-    <label for="mapa">Mapa s fotografijama</label>
-    <input type="file" id="mapa" webkitdirectory directory multiple>
-    <span id="mapa-info" style="font-size:12px;color:var(--muted)"></span>
-    <div id="lista"></div>
-    <span id="batch-info" style="font-size:12px;color:var(--muted)"></span>
-    <div class="btnrow">
-      <button id="dl-batch" class="primary" disabled>Generiraj sve i preuzmi zip</button>
     </div>
   </section>
 
@@ -767,17 +753,6 @@ function bindInputs() {
 
   $('#dl-one').onclick = () => downloadOne();
   $('#dl-all').onclick = () => downloadAll();
-  $('#csv').addEventListener('change', e => {
-    const f = e.target.files[0];
-    if (f) f.text().then(t => loadBatch(t));
-  });
-  $('#mapa').addEventListener('change', e => {
-    photoFiles = {};
-    for (const f of e.target.files) photoFiles[f.name.toLowerCase()] = f;
-    $('#mapa-info').textContent = `${e.target.files.length} datoteka učitano`;
-    matchBatchPhotos();
-  });
-  $('#dl-batch').onclick = () => downloadBatch();
 }
 
 function photoErr(err) {
