@@ -118,9 +118,7 @@ hr{border:0;border-top:1px solid var(--line);margin:18px 0}
   <section>
     <h2>Fotografija</h2>
     <div id="drop">
-      <label for="foto" style="cursor:pointer;color:inherit;margin:0">
-        Povuci fotografiju ovdje ili klikni
-      </label>
+      <span class="drop-label">Povuci fotografiju ovdje ili klikni</span>
       <input type="file" id="foto" accept="image/*">
       <span id="foto-ime">nema fotografije</span>
     </div>
@@ -756,6 +754,7 @@ function bindInputs() {
   };
 
   const drop = $('#drop');
+  drop.addEventListener('click', e => { if (e.target.id !== 'foto') $('#foto').click(); });
   ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => {
     e.preventDefault(); drop.classList.add('hot');
   }));
