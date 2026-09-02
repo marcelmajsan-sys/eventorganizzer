@@ -598,25 +598,37 @@ function renderCard(canvas, fmtName, data, assets) {
   ctx.fillRect(ml + 8, L.divY * H, L.divW * W - 8, lw);
 
   /* --- footer --- */
-  const labY = L.labY * H, fooY = L.fooY * H, fooH = L.fooH * H;
+  const fooY = L.fooY * H;
   const col1 = ml + 8;
-  ctx.font = fnt(400, L.labFs * W);
-  ctx.fillText('Organizator', col1, labY);
-  const ec = assets.ecom;
-  const ecW = ec.width * fooH / ec.height;
-  ctx.drawImage(ec, col1, fooY - fooH, ecW, fooH);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = C.white;
 
+  // Lijevo: info u 3 reda (zamjenjuje "Organizator" + logo)
+  const infoLines = ['CRO Commerce 2026', '13.10.2026.', 'conference.ecommerce.hr'];
+  const infoFs = L.labFs * W * 1.25;
+  const infoLh = infoFs * 1.32;
+  let maxInfoW = 0;
+  infoLines.forEach((ln, i) => {
+    ctx.font = fnt(i === 0 ? 700 : 400, infoFs);
+    maxInfoW = Math.max(maxInfoW, ctx.measureText(ln).width);
+  });
+  infoLines.forEach((ln, i) => {
+    ctx.font = fnt(i === 0 ? 700 : 400, infoFs);
+    ctx.fillText(ln, col1, fooY - (infoLines.length - 1 - i) * infoLh);
+  });
+  const blockMid = fooY - infoLh;   // vertikalna sredina 3-rednog bloka
+
+  // Desno: slogan većim fontom, centriran po visini lijevog bloka
   if (data.slogan) {
-    const col2 = col1 + ecW + W * 0.022;
+    const col2 = col1 + maxInfoW + W * 0.030;
     let right = ml + L.divW * W;
     if (L.photo[3] * H > L.divY * H) right = Math.min(right, L.photo[0] * W - W * 0.020);
-    const avail = Math.max(right - col2, W * 0.12);
-    const base = L.sloganFs * W;
-    const r = wrapTo(ctx, data.slogan, 500, avail, 2, base, base * 0.60);
-    ctx.font = fnt(500, r.fs);
-    const lh = r.fs * 1.28;
-    const centre = fooY - fooH * 0.55;
-    let y = centre - (r.lines.length - 1) * lh / 2 + r.fs * 0.34;
+    const avail = Math.max(right - col2, W * 0.14);
+    const base = infoFs * 1.05;
+    const r = wrapTo(ctx, data.slogan, 600, avail, 3, base, base * 0.55);
+    ctx.font = fnt(600, r.fs);
+    const lh = r.fs * 1.24;
+    let y = blockMid - (r.lines.length - 1) * lh / 2 + r.fs * 0.34;
     for (const line of r.lines) { ctx.fillText(line, col2, y); y += lh; }
   }
 }
