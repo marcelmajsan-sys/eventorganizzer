@@ -19,7 +19,19 @@ async function getSessionWithTimeout(supabase: ReturnType<typeof createServerCli
   return Promise.race([fetchSession(), timeout]);
 }
 
+// Javne rute — propuštaju se bez auth provjere (middleware se vrti i nad public/ datotekama).
+const PUBLIC_PATHS = ["/generator"];
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (
+    PUBLIC_PATHS.some(
+      (p) => pathname === p || pathname === p + ".html" || pathname.startsWith(p + "/")
+    )
+  ) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const projectId = resolveProjectId(request.cookies.get(PROJECT_COOKIE)?.value);
@@ -44,8 +56,6 @@ export async function middleware(request: NextRequest) {
   const session = await getSessionWithTimeout(supabase, 1200);
   if (session === SESSION_TIMEOUT) return supabaseResponse;
   const user = session?.user ?? null;
-
-  const pathname = request.nextUrl.pathname;
 
   // /admin (exact) = admin login page — always accessible
   // /admin/* = protected area — redirect to /admin login if not authenticated
