@@ -696,12 +696,17 @@ function draw() {
   if (!ready) return;
   clearTimeout(drawTimer);
   drawTimer = setTimeout(() => {
-    renderCard(work, current, state, assets);
-    const f = FORMATS[current];
-    preview.width = f.W; preview.height = f.H;
-    preview.getContext('2d').drawImage(work, 0, 0);
-    preview.style.aspectRatio = `${f.W} / ${f.H}`;
-    $('#dims').textContent = `${f.W} × ${f.H}`;
+    try {
+      renderCard(work, current, state, assets);
+      const f = FORMATS[current];
+      preview.width = f.W; preview.height = f.H;
+      preview.getContext('2d').drawImage(work, 0, 0);
+      preview.style.aspectRatio = `${f.W} / ${f.H}`;
+      $('#dims').textContent = `${f.W} × ${f.H}`;
+    } catch (err) {
+      console.error('draw()', err);
+      setStatus('Greška pri crtanju: ' + (err && err.message || err));
+    }
   }, 16);
 }
 
@@ -744,7 +749,7 @@ function bindInputs() {
   }
   $('#foto').addEventListener('change', e => {
     const f = e.target.files[0];
-    if (f) usePhotoFile(f).then(draw);
+    if (f) usePhotoFile(f).then(draw).catch(photoErr);
   });
   $('#reset-foto').onclick = () => {
     state.photo = null; $('#foto').value = ''; $('#foto-ime').textContent = 'nema fotografije';
@@ -760,7 +765,7 @@ function bindInputs() {
   }));
   drop.addEventListener('drop', e => {
     const f = e.dataTransfer.files[0];
-    if (f) usePhotoFile(f).then(draw);
+    if (f) usePhotoFile(f).then(draw).catch(photoErr);
   });
 
   $('#dl-one').onclick = () => downloadOne();
@@ -776,6 +781,11 @@ function bindInputs() {
     matchBatchPhotos();
   });
   $('#dl-batch').onclick = () => downloadBatch();
+}
+
+function photoErr(err) {
+  console.error('usePhotoFile', err);
+  setStatus('Slika se nije učitala: ' + (err && err.message || err || 'nepoznata greška'));
 }
 
 async function usePhotoFile(file) {
@@ -1024,7 +1034,10 @@ class ZipWriter {
   }
 }
 
-boot();
+boot().catch(err => {
+  console.error('boot()', err);
+  setStatus('Greška pri pokretanju alata: ' + (err && err.message || err));
+});
 </script>
 </body>
 </html>
