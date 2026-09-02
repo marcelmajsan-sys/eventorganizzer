@@ -466,13 +466,14 @@ function drawPhoto(ctx, W, H, box, img, mode, zoom, shiftX, shiftY) {
   o.imageSmoothingQuality = 'high';
   o.drawImage(img, left, top, dw, dh);
 
-  // omeksani rubovi
-  o.globalCompositeOperation = 'destination-in';
+  // omeksani rubovi — destination-out briše samo rubne trake (opaque na rubu → prozirno prema sredini),
+  // pa sredina slike ostaje netaknuta. (destination-in bi obrisao sve izvan svakog fillRecta.)
+  o.globalCompositeOperation = 'destination-out';
   const fade = Math.min(0.16 * bw, 0.16 * bh);
   const mk = (x0_, y0_, x1_, y1_) => {
     const g = o.createLinearGradient(x0_, y0_, x1_, y1_);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,1)');
+    g.addColorStop(0, 'rgba(0,0,0,1)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
     return g;
   };
   o.fillStyle = mk(0, 0, fade, 0);
