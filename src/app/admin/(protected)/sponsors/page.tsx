@@ -7,6 +7,7 @@ import AddSponsorModal from "@/components/admin/AddSponsorModal";
 import SearchInput from "@/components/admin/SearchInput";
 import PackageTypeManager from "@/components/admin/PackageTypeManager";
 import SponsorsTableWithSelect from "@/components/admin/SponsorsTableWithSelect";
+import ExportContactsButton from "@/components/admin/ExportContactsButton";
 
 interface Props {
   searchParams: { package?: string; payment?: string; lead?: string; type?: string; q?: string };
@@ -55,10 +56,23 @@ const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
 export default async function SponsorsPage({ searchParams }: Props) {
   const supabase = await createClient();
 
-  const sponsorsRes = await supabase
+  // Puni set polja kontakata treba XLSX export; fallback za baze bez novijih kolona.
+  const CONTACT_FIELDS_FULL =
+    "*, sponsor_benefits(id, status), sponsor_contacts(id, name, email, phone, role, type, company, ticket_type, notes)";
+  const CONTACT_FIELDS_MIN =
+    "*, sponsor_benefits(id, status), sponsor_contacts(name, email, type)";
+
+  let sponsorsRes = await supabase
     .from("sponsors")
-    .select("*, sponsor_benefits(id, status), sponsor_contacts(name, email, type)")
+    .select(CONTACT_FIELDS_FULL)
     .order("name");
+
+  if (sponsorsRes.error) {
+    sponsorsRes = await supabase
+      .from("sponsors")
+      .select(CONTACT_FIELDS_MIN)
+      .order("name");
+  }
 
   let packageTypesRes: { data: { id: string; name: string }[] | null } = { data: null };
   try {
@@ -112,7 +126,10 @@ export default async function SponsorsPage({ searchParams }: Props) {
           <h1 className="page-title">Partneri</h1>
           <p className="page-subtitle">{partnerCountLabel(sponsors.length)}{isFiltered ? "" : " ukupno"}</p>
         </div>
-        <AddSponsorModal packageTypes={packageTypeNames} />
+        <div className="flex items-center gap-2">
+          <ExportContactsButton sponsors={sponsors as any} />
+          <AddSponsorModal packageTypes={packageTypeNames} />
+        </div>
       </div>
 
       {/* Filters */}
