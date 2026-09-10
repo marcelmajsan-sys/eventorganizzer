@@ -39,6 +39,14 @@ function togglePayment(active: string[], value: string, rest: { package?: string
   return buildUrl({ ...rest, payment: next.join(",") || undefined });
 }
 
+function toggleLead(active: string[], value: string, rest: { package?: string; payment?: string; q?: string }): string {
+  const next = active.includes(value)
+    ? active.filter((l) => l !== value)
+    : [...active, value];
+  // Status i "Tip kontakta" se međusobno isključuju — zato se type ne prenosi.
+  return buildUrl({ ...rest, lead: next.join(",") || undefined });
+}
+
 /** HR množina za "partner": 1 partner, 2-4 partnera, 5+ partnera (uz 11-14 iznimku). */
 function partnerCountLabel(n: number): string {
   const mod10 = n % 10;
@@ -88,6 +96,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
 
   const activePackages = parsePackages(searchParams.package);
   const activePayments = parseList(searchParams.payment);
+  const activeLeads = parseList(searchParams.lead);
   let sponsors = sponsorsRes.data ?? [];
 
   if (activePackages.length > 0) {
@@ -96,8 +105,8 @@ export default async function SponsorsPage({ searchParams }: Props) {
   if (activePayments.length > 0) {
     sponsors = sponsors.filter((s) => activePayments.includes(s.payment_status));
   }
-  if (searchParams.lead) {
-    sponsors = sponsors.filter((s) => s.lead_status === searchParams.lead);
+  if (activeLeads.length > 0) {
+    sponsors = sponsors.filter((s) => activeLeads.includes(s.lead_status));
   } else if (searchParams.type === "leads") {
     sponsors = sponsors.filter((s) => s.lead_status === "cold_lead" || s.lead_status === "hot_lead");
   } else if (searchParams.type === "clients") {
@@ -197,7 +206,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
             <a
               href={buildUrl({ package: searchParams.package, payment: searchParams.payment, q: searchParams.q })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                !searchParams.lead && !searchParams.type ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                activeLeads.length === 0 && !searchParams.type ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               Svi
@@ -205,9 +214,9 @@ export default async function SponsorsPage({ searchParams }: Props) {
             {LEAD_STATUSES.map((s) => (
               <a
                 key={s.value}
-                href={buildUrl({ package: searchParams.package, payment: searchParams.payment, lead: s.value, q: searchParams.q })}
+                href={toggleLead(activeLeads, s.value, { package: searchParams.package, payment: searchParams.payment, q: searchParams.q })}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
-                  searchParams.lead === s.value
+                  activeLeads.includes(s.value)
                     ? "bg-gray-900 text-white border-gray-900"
                     : `${leadStatusColor(s.value)} hover:opacity-80`
                 }`}
@@ -228,7 +237,7 @@ export default async function SponsorsPage({ searchParams }: Props) {
             <a
               href={buildUrl({ package: searchParams.package, payment: searchParams.payment, q: searchParams.q })}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                !searchParams.type && !searchParams.lead ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                !searchParams.type && activeLeads.length === 0 ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               Svi
