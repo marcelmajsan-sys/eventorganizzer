@@ -11,8 +11,6 @@ Admin portal za upravljanje CRO Commerce konferencijom:
 
 Deployano na: https://partners.ecommerce.hr
 
-> **Dvije kopije koda**: `src/` (root, Vercel) i `cro-commerce-portal/cro-commerce-portal/src/` (lokalni dev). Nakon promjene u lokalnom dev direktoriju, kopiraj u root `src/` prije commita.
-
 ---
 
 ## Pokretanje lokalno
@@ -23,6 +21,60 @@ npm install
 # Kreiraj .env.local (vidi sekciju Environment varijable)
 npm run dev   # → http://localhost:3000
 ```
+
+---
+
+## Struktura repozitorija
+
+```
+eventorganizzer/
+├── src/                                   ← Vercel deploya odavde (root kopija)
+│   ├── app/
+│   │   ├── page.tsx                       ← Partner login (`/`) — HR/EN toggle, findPartnerProject
+│   │   ├── [slug]/                        ← Javna stranica ulaznice (QR), server component
+│   │   ├── admin/
+│   │   │   ├── page.tsx                   ← Admin login (`/admin`)
+│   │   │   └── (protected)/               ← Sve admin stranice iza auth guarda
+│   │   │       ├── layout.tsx             ← Provjera `project_admins`; scroll container `<main overflow-y-auto>`
+│   │   │       ├── dashboard/ sponsors/[id]/ benefits/ contacts/[id]/
+│   │   │       ├── ulaznice/ program/ troskovi/ tasks/[id]/ calendar/
+│   │   │       └── email-predlosci/ automatizacija/ inbox/ settings/
+│   │   ├── portal/                        ← Sponzorski portal
+│   │   │   ├── layout.tsx                 ← admin → /admin/dashboard; bez pristupa → /api/auth/signout
+│   │   │   └── sponsor/ benefits/ program/ video/
+│   │   ├── actions/                       ← Server actioni (svi s guardom iz authGuards.ts)
+│   │   │   ├── switchProject.ts  impersonate.ts  findPartnerProject.ts
+│   │   │   ├── userManagement.ts  partnerManagement.ts  projectSettings.ts
+│   │   │   ├── benefitActions.ts  contactActions.ts  ticketActions.ts
+│   │   │   ├── sponsorBulkUpdate.ts  sponsorComments.ts  contractActions.ts
+│   │   │   └── tasks.ts  notifications.ts  getAdminEmails.ts
+│   │   ├── api/
+│   │   │   ├── auth/signout/              ← Odjava iz OBA projekta (Route Handler smije pisati cookies)
+│   │   │   ├── benefits/[id]/notify/ + remind/
+│   │   │   ├── cron/reminders/ + comment-reminders/
+│   │   │   └── portal/invite/
+│   │   └── auth/callback/                 ← PKCE/implicit fallback pri zamjeni projekta
+│   ├── components/
+│   │   ├── admin/                         ← AdminSidebar, SponsorsTableWithSelect, BenefitsView,
+│   │   │                                     ExportContactsButton, UlazniceActions, ImpersonateButton, …
+│   │   └── portal/                        ← PortalSidebar, PortalContactsSection, PortalContractView,
+│   │                                         PortalHelpModal, ImpersonationBanner, …
+│   ├── context/LanguageContext.tsx        ← useLang() za portal i18n
+│   ├── lib/
+│   │   ├── supabase/                      ← client.ts, server.ts, projects.ts, adminProjectClient.ts
+│   │   ├── authGuards.ts                  ← requireAdmin / requireSponsor / requireAdminOrSponsor
+│   │   ├── impersonation.ts  ticketQuota.ts  slugUtils.ts
+│   │   ├── i18n/portal.ts  email.ts  utils.ts
+│   ├── middleware.ts                      ← Samo "je li prijavljen" (getSession, 1200ms) + PUBLIC_PATHS
+│   └── types/index.ts
+├── supabase/                              ← SQL migracije + seed/utility skripte (popis: MIGRATIONS.md)
+├── public/generator.html                  ← Javni alat za vizuale, servira se na `/generator`
+├── cro-commerce-portal/cro-commerce-portal/
+│   └── src/                               ← Lokalni dev dir — kopija root `src/`
+├── CLAUDE.md  MIGRATIONS.md  vercel.json  next.config.mjs  .npmrc
+```
+
+> **Dvije kopije koda**: `src/` (root, Vercel deploya odavde) i `cro-commerce-portal/cro-commerce-portal/src/` (lokalni dev). Nakon promjene u dev direktoriju **obavezno kopiraj u root `src/` prije commita** — inače promjena ne ode na produkciju. Dokumentacija (`CLAUDE.md`) se NE duplicira: postoji samo ova, root verzija.
 
 ---
 
@@ -38,6 +90,8 @@ npm run dev   # → http://localhost:3000
 | `/admin/contacts/[id]` | Detaljna stranica kontakta |
 | `/admin/ulaznice` | Sve ulaznice — sekcije "Ulaznice partnera" (`source='portal'`) i "Ručno dodane" (`source='admin'`, mogu imati partnera); "Preuzmi .xlsx" export u zaglavlju |
 | `/admin/program` | Program konferencije |
+| `/admin/email-predlosci` | Email predlošci (`email_templates`) |
+| `/admin/automatizacija` | Automatizacije podsjetnika (`email_automations`) |
 | `/admin/troskovi` | Troškovi eventa |
 | `/admin/tasks` / `/admin/tasks/[id]` | Kanban + detaljna stranica |
 | `/admin/calendar` | Rokovnik (zadaci po rokovima) |
@@ -45,7 +99,7 @@ npm run dev   # → http://localhost:3000
 | `/admin/settings` | Datum, korisnici, partneri |
 | `/admin` | Admin login (`/login` je samo redirect u middlewareu — stranica ne postoji) |
 | `/` | Partner login (`/partner` je samo redirect u middlewareu — stranica ne postoji) |
-| `/portal/*` | Sponzorski portal |
+| `/portal/*` | Sponzorski portal — `sponsor` (Partner), `benefits`, `program`, `video` |
 | `/[slug]` | Javna stranica ulaznice (QR link, server component, `sponsor_contacts.slug`) |
 | `/generator` | Javni alat za generiranje vizuala govornika (statični `public/generator.html`, rewrite u `next.config.mjs`, `PUBLIC_PATHS` u middlewareu — bez prijave) |
 
@@ -179,6 +233,23 @@ Stranica ima HR/EN language toggle (lokalno, bez i18n konteksta); error poruke p
 
 ---
 
+### Kreiranje korisnika — operativno
+- **Admin**: Admin panel → Postavke → Pristup portalu. Novi admin se kreira u **obje** baze (2025 i 2026) i dodaje u `project_admins`. Svi u `project_admins` imaju puni pristup.
+- **Partner**: Admin panel → Postavke → Partneri → Novi partner (kreira se u **aktivnom** projektu). Alternativno: profil partnera → Kontakt osobe → mail ikona → `/api/portal/invite`. Partner **ne smije** biti u `project_admins` — inače ga portal redirecta u admin panel.
+- **Promjena lozinke partnera**: Postavke → Partneri → ikona ključa na retku.
+- Za projekt switch partner mora imati account **i** `sponsor_users` unos u oba projekta.
+
+Ručno, ako zatreba:
+
+```sql
+INSERT INTO sponsor_users (user_id, sponsor_id) VALUES ('uuid-korisnika', 'uuid-partnera');
+UPDATE auth.users SET email_confirmed_at = NOW() WHERE id = 'uuid-korisnika';
+```
+
+> **Ne raditi DB upite sa service role klijentom u `middleware.ts`** — Edge runtime ne može pristupiti `SUPABASE_SERVICE_ROLE_KEY`.
+
+---
+
 ## Environment varijable
 
 ```env
@@ -213,6 +284,10 @@ CRON_SECRET=...
 git add . && git commit -m "Opis" && git push origin main
 # Vercel automatski deploya iz main grane
 ```
+
+**Grananje**: `main` je produkcija i Vercel deploya odatle; direktni commit na `main` je OK za ovaj projekt.
+
+**Ručni redeploy bez promjena**: `git commit --allow-empty -m "Force redeploy" && git push`
 
 **Vercel config**: Root directory `/`, Build command `next build`, Node 18+, `.npmrc`: `legacy-peer-deps=true`
 
@@ -250,7 +325,115 @@ git add . && git commit -m "Opis" && git push origin main
 - **`/admin/sponsors` filteri** su svi URL-driven i kombiniraju se: `?package=` (multi, zarez), `?payment=` (multi, zarez), `?lead=` (**multi, zarez** — chipovi se togglaju preko `toggleLead`), `?type=leads|clients` i `?q=`. **Status (`lead`) i Tip kontakta (`type`) se međusobno isključuju** — `toggleLead` namjerno ne prenosi `type`, a `type` linkovi ne prenose `lead`. Filtriranje je server-side u `page.tsx`, pa `SponsorsTableWithSelect` i export uvijek dobiju istu, već filtriranu listu. Poznato ograničenje: `PackageTypeManager` gradi URL samo iz `package`+`payment`, pa klik na kategoriju resetira `lead`/`type`/`q`
 - **Export kontakata partnera** (`ExportContactsButton.tsx`, zaglavlje `/admin/sponsors`): client-side XLSX, **jedan redak po kontaktu** (ne po partneru) za trenutno filtrirane partnere; kolone Partner, Paket, Status, Plaćanje, Tip kontakta, Ime i prezime, Email, Telefon, Funkcija, Tvrtka kontakta, Tip ulaznice, Napomena. Primarni kontakt (`sponsors.contact_*`) ide kao zaseban redak i **deduplicira se** protiv svog zrcala u `sponsor_contacts` (migration_033) po emailu ILI imenu — kod poklapanja se zrcalni telefon/funkcija/tvrtka/napomena **mergaju** u primarni redak umjesto da se odbace. Partneri bez ijednog kontakta dobiju redak `(bez kontakta)` i ne broje se u brojaču na gumbu. `page.tsx` zato selecta puni set polja kontakata uz fallback na uži set ako novije kolone ne postoje
 - **`/admin/ulaznice`** (`UlazniceActions.tsx`): `ExportXlsxButton` radi client-side XLSX export (`xlsx` paket, `json_to_sheet` + `writeFile`); export kolone (Ime i prezime, Email, Telefon, Tvrtka, Kategorija tvrtke, Tip ulaznice, Komentar, Partner, QR link) — bulk upload UI i `BulkModal` su **uklonjeni**; sekcije se dijele po `sponsor_contacts.source` (`'portal'` = partner unio kroz portal, `'admin'` = ručno u adminu, neovisno o `sponsor_id`); svi insert pointi postavljaju `source` (`ticketActions.ts`, `AddContactModal`, `ContactsSection` → `'admin'`; `createSponsorTicket`, `PortalContactsSection` → `'portal'`) uz graceful retry bez kolone dok migration_039 nije pokrenut (tada fallback podjela po `sponsor_id`)
+- **Graceful degradation pattern** za nove kolone: uvijek probaj upit s novim kolonama; ako Supabase vrati error koji sadrži naziv kolone, ponovi upit bez njih. `as any` cast na fallback varijablu da se izbjegnu TS greške. Kritično kod `iznos` (migration_024) — bez fallbacka cijeli update tiho faila i ostale promjene (npr. `lead_status`) se ne spreme
+- **`useState` + `useEffect([initial])` sync**: klijentske komponente koje primaju server props moraju sinkronizirati state u `useEffect` — komponenta često ostaje mountirana s novim propsom (npr. `RenameBenefitDialog` ostaje mountiran s `currentName=null` kad je zatvoren, pa bi bez `useEffect` zadržao prazan string)
+- **Inline edit pattern** (`AdminPrimaryContactEdit`, `PrimaryContactSection` u `PortalContactsSection`): `useState displayed` za optimistički prikaz + `useEffect` za sync s propsima + zaseban error state
+- **Bulk select pattern** (`SponsorsTableWithSelect`): `useState<Set<string>>` za odabrane ID-eve; klik na redak togglea selekciju (osim klika na `<a>`); `useTransition` za non-blocking server action; bulk bar je `sticky top-0 z-10`. Vrijednost `""` u dropdownu znači "bez promjene" i ne šalje se u update; `"__clear__"` je sentinel koji šalje `null` (brisanje lead statusa)
+- **Dashboard "Sponzori po paketu" i "Status plaćanja"** prikazuju SAMO potvrđene partnere (`confirmed_new` ili `confirmed_returning`) — subtitle "samo potvrđeni (N)" objašnjava filter, a postoci se računaju prema tom broju
+- **`notifications` tablica** (migration_020): `sponsor_id` je nullable, `task_id` je nullable FK na `tasks`. Inbox query uključuje `task_id` u SELECT — ako kolona ne postoji, **cijeli query faila i inbox je prazan**
+- **`sponsor_contacts.type` CHECK constraint**: migration_006 dozvoljava samo `contact` i `ticket`; migration_023 proširuje na svih 7 tipova. Bez te migracije spremanje kontakta tipa partner/visitor/speaker/… **tiho faila**
+- **`contact_phone` kolona** na `sponsors` dodana je tek migration_016 — nije bila u inicijalnoj shemi i uzrokovala je grešku pri uređivanju primarnog kontakta
+- **`updatePrimaryContact`** koristi admin klijent za update `contact_name/email/phone` jer partneri nemaju direktan UPDATE RLS na `sponsors`; vraća `{ error: string | null }` da se pravi Supabase error vidi u UI
+- **Orphaned `sponsor_users` unosi** (bez matching auth usera) preskaču se u prikazu na settings stranici; prikaz partnera se dodatno deduplicira po emailu
 - **Dijeljeni dokumenti za više partnera**: jedan storage objekt (npr. `sponsor-files/shared/...`) + po jedan `files` red po sponzoru (`benefit_id: null`, isti `storage_url`) — tako su dimenzije standa podijeljene svim partnerima po paketu (veliki stand → Srebrni/Zlatni/Glavni; regular stand → Brončani); brisanje `files` reda ne briše storage objekt
+
+---
+
+## Implementirane funkcionalnosti
+
+### Partneri (`/admin/sponsors`)
+- Lista partnera s tražilicom (`?q=`) — naziv tvrtke je klikabilan link na profil
+- **Multi-select filter paketa** (`PackageTypeManager`) — `?package=Zlatni,Srebrni`; × ikonica se prikazuje samo na aktivnom filteru i uklanja ga (ne briše kategoriju iz baze); olovka gumb ulazi u **edit mode** gdje se kategorija preimenuje (inline input + ✓) ili briše (trash + potvrda Da/Ne)
+- **Multi-select filter plaćanja** — `?payment=pending,partial`
+- **Multi-select filter statusa (lead)** — `?lead=cold_lead,hot_lead`, chipovi se togglaju; `Tip kontakta` (`?type=leads|clients`) je prečac za iste statuse i **isključuje se** s `lead` filterom
+- **Export kontakata** (`ExportContactsButton`) — gumb "Preuzmi kontakte (N)" u zaglavlju; XLSX s jednim retkom po kontaktu za trenutno filtrirane partnere
+- **Multi-select bulk edit** (`SponsorsTableWithSelect`) — checkbox stupac; klik na redak ili checkbox odabire partnera; checkbox u zaglavlju odabire/poništava sve; sticky bulk action bar s dropdownima Paket/Plaćanje/Status; `bulkUpdateSponsors` radi `.update().in("id", ids)` + `revalidatePath`
+- **Iznos stupac** — `iznos` formatiran kao EUR (0 € sivom bojom za null)
+- **Primarni kontakt — inline edit** (`AdminPrimaryContactEdit`) u sekciji Informacije na profilu partnera
+- **Brisanje partnera** s potvrdom (`DeleteSponsorButton`) → redirect na `/admin/sponsors`
+- **Komentari** (`SponsorCommentsSection`, migration_037) — uz komentar ide notifikacija; podsjetnici preko `api/cron/comment-reminders`
+- **Impersonacija** (`ImpersonateButton`) — "Logiraj se kao partner", vidi sekciju Autentikacija
+- **AddSponsorModal** inserta samo `sponsors` red — **ne** auto-kreira benefite po paketu
+
+### Benefiti (`/admin/benefits`)
+- Kliktabilne stat kartice — filtriranje po statusu via `?status=`
+- **Dodavanje** (`AddBenefitModal`) — dropdown postojećih naziva + "Dodaj novi benefit" za slobodan unos; može odabrati i partnera
+- **Edit** (`EditBenefitDialog` / `EditBenefitModal`) — opis, kontakt osoba, upload dokumenata, podsjetnik
+- **Grupni edit** (`RenameBenefitDialog`) — olovka pored naziva grupe mijenja naziv i rok za SVE partnere te grupe odjednom; rok se pre-popunjava najčešćim datumom u grupi
+- **Brisanje po partneru** — Trash2 na hover u svakom redu; briše samo taj `benefit.id`
+- **Dodavanje partnera benefitu** — "+" na dnu razvijenog AccordionGroup, dropdown neraspoređenih partnera
+- **"Zadnji podsjetnik"** — datum zadnjeg poslanog maila u accordion headeru
+- **Auto-scroll na vrh** pri otvaranju svakog modala
+- **Dokumenti benefita** (`BenefitFileUpload`, migration_018) — putanja `{sponsor_id}/benefits/{benefit_id}/{timestamp}_{filename}`; `files.benefit_id IS NULL` = datoteke partnera, `NOT NULL` = dokumenti benefita; portal ih prikazuje u `PortalBenefitCard`
+
+### Email (`/admin/email-predlosci`, `/admin/automatizacija`)
+- **Email predlošci** (`EmailTemplatesView` nad `email_templates`) — subject/body/button, `is_active` zastavica
+- **Automatizacija** (`AutomatizacijaView` nad `email_automations`) — trigger tip + `days_before` + vezani predložak
+- **Ručna obavijest** — gumb "Pošalji obavijest" u `EditBenefitDialog` → `/api/benefits/[id]/notify`; subject `CRO Commerce [GODINA] - Podsjetnik za [naziv]` (godina iz cookieja); nakon slanja upis u `email_logs` + `router.refresh()`
+- **Cron** — `api/cron/reminders` obrađuje OBA projekta; overdue alert samo za benefite koji su TEK SADA prešli u overdue
+
+### Kontakti (`/admin/contacts`)
+- Standalone lista svih kontakata s filterom po tipu i partneru + tražilica; bulk delete; link na detaljnu stranicu
+- **Dodavanje** (`AddContactModal`) i **uređivanje** (`ContactDetailActions`) — tip, partner (dropdown), ime, firma, email, telefon, funkcija, napomena
+- Brisanje ide ISKLJUČIVO preko `deleteContact`/`deleteContactsBulk` (nullificiraju FK na benefitima)
+- Na profilu partnera: sekcije **Kontakt osobe** i **Osobe za ulaznice** s inline CRUD-om; mail ikona na hover šalje portal pozivnicu (`/api/portal/invite`)
+
+### Ulaznice (`/admin/ulaznice`)
+- Dvije sekcije po `sponsor_contacts.source` (migration_039): **Ulaznice partnera** (`source='portal'`) i **Ručno dodane** (`source='admin'`, mogu imati partnera)
+- **Preuzmi .xlsx** (`ExportXlsxButton`) — kolone Ime i prezime, Email, Telefon, Tvrtka, Kategorija tvrtke, Tip ulaznice, Komentar, Partner, QR link
+- Stat kartice Ukupno / Od partnera / VIP / Standard; QR gumb po retku otvara `QRModal` (javna stranica `/[slug]`)
+- Bulk upload UI (`BulkModal`) je **uklonjen**; `bulkCreateTickets` i dalje postoji u `ticketActions.ts`
+- **Limit ulaznica** vrijedi samo za partnerski unos (`createSponsorTicket`, vidi `lib/ticketQuota.ts`) — admin unos nema limit
+
+### Program (`/admin/program`, `/portal/program`)
+- Tabovi po pozornici: **Blackwall Stage** (`future`), **Manago AI Stage** (`action`), **Wonderland Stage** (`wonderland`), plus zajedničke stavke (`all`)
+- Admin: CRUD sesija + tražilica. Portal: isti prikaz, read-only
+- Timeline grupiran po vremenskim slotovima; paralelne sesije side-by-side; badge za tip sesije (Predavanje, Panel, Fireside, Keynote, Pauza, Networking)
+
+### Troškovi (`/admin/troskovi`)
+- 4 summary kartice: Ukupni budžet, Plaćeno (progress bar), Na čekanju, Preostalo
+- Tablica s filterom po statusu + tražilica; CRUD; izolacija po `project_id`
+- Status: `paid`, `pending`, `overdue`, `partial`, `unconfirmed` (migration_031)
+
+### Zadaci i Rokovnik
+- Kanban board (`/admin/tasks`) — kliktabilni naslovi vode na `/admin/tasks/[id]` (prikaz + edit + delete)
+- **Rokovnik** (`/admin/calendar`) — godišnji pregled zadataka po rokovima i mjesecima, filtar po odgovornoj osobi, klik otvara modal s inline editom i brisanjem
+- Zadatak s emailom u `assigned_to` → Postgres trigger (migration_021/028) upisuje notifikaciju u inbox
+
+### Inbox (`/admin/inbox`)
+- Sve notifikacije (nepročitane + pročitane), badge s brojem nepročitanih u sidebaru
+- Per-user read tracking (`notification_reads`, migration_029)
+- Izvori: novi kontakt (migration_019/022), novi zadatak (migration_021/028), prijava partnera (`recordPartnerLogin`), prihvaćen ugovor (migration_036), komentar uz partnera (migration_037)
+- Akcije: označi kao pročitano/nepročitano, označi sve; brisanje vidljivo samo za `marcel@ecommerce.hr`
+
+### Postavke (`/admin/settings`)
+- Datum konferencije (`project_settings`)
+- **Admin korisnici** (`UserManagementSection`) — kreiranje ide u **sve** baze (2025 i 2026) + `project_admins`
+- **Partneri** (`PartnerManagementSection`) — novi partner (ime, email, lozinka, partner) u aktivnom projektu; promjena lozinke (ikona ključa); welcome email preko `createPartnerUser`; prikaz deduplikacira po emailu i preskače orphaned `sponsor_users` unose
+
+### Sponzorski portal (`/portal`)
+- Login na **`/`** (`/partner` je samo middleware redirect — stranica ne postoji); nakon prijave → `/portal/benefits`
+- Nav: **Partner → Benefiti → Program → CRO Commerce 2025 (Video)** + projekt switcher + HR/EN toggle + `PortalHelpModal`
+- **`/portal/sponsor`** — tab Informacije (primarni kontakt, kontakt osobe, osobe za ulaznice — sve editable, RLS migration_015) i tab Dokumenti (read-only lista datoteka partnera)
+- **`/portal/benefits`** — read-only lista s progress barom i kliktabilnim status karticama; svaki benefit prikazuje opis, kontakt osobu i dokumente
+- **`/portal/program`** — read-only program, tabovi po pozornici
+- **`/portal/video`** — embed snimke CRO Commerce 2025
+- **Ugovor** (`PortalContractView`, migration_035/036) — prikazuje stvarne benefite partnera kad postoje; hardkodirani popis po paketu je samo fallback
+- **Usporedba paketa** (`PortalCollaborationOptions`) — MARKETINŠKA tablica s hardkodiranim `PACKAGES`/`CATEGORIES`; stvarni limit ulaznica dolazi iz benefita partnera
+- Pristup samo korisnicima u `sponsor_users`; admini se redirectaju na `/admin/dashboard`
+
+### Upload datoteka
+- `FileUploadSection` (po partneru) i `BenefitFileUpload` (po benefitu) → bucket `sponsor-files`
+- Vidljivi error u UI ako upload ne uspije; datoteke vidljive i na portalu
+- **Dijeljeni dokumenti**: jedan storage objekt + po jedan `files` red po partneru (isti `storage_url`); brisanje `files` reda ne briše storage objekt
+
+### Javni alat `/generator`
+- Statični `public/generator.html` (rewrite u `next.config.mjs`, `PUBLIC_PATHS` u middlewareu) — generira vizuale govornika, bez prijave
+
+### UI konvencije
+- Modali se otvaraju pri **vrhu viewporta** (`items-start pt-8`) + `<main>` se scrolla na vrh (`behavior: "smooth"`)
+- Fixed overlay s Tailwind klasama, ne `<dialog>` element
+- Naslov aplikacije: `EventOrganizzer - CRO Commerce Conference`
 
 ---
 
