@@ -1,3 +1,22 @@
+-- =====================================================================
+-- !! ZASTARJELO - NE POKRETATI !!
+--
+-- Ovaj seed ima krive podatke i zamijenjen je skriptom
+-- supabase/fix_2026_program.sql (koja je pokrenuta i potvrdena u bazi).
+--
+-- Konkretno je krivo u ovoj datoteci:
+--   1) Cijeli "expert" track je na stage 'wonderland' umjesto 'action'
+--      (Manago AI Stage), pa 10 redaka zavrsi na krivoj pozornici.
+--   2) 11:00 ManagoAI i 11:30 panel "Kako izgraditi brend..." su na
+--      'action' umjesto na 'future' (Blackwall Stage).
+--   3) Wonderland Stage (talks) - 4 predavanja - potpuno nedostaje.
+--   4) Dario Begonja ima placeholder naslov "Koji je ROI povjerenja?".
+--
+-- Pokretanje ove skripte vratilo bi sve te greske jer prvo radi
+-- DELETE FROM program_sessions WHERE project_id = '2026'.
+-- Zadrzano samo kao zapis; za unos programa koristi fix_2026_program.sql.
+-- =====================================================================
+
 -- Seed: CRO Commerce 2026 - Program sesije
 -- Izvor: conference.ecommerce.hr (program, 13.10.2026.)
 -- POKRENUTI SAMO ZA 2026 PROJEKT (Supabase Dashboard -> SQL Editor -> 2026 instanca)!
