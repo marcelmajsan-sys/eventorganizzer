@@ -1,5 +1,9 @@
 # CRO Commerce Admin Portal — Dokumentacija
 
+> **Mjerodavan dokument je [`CLAUDE.md` u rootu repozitorija](../../CLAUDE.md).**
+> Ova kopija je stariji snimak i na više mjesta zaostaje (npr. stara deploy adresa,
+> stari nazivi pozornica, popis migracija). Kod neslaganja vrijedi root verzija.
+
 ## Što aplikacija radi
 
 Admin portal za upravljanje CRO Commerce konferencijom. Omogućuje:
@@ -9,7 +13,7 @@ Admin portal za upravljanje CRO Commerce konferencijom. Omogućuje:
 - Email obavijesti za benefite s praćenjem zadnjeg slanja
 - Kontakt osobe i osobe za ulaznice po sponzoru
 - Upload datoteka po sponzoru i po benefitu (Supabase Storage bucket `sponsor-files`)
-- Program konferencije po pozornicama (Future / Action / Wonderland Stage)
+- Program konferencije po pozornicama (Blackwall / Manago AI / Wonderland Stage — DB ključevi su i dalje `future` / `action` / `wonderland`)
 - Praćenje troškova eventa s budžetom i statusima plaćanja
 - Zadaci (Kanban board) s detaljnim stranicama po zadatku
 - Rokovnik — godišnji pregled zadataka po rokovima s filtrom po odgovornoj osobi
@@ -17,7 +21,7 @@ Admin portal za upravljanje CRO Commerce konferencijom. Omogućuje:
 - **Multi-projekt**: CRO Commerce 2026 i 2025 — prebacivanje bez ponovnog logina
 - **Sponzorski portal** — portal za sponzore na `/portal` i `/partner` s mogućnošću uređivanja kontakata
 
-Deployano na: https://eventorganizzer.vercel.app
+Deployano na: https://partners.ecommerce.hr
 
 ---
 
@@ -245,7 +249,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 RESEND_API_KEY=re_...
 
 # URL aplikacije — OBAVEZNO postaviti na produkcijski URL
-NEXT_PUBLIC_APP_URL=https://eventorganizzer.vercel.app
+NEXT_PUBLIC_APP_URL=https://partners.ecommerce.hr
 
 # Admin email (prima cron obavijesti)
 ADMIN_EMAIL=tim@ecommerce.hr
@@ -412,8 +416,8 @@ UPDATE auth.users SET email_confirmed_at = NOW() WHERE id = 'uuid-korisnika';
 
 ### Supabase konfiguracija za projekt switch
 U **oba** Supabase projekta (2025 i 2026):
-- **Authentication → URL Configuration → Redirect URLs**: dodati `https://eventorganizzer.vercel.app/auth/callback`
-- **Authentication → URL Configuration → Site URL**: `https://eventorganizzer.vercel.app`
+- **Authentication → URL Configuration → Redirect URLs**: dodati `https://partners.ecommerce.hr/auth/callback`
+- **Authentication → URL Configuration → Site URL**: `https://partners.ecommerce.hr`
 
 ---
 
@@ -435,13 +439,14 @@ git push origin main
 ### Sponzori
 - Lista sponzora s tražilicom (`?q=` URL param) — naziv tvrtke je klikabilan link na profil
 - **Multi-select filter paketa** (`PackageTypeManager`) — comma-separated `?package=Zlatni,Srebrni` URL param; × ikonica se prikazuje samo na aktivnom filteru i uklanja ga (ne briše kategoriju iz baze); uz "+" gumb postoji i olovka gumb koji ulazi u **edit mode** gdje se svaka kategorija može preimenovati (inline input + ✓) ili obrisati (trash + potvrda Da/Ne)
-- **Lead status filter** — `?lead=cold_lead` itd., s obojenim badge-evima u tablici
+- **Lead status filter (multi-select)** — `?lead=cold_lead,hot_lead` (zarezom odvojeno, chipovi se togglaju), s obojenim badge-evima u tablici
 - Detaljna stranica sponzora (`/admin/sponsors/[id]`) — prikazuje lead_status badge
 - Edit forma s paketom, kontaktom, statusom plaćanja i **lead statusom**
 - **Primarni kontakt — inline edit** (`AdminPrimaryContactEdit`) u sekciji Informacije na stranici sponzora — hover olovka, uređivanje direktno bez otvaranja modala
 - Upload datoteka po sponzoru (Supabase Storage) — odvojene od datoteka po benefitu
 - **Brisanje sponzora** s potvrdom (`DeleteSponsorButton`) — redirect na `/admin/sponsors`
 - **Multi-select bulk edit** (`SponsorsTableWithSelect`) — checkbox stupac; klik na redak ili checkbox odabire sponzora; checkbox u zaglavlju odabire/poništava sve; bulk action bar (sticky, plava pozadina) pojavljuje se kad je odabran ≥1 sponzor s dropdownima za Paket/Plaćanje/Status i gumbom "Primijeni"; server action `bulkUpdateSponsors` radi `.update().in("id", ids)` — `revalidatePath` osvježava stranicu
+- **Export kontakata** (`ExportContactsButton`) — gumb "Preuzmi kontakte (N)" u zaglavlju; XLSX s jednim retkom po kontaktu za trenutno filtrirane partnere (poštuje sva četiri filtera + tražilicu); primarni kontakt se deduplicira protiv svog zrcala u `sponsor_contacts`
 - **Iznos stupac** u tablici sponzora — prikazuje `iznos` formatiran kao EUR (0 € za null vrijednosti, sivom bojom)
 - **Iznos polje** u AddSponsorModal i EditSponsorForm — opcionalni numerički unos; EditSponsorForm ima graceful degradation (retry bez iznos ako kolona ne postoji u DB)
 - **AddSponsorModal** inserta samo `sponsors` red — **ne** auto-kreira benefite po paketu (benefiti se dodaju zasebno preko AddBenefitModal / grupnog edita)
@@ -582,7 +587,7 @@ git push origin main
 - **Admin i partner projekt switch** rade identično — server-side token exchange: `admin.generateLink` → `fetch(url, {redirect:"manual"})` → parse Location header → `setSession`
 - **UUID-ovi korisnika su različiti** između projekata (2025 i 2026 su zasebne Supabase instance)
 - **Orphaned `sponsor_users` unosi** (bez matching auth usera) se preskaču u prikazu na settings stranici
-- `NEXT_PUBLIC_APP_URL` mora biti postavljen na `https://eventorganizzer.vercel.app` — koristi se za `redirectTo` u magic link generaciji
+- `NEXT_PUBLIC_APP_URL` mora biti postavljen na `https://partners.ecommerce.hr` — koristi se za `redirectTo` u magic link generaciji
 - **`updatePrimaryContact` server action** koristi admin klijent za update `contact_name/email/phone` na `sponsors` tablici — partneri nemaju direktan UPDATE RLS na `sponsors`. Vraća `{ error: string | null }` (ne baca exception) da se pravi Supabase error može prikazati u UI
 - **`sponsor_contacts` RLS** (migration_015): partneri mogu SELECT/INSERT/UPDATE/DELETE samo za vlastiti `sponsor_id` (via `get_my_sponsor_id()` helper funkcija)
 - **`contact_phone` kolona** dodana migration_016 — nije bila u inicijalnoj shemi; uzrokovala je grešku pri uređivanju primarnog kontakta

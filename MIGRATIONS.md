@@ -58,6 +58,10 @@ Sve migracije su u `supabase/` folderu. Pokrenuti u Supabase Dashboard → SQL E
 -- seed_2025_program.sql — sav program + troškovi iz Google tablice
 ```
 
+## Seed / program podaci za 2026
+
+- **`supabase/fix_2026_program.sql`** — **aktualna** skripta za program CRO Commerce 2026 (izvor: conference.ecommerce.hr). Briše sve `project_id='2026'` retke i unosi 30 sesija u transakciji. Pokrenuto i potvrđeno u bazi (rujan 2026.): 4 `all` / 13 `future` / 9 `action` / 4 `wonderland`. Pokrenuti u **OBJE** baze.
+- **`supabase/seed_2026_program.sql`** — **ZASTARJELO, NE POKRETATI.** Raniji seed s krivim pozornicama (expert track na `wonderland` umjesto `action`), izostavljenim Wonderland Stageom i placeholder naslovom. Počinje s `DELETE ... project_id='2026'`, pa bi vratio sve greške. Zamijenjen s `fix_2026_program.sql`.
 ## Supabase Storage
 
 Bucket `sponsor-files` mora biti kreiran kao **Public** u Supabase Dashboard + RLS politike:

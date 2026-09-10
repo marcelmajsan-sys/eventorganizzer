@@ -31,7 +31,7 @@ npm run dev   # → http://localhost:3000
 | Ruta | Opis |
 |------|------|
 | `/admin/dashboard` | Nadzorna ploča |
-| `/admin/sponsors` | Lista sponzora (multi-select bulk edit) |
+| `/admin/sponsors` | Lista partnera (naslov "Partneri") — multi-select bulk edit; filteri Kategorija / Plaćanje / Status / Tip kontakta + tražilica; "Preuzmi kontakte" XLSX export u zaglavlju |
 | `/admin/sponsors/[id]` | Detaljna stranica sponzora |
 | `/admin/benefits` | Svi benefiti (filter `?status=`) |
 | `/admin/contacts` | Svi kontakti (koristi `createAdminClient`) |
@@ -47,6 +47,7 @@ npm run dev   # → http://localhost:3000
 | `/` | Partner login (`/partner` je samo redirect u middlewareu — stranica ne postoji) |
 | `/portal/*` | Sponzorski portal |
 | `/[slug]` | Javna stranica ulaznice (QR link, server component, `sponsor_contacts.slug`) |
+| `/generator` | Javni alat za generiranje vizuala govornika (statični `public/generator.html`, rewrite u `next.config.mjs`, `PUBLIC_PATHS` u middlewareu — bez prijave) |
 
 **Ključne server actions** (`src/app/actions/`):
 - **AUTORIZACIJA (obavezno)**: server actioni su javno pozivljivi POST endpointi, a admin klijenti bypassiraju RLS. Svaki admin action MORA početi s `requireAdmin()` iz `@/lib/authGuards` (vraća `{ok:false, error}` za ne-admine), portal actioni s `requireSponsor(sponsorId)` (provjera `sponsor_users`), a mješoviti s `requireAdminOrSponsor(sponsorId)`. `FALLBACK_ADMIN_EMAILS` i `SUPER_ADMIN_EMAIL` žive SAMO u `authGuards.ts` — ne duplicirati. Iznimka bez guarda: `findPartnerProject` (treba ga login stranica).
@@ -246,6 +247,8 @@ git add . && git commit -m "Opis" && git push origin main
 - **Brisanje datoteka**: prije `storage.remove` provjeriti postoje li drugi `files` redovi s istim `storage_url` ili path počinje sa `shared/` — tada obrisati SAMO DB red (dijeljeni dokumenti pattern)
 - **Brisanje kontakata u admin UI** ide ISKLJUČIVO preko server actiona `deleteContact`/`deleteContactsBulk` (nullificiraju FK na benefitima), nikad direktnim `supabase.delete()` iz browsera
 - **`AddSponsorModal`** više **NE** auto-kreira benefite po paketu pri dodavanju sponzora — inserta samo `sponsors` red; benefiti se dodaju zasebno (`AddBenefitModal` / grupni edit)
+- **`/admin/sponsors` filteri** su svi URL-driven i kombiniraju se: `?package=` (multi, zarez), `?payment=` (multi, zarez), `?lead=` (**multi, zarez** — chipovi se togglaju preko `toggleLead`), `?type=leads|clients` i `?q=`. **Status (`lead`) i Tip kontakta (`type`) se međusobno isključuju** — `toggleLead` namjerno ne prenosi `type`, a `type` linkovi ne prenose `lead`. Filtriranje je server-side u `page.tsx`, pa `SponsorsTableWithSelect` i export uvijek dobiju istu, već filtriranu listu. Poznato ograničenje: `PackageTypeManager` gradi URL samo iz `package`+`payment`, pa klik na kategoriju resetira `lead`/`type`/`q`
+- **Export kontakata partnera** (`ExportContactsButton.tsx`, zaglavlje `/admin/sponsors`): client-side XLSX, **jedan redak po kontaktu** (ne po partneru) za trenutno filtrirane partnere; kolone Partner, Paket, Status, Plaćanje, Tip kontakta, Ime i prezime, Email, Telefon, Funkcija, Tvrtka kontakta, Tip ulaznice, Napomena. Primarni kontakt (`sponsors.contact_*`) ide kao zaseban redak i **deduplicira se** protiv svog zrcala u `sponsor_contacts` (migration_033) po emailu ILI imenu — kod poklapanja se zrcalni telefon/funkcija/tvrtka/napomena **mergaju** u primarni redak umjesto da se odbace. Partneri bez ijednog kontakta dobiju redak `(bez kontakta)` i ne broje se u brojaču na gumbu. `page.tsx` zato selecta puni set polja kontakata uz fallback na uži set ako novije kolone ne postoje
 - **`/admin/ulaznice`** (`UlazniceActions.tsx`): `ExportXlsxButton` radi client-side XLSX export (`xlsx` paket, `json_to_sheet` + `writeFile`); export kolone (Ime i prezime, Email, Telefon, Tvrtka, Kategorija tvrtke, Tip ulaznice, Komentar, Partner, QR link) — bulk upload UI i `BulkModal` su **uklonjeni**; sekcije se dijele po `sponsor_contacts.source` (`'portal'` = partner unio kroz portal, `'admin'` = ručno u adminu, neovisno o `sponsor_id`); svi insert pointi postavljaju `source` (`ticketActions.ts`, `AddContactModal`, `ContactsSection` → `'admin'`; `createSponsorTicket`, `PortalContactsSection` → `'portal'`) uz graceful retry bez kolone dok migration_039 nije pokrenut (tada fallback podjela po `sponsor_id`)
 - **Dijeljeni dokumenti za više partnera**: jedan storage objekt (npr. `sponsor-files/shared/...`) + po jedan `files` red po sponzoru (`benefit_id: null`, isti `storage_url`) — tako su dimenzije standa podijeljene svim partnerima po paketu (veliki stand → Srebrni/Zlatni/Glavni; regular stand → Brončani); brisanje `files` reda ne briše storage objekt
 
@@ -259,6 +262,8 @@ Kako pokrenuti: Supabase Dashboard → SQL Editor → New query → kopiraj migr
 
 ### Utility SQL skripte (nisu migracije)
 
+- **`supabase/fix_2026_program.sql`** — **aktualan** unos programa CRO Commerce 2026 (izvor: conference.ecommerce.hr). Briše sve `project_id='2026'` retke i ponovno ih unosi u transakciji (30 sesija: 4 `all`, 13 `future`, 9 `action`, 4 `wonderland`). Pokrenuto i potvrđeno u bazi (rujan 2026.). Mapiranje pozornica: `future`=Blackwall (Main), `action`=Manago AI (expert), `wonderland`=Wonderland (talks), `all`=zajedničko.
+- **`supabase/seed_2026_program.sql`** — **ZASTARJELO, NE POKRETATI.** Raniji seed istog programa s krivim podacima (cijeli expert track na `wonderland` umjesto `action`, dvije Blackwall sesije na `action`, Wonderland Stage potpuno izostavljen, placeholder naslov za Darija Begonju). Počinje s `DELETE ... project_id='2026'`, pa bi ponovno pokretanje vratilo sve greške. Zamijenjen s `fix_2026_program.sql`; datoteka ima upozorenje u zaglavlju.
 - **`supabase/cleanup_duplicate_contacts.sql`** — ručno čišćenje duplih kontakata (isti email). Dvostupanjski: KORAK 1 samo prikaže što će se zadržati/obrisati (`ROW_NUMBER()` preview); KORAK 2 je zakomentiran — odkomentirati tek nakon provjere. Prioritet zadržavanja: ima `sponsor_id` → dulje ime → više popunjenih polja → stariji `created_at`.
 
 ---
