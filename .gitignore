@@ -24,3 +24,9 @@ next-env.d.ts
 
 # Zip archives
 *.zip
+
+# Claude Code lokalne postavke (per-machine allowlist)
+**/.claude/settings.local.json
+
+# Jednokratne debug skripte (citaju .env.local / service role kljuc)
+__tmp-*
