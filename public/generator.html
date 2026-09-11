@@ -508,10 +508,7 @@ function drawPlaceholder(ctx, W, H, box) {
   ctx.fillStyle = 'rgba(255,255,255,0.40)';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = fnt(500, vh * 0.040);
-  ctx.fillText('FOTO GOVORNIKA', cx, vy0 + vh * 0.66);
-  ctx.font = fnt(400, vh * 0.030);
-  ctx.fillStyle = 'rgba(255,255,255,0.30)';
-  ctx.fillText('dodaj fotografiju lijevo', cx, vy0 + vh * 0.715);
+  ctx.fillText('VAŠA FOTOGRAFIJA', cx, vy0 + vh * 0.66);
   ctx.restore();
 }
 
@@ -632,6 +629,9 @@ function renderCard(canvas, fmtName, data, assets) {
   // ako slika završava iznad podnožja, crta ne smije preko nje
   if (L.photo[3] * H <= L.divY * H) dividerY = Math.max(dividerY, L.photo[3] * H + W * 0.020);
   const lw = Math.max(1, Math.round(W / 750));
+  // cijeli footer (crta + info + slogan) 10px vise => 10px veci razmak do dna
+  ctx.save();
+  ctx.translate(0, -H * (10 / 1080));
   ctx.fillStyle = C.white;
   ctx.fillRect(ml + 8, dividerY, contentRight - (ml + 8), lw);
 
@@ -653,6 +653,7 @@ function renderCard(canvas, fmtName, data, assets) {
     }
     for (const line of slog.r.lines) { ctx.fillText(line, slog.col, y); y += slog.lh; }
   }
+  ctx.restore();
 }
 </script>
 <script>/* CRO Commerce generator - sucelje ------------------------------------- */
