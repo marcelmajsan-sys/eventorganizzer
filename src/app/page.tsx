@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { PROJECT_COOKIE, PROJECTS } from "@/lib/supabase/projects";
 import { findPartnerProject } from "@/app/actions/findPartnerProject";
+import { recordPartnerLogin } from "@/app/actions/notifications";
 import { Eye, EyeOff, LogIn, Loader2, Building2, Languages } from "lucide-react";
 
 type Lang = "hr" | "en";
@@ -70,6 +71,7 @@ function PartnerLoginForm() {
 
     if (!authError && data.user) {
       document.cookie = `${PROJECT_COOKIE}=${projectId}; path=/; max-age=31536000`;
+      await recordPartnerLogin(data.user.id, email, projectId);
       router.push("/portal/benefits");
       router.refresh();
       return;

@@ -187,7 +187,7 @@ Prije ispravljanja bilo kojeg problema vezanog uz bazu: provjeri da je migracija
 - **`admin/layout.tsx`** — provjerava `project_admins` tablicu → nije admin → redirect `/portal`
 - **`portal/layout.tsx`** — ako admin → `/admin/dashboard`; ako nema u `sponsor_users` → redirect na `/api/auth/signout?redirect=/partner?error=no_access` (Route Handler briše cookies)
 - **`login/page.tsx`** — admin login → `/admin/dashboard`
-- **`partner/page.tsx`** — partner login s HR/EN jezičnim togglem; poziva `findPartnerProject(email)` za točan projekt; nakon prijave redirect na `/portal/benefits`; **ne bilježi `recordPartnerLogin`**
+- **`partner/page.tsx`** — partner login s HR/EN jezičnim togglem; poziva `findPartnerProject(email)` za točan projekt; nakon prijave bilježi `recordPartnerLogin` pa redirect na `/portal/benefits`
 
 ### Projekt switch
 Cookie `cro_active_project` (`'2026'` | `'2025'`). Token exchange flow:
@@ -226,9 +226,8 @@ Admin gumb **"Logiraj se kao partner"** na profilu partnera (`ImpersonateButton`
 
 ### Partner login flow
 Partner login je na `/` (`src/app/page.tsx`); `/partner` i `/login` su SAMO middleware redirecti — te su stranice obrisane (bile su mrtvi duplikati). Admin login je `src/app/admin/page.tsx`.
-Login ne poziva `recordPartnerLogin` — prijava ide direktno na `/portal/benefits`.
+Login poziva `await recordPartnerLogin(userId, email, projectId)` nakon uspješne prijave (inbox notifikacija "Prijava partnera"), zatim redirect na `/portal/benefits`. Poziv je bio uklonjen u commitu `c058217e` (8.6.2026.) pa se prijave lipanj–rujan 2026. NISU bilježile; vraćen 17.9.2026.
 Stranica ima HR/EN language toggle (lokalno, bez i18n konteksta); error poruke prate odabrani jezik (`errorKey` state).
-`recordPartnerLogin` i dalje postoji u `notifications.ts` i može se pozvati iz drugog mjesta ako zatreba.
 **`createBrowserClient` na login stranicama MORA dobiti `{ isSingleton: false }`** kao treći argument — inače drugi poziv s URL-om drugog projekta vrati cached klijent prvog i login u 2025 tiho ne radi.
 
 ---
