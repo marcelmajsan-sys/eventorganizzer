@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight, CalendarDays, Youtube, Languages } from "lucide-react";
+import { Gift, LogOut, Building2, Menu, X, ArrowLeftRight, CalendarDays, Youtube, Languages, Sparkles } from "lucide-react";
 import PortalHelpModal from "@/components/portal/PortalHelpModal";
 import { useState } from "react";
 import { packageColor } from "@/lib/utils";
@@ -33,6 +33,7 @@ export default function PortalSidebar({ sponsor, userEmail, activeProjectId, oth
   const navItems = [
     { href: "/portal/sponsor",  label: "Partner",       icon: Building2 },
     { href: "/portal/benefits", label: t("nav.benefits"), icon: Gift },
+    { href: "/portal/generator", label: t("nav.generator"), icon: Sparkles },
     { href: "/portal/program",  label: "Program",       icon: CalendarDays },
     { href: "/portal/video",    label: "CRO Commerce 2025 (Video)", icon: Youtube },
   ];

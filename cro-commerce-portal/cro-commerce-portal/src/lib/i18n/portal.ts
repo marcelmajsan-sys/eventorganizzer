@@ -3,6 +3,7 @@ export type Lang = "hr" | "en";
 const HR = {
   // Sidebar
   "nav.benefits": "Vaši benefiti",
+  "nav.generator": "Generator vizuala",
   "nav.signOut": "Odjava",
   "nav.signingOut": "Odjava...",
   "nav.switchProject": "Prebaci na",
@@ -149,6 +150,12 @@ const HR = {
   "video.title": "CRO COMMERCE 2025 - Feel The Vibes",
   "video.watch": "Pogledaj snimke programa",
 
+  // Generator page
+  "generator.title": "Generator vizuala",
+  "generator.subtitle": "Napravite svoj CRO Commerce 2026 vizual za društvene mreže",
+  "generator.text": "Pokažite svojoj publici da ste dio CRO Commerce 2026! Iskoristite naš generator vizuala i u par klikova napravite vlastiti vizual za društvene mreže — spreman za objavu na LinkedInu, Instagramu ili Facebooku.",
+  "generator.open": "Otvori generator vizuala",
+
   // Help modal
   "help.btn": "Upute",
   "help.title": "Dobrodošli u Partner Portal",
@@ -170,6 +177,7 @@ const HR = {
 const EN: typeof HR = {
   // Sidebar
   "nav.benefits": "Your Benefits",
+  "nav.generator": "Visual Generator",
   "nav.signOut": "Sign out",
   "nav.signingOut": "Signing out...",
   "nav.switchProject": "Switch to",
@@ -315,6 +323,12 @@ const EN: typeof HR = {
   // Video page
   "video.title": "CRO COMMERCE 2025 - Feel The Vibes",
   "video.watch": "Watch program recordings",
+
+  // Generator page
+  "generator.title": "Visual Generator",
+  "generator.subtitle": "Create your CRO Commerce 2026 visual for social media",
+  "generator.text": "Show your audience you are part of CRO Commerce 2026! Use our visual generator to create your own social media visual in just a few clicks — ready to post on LinkedIn, Instagram or Facebook.",
+  "generator.open": "Open the visual generator",
 
   // Help modal
   "help.btn": "Help",
