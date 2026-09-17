@@ -7,8 +7,9 @@ import Link from "next/link";
 import {
   ArrowLeft, Building2, FileText,
   Calendar, CheckCircle2, Clock, AlertTriangle, XCircle,
-  FileSignature, User, LogIn
+  FileSignature, User, LogIn, TicketPercent
 } from "lucide-react";
+import { getTicketDiscountCode } from "@/lib/discountCodes";
 import {
   packageColor, paymentStatusColor, paymentStatusLabel,
   benefitStatusColor, benefitStatusLabel, leadStatusColor, leadStatusLabel, formatDate, daysUntil, isBenefitOverdue
@@ -166,6 +167,19 @@ export default async function SponsorDetailPage({ params }: Props) {
                     <dd className="mt-0.5">
                       <span className={`badge border ${leadStatusColor(sponsor.lead_status as LeadStatus)}`}>
                         {leadStatusLabel(sponsor.lead_status as LeadStatus)}
+                      </span>
+                    </dd>
+                  </div>
+                </div>
+              )}
+              {getTicketDiscountCode(sponsor.name) && (
+                <div className="flex items-start gap-3">
+                  <TicketPercent size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <dt className="text-gray-500 text-xs">Kod za popust na ulaznice</dt>
+                    <dd className="mt-0.5">
+                      <span className="badge bg-brand-50 text-brand-700 border border-brand-200 font-mono font-semibold">
+                        {getTicketDiscountCode(sponsor.name)}
                       </span>
                     </dd>
                   </div>

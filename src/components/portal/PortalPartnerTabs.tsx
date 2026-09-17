@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, File, FileText, FolderOpen } from "lucide-react";
+import { Building2, File, FileText, FolderOpen, TicketPercent } from "lucide-react";
 import { packageColor, paymentStatusLabel, paymentStatusColor, formatDate, formatFileSize } from "@/lib/utils";
+import { getTicketDiscountCode } from "@/lib/discountCodes";
 import type { PackageType, PaymentStatus } from "@/types";
 import PortalContactsSection from "@/components/portal/PortalContactsSection";
 import PortalCollaborationOptions from "@/components/portal/PortalCollaborationOptions";
@@ -72,6 +73,7 @@ export default function PortalPartnerTabs({
   const { t, lang } = useLang();
 
   const isMainPackage = MAIN_PACKAGES.includes(sponsor.package_type);
+  const discountCode = getTicketDiscountCode(sponsor.name);
 
   const TABS = [
     { id: "info"      as const, label: t("tabs.info") },
@@ -130,6 +132,22 @@ export default function PortalPartnerTabs({
               */}
 
             </div>
+
+            {/* Kod za popust na ulaznice za klijente partnera */}
+            {discountCode && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                  {t("info.discount")}
+                </p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-brand-50 border border-brand-200 text-brand-700 font-mono font-bold text-sm tracking-wide">
+                    <TicketPercent size={15} />
+                    {discountCode}
+                  </span>
+                  <p className="text-xs text-gray-500">{t("info.discountText")}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

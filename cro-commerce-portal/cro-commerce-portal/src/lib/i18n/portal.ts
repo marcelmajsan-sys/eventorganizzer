@@ -16,6 +16,8 @@ const HR = {
   "tabs.myPackage": "Vaš paket",
   "info.category": "Kategorija",
   "info.payment": "Plaćanje",
+  "info.discount": "Kod za popust",
+  "info.discountText": "Podijelite ovaj kod sa svojim klijentima za 20% popusta na ulaznice.",
   "docs.empty": "Nema uploadanih dokumenata.",
   "docs.title": "Dokumenti",
 
@@ -181,6 +183,8 @@ const EN: typeof HR = {
   "tabs.myPackage": "Your Package",
   "info.category": "Category",
   "info.payment": "Payment",
+  "info.discount": "Discount code",
+  "info.discountText": "Share this code with your clients for 20% off conference tickets.",
   "docs.empty": "No uploaded documents.",
   "docs.title": "Documents",
 
