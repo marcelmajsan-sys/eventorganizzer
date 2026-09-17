@@ -17,7 +17,7 @@ const HR = {
   "info.category": "Kategorija",
   "info.payment": "Plaćanje",
   "info.discount": "Kod za popust",
-  "info.discountText": "Podijelite ovaj kod sa svojim klijentima za 20% popusta na ulaznice.",
+  "info.discountText": "Podijelite ovaj kod sa svojim klijentima za 20% popusta na ulaznice. Vrijedi do 10.10.2026.",
   "docs.empty": "Nema uploadanih dokumenata.",
   "docs.title": "Dokumenti",
 
@@ -184,7 +184,7 @@ const EN: typeof HR = {
   "info.category": "Category",
   "info.payment": "Payment",
   "info.discount": "Discount code",
-  "info.discountText": "Share this code with your clients for 20% off conference tickets.",
+  "info.discountText": "Share this code with your clients for 20% off conference tickets. Valid until 10 Oct 2026.",
   "docs.empty": "No uploaded documents.",
   "docs.title": "Documents",
 
