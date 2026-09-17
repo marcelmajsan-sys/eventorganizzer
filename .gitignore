@@ -30,3 +30,8 @@ next-env.d.ts
 
 # Jednokratne debug skripte (citaju .env.local / service role kljuc)
 __tmp-*
+
+# Vercel
+.vercel
+.env*
+!.env.example
