@@ -41,7 +41,7 @@ eventorganizzer/
 │   │   │       └── email-predlosci/ automatizacija/ inbox/ settings/
 │   │   ├── portal/                        ← Sponzorski portal
 │   │   │   ├── layout.tsx                 ← admin → /admin/dashboard; bez pristupa → /api/auth/signout
-│   │   │   └── sponsor/ benefits/ program/ video/
+│   │   │   └── sponsor/ benefits/ program/ video/ generator/
 │   │   ├── actions/                       ← Server actioni (svi s guardom iz authGuards.ts)
 │   │   │   ├── switchProject.ts  impersonate.ts  findPartnerProject.ts
 │   │   │   ├── userManagement.ts  partnerManagement.ts  projectSettings.ts
@@ -99,7 +99,7 @@ eventorganizzer/
 | `/admin/settings` | Datum, korisnici, partneri |
 | `/admin` | Admin login (`/login` je samo redirect u middlewareu — stranica ne postoji) |
 | `/` | Partner login (`/partner` je samo redirect u middlewareu — stranica ne postoji) |
-| `/portal/*` | Sponzorski portal — `sponsor` (Partner), `benefits`, `program`, `video` |
+| `/portal/*` | Sponzorski portal — `sponsor` (Partner), `benefits`, `generator`, `program`, `video` |
 | `/[slug]` | Javna stranica ulaznice (QR link, server component, `sponsor_contacts.slug`) |
 | `/generator` | Javni alat za generiranje vizuala govornika (statični `public/generator.html`, rewrite u `next.config.mjs`, `PUBLIC_PATHS` u middlewareu — bez prijave) |
 
@@ -414,9 +414,10 @@ git add . && git commit -m "Opis" && git push origin main
 
 ### Sponzorski portal (`/portal`)
 - Login na **`/`** (`/partner` je samo middleware redirect — stranica ne postoji); nakon prijave → `/portal/benefits`
-- Nav: **Partner → Benefiti → Program → CRO Commerce 2025 (Video)** + projekt switcher + HR/EN toggle + `PortalHelpModal`
+- Nav: **Partner → Benefiti → Generator vizuala → Program → CRO Commerce 2025 (Video)** + projekt switcher + HR/EN toggle + `PortalHelpModal`
 - **`/portal/sponsor`** — tab Informacije (primarni kontakt, kontakt osobe, osobe za ulaznice — sve editable, RLS migration_015) i tab Dokumenti (read-only lista datoteka partnera)
 - **`/portal/benefits`** — read-only lista s progress barom i kliktabilnim status karticama; svaki benefit prikazuje opis, kontakt osobu i dokumente
+- **`/portal/generator`** — poziv partnerima da naprave svoj CRO Commerce 2026 vizual za društvene mreže; gumb otvara javni `/generator` u novom tabu (i18n ključevi `nav.generator` + `generator.*`)
 - **`/portal/program`** — read-only program, tabovi po pozornici
 - **`/portal/video`** — embed snimke CRO Commerce 2025
 - **Ugovor** (`PortalContractView`, migration_035/036) — prikazuje stvarne benefite partnera kad postoje; hardkodirani popis po paketu je samo fallback
