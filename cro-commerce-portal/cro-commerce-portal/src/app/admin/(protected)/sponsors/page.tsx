@@ -8,6 +8,7 @@ import SearchInput from "@/components/admin/SearchInput";
 import PackageTypeManager from "@/components/admin/PackageTypeManager";
 import SponsorsTableWithSelect from "@/components/admin/SponsorsTableWithSelect";
 import ExportContactsButton from "@/components/admin/ExportContactsButton";
+import ShareDocumentModal from "@/components/admin/ShareDocumentModal";
 
 interface Props {
   searchParams: { package?: string; payment?: string; lead?: string; type?: string; q?: string };
@@ -128,6 +129,13 @@ export default async function SponsorsPage({ searchParams }: Props) {
     searchParams.package || searchParams.payment || searchParams.lead || searchParams.type || searchParams.q
   );
 
+  // Opsezi za "Podijeli dokument": svi partneri projekta / potvrđeni / trenutno filtrirani.
+  const allSponsorIds: string[] = (sponsorsRes.data ?? []).map((s) => s.id);
+  const clientSponsorIds: string[] = (sponsorsRes.data ?? [])
+    .filter((s) => s.lead_status === "confirmed_new" || s.lead_status === "confirmed_returning")
+    .map((s) => s.id);
+  const visibleSponsorIds: string[] = sponsors.map((s) => s.id);
+
   return (
     <div className="animate-enter">
       <div className="page-header flex items-start justify-between">
@@ -137,6 +145,12 @@ export default async function SponsorsPage({ searchParams }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <ExportContactsButton sponsors={sponsors as any} />
+          <ShareDocumentModal
+            clientIds={clientSponsorIds}
+            visibleIds={visibleSponsorIds}
+            allIds={allSponsorIds}
+            isFiltered={isFiltered}
+          />
           <AddSponsorModal packageTypes={packageTypeNames} />
         </div>
       </div>
