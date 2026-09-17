@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket, User, QrCode, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Loader2, Users, Ticket, User, QrCode, ExternalLink, TicketPercent } from "lucide-react";
 import { updatePrimaryContact } from "@/app/actions/partnerManagement";
 import { createSponsorTicket, type TicketFormData } from "@/app/actions/ticketActions";
 import { useLang } from "@/context/LanguageContext";
@@ -445,12 +445,13 @@ function PrimaryContactSection({ sponsorId, initial }: { sponsorId: string; init
 }
 
 export default function PortalContactsSection({
-  sponsorId, primaryContact, contacts: initial, ticketQuota,
+  sponsorId, primaryContact, contacts: initial, ticketQuota, discountCode,
 }: {
   sponsorId: string;
   primaryContact: PrimaryContact;
   contacts: Contact[];
   ticketQuota: { vip: number | null; standard: number | null };
+  discountCode?: string | null;
 }) {
   const { t } = useLang();
   const [contacts, setContacts] = useState(initial);
@@ -525,6 +526,23 @@ export default function PortalContactsSection({
           />
         )}
       </div>
+
+      {/* Kod za popust na ulaznice za klijente partnera */}
+      {discountCode && (
+        <div className="border-t border-gray-100 pt-5">
+          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm">
+            <TicketPercent size={15} className="text-gray-400" />
+            {t("info.discount")}
+          </h3>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-brand-50 border border-brand-200 text-brand-700 font-mono font-bold text-sm tracking-wide">
+              <TicketPercent size={15} />
+              {discountCode}
+            </span>
+            <p className="text-xs text-gray-500">{t("info.discountText")}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
