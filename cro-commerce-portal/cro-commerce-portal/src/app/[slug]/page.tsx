@@ -2,6 +2,18 @@ import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { Building2, Briefcase } from "lucide-react";
+import TicketDownloadButton from "@/components/TicketDownloadButton";
+
+function slugifyName(name: string) {
+  return (
+    name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "ulaznica"
+  );
+}
 
 const SELECT = "id, name, company, role, ticket_type, slug";
 
@@ -53,7 +65,7 @@ export default async function TicketPage({ params }: { params: { slug: string } 
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-sans">
-      <div className="w-full bg-white shadow-2xl rounded-sm overflow-hidden" style={{ maxWidth: 720 }}>
+      <div id="ticket-card" className="w-full bg-white shadow-2xl rounded-sm overflow-hidden" style={{ maxWidth: 720 }}>
         <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #111827 60%, #ea580c 100%)" }} />
 
         <div className="flex">
@@ -126,6 +138,11 @@ export default async function TicketPage({ params }: { params: { slug: string } 
 
         <div className="h-1 w-full" style={{ background: "#111827" }} />
       </div>
+
+      <TicketDownloadButton
+        targetId="ticket-card"
+        fileName={`ulaznica-${slugifyName(contact.name)}-cro-commerce-2026.pdf`}
+      />
 
       <p className="mt-5 text-xs text-gray-400">conference.ecommerce.hr &nbsp;·&nbsp; CRO Commerce 2026</p>
     </div>
